@@ -5,18 +5,27 @@ import {
   formatSalary,
   getCompanyLabel,
   getNextAction,
+  getRoleTitle,
+  getSourceHost,
 } from './job-search.selectors';
-import { jobSearchReducer } from './job-search.state';
+import {
+  applicationUpdated,
+  jobSearchReducer,
+  linksCaptured,
+  taskCompletionSet,
+} from './job-search.slice';
 
 describe('application state boundaries', () => {
   it('moves a role without changing interest, priority, or another role', () => {
     const original = createSampleState();
     const role = original.opportunities[0];
-    const next = jobSearchReducer(original, {
-      type: 'update-application',
-      id: role.id,
-      changes: { stage: 'offer' },
-    });
+    const next = jobSearchReducer(
+      original,
+      applicationUpdated({
+        id: role.id,
+        changes: { stage: 'offer' },
+      }),
+    );
     expect(next.opportunities[0]).toMatchObject({
       stage: 'offer',
       interest: role.interest,
@@ -31,11 +40,13 @@ describe('application state boundaries', () => {
     const role = original.opportunities.find(
       (item) => item.id === 'northstar-platform',
     );
-    const next = jobSearchReducer(original, {
-      type: 'update-application',
-      id: 'northstar-platform',
-      changes: { plannedResumeId: 'general-v5', stage: 'collected' },
-    });
+    const next = jobSearchReducer(
+      original,
+      applicationUpdated({
+        id: 'northstar-platform',
+        changes: { plannedResumeId: 'general-v5', stage: 'collected' },
+      }),
+    );
     expect(
       next.opportunities.find((item) => item.id === 'northstar-platform')
         ?.submittedMaterial,
@@ -47,16 +58,16 @@ describe('application state boundaries', () => {
   });
 
   it('captures links without inventing posting facts or companies', () => {
-    const next = jobSearchReducer(createSampleState(), {
-      type: 'capture',
-      links: [
+    const next = jobSearchReducer(
+      createSampleState(),
+      linksCaptured([
         {
           id: 'new-role',
           sourceUrl: 'https://jobs.example.org/123',
           interest: 'interested',
         },
-      ],
-    });
+      ]),
+    );
     const role = next.opportunities.at(-1);
     expect(role).toMatchObject({
       id: 'new-role',
@@ -85,11 +96,13 @@ describe('application state boundaries', () => {
     expect(roles.map((role) => getCompanyLabel(role, state.companies))).toEqual(
       ['Northstar', 'Northstar'],
     );
-    const next = jobSearchReducer(state, {
-      type: 'update-application',
-      id: roles[0].id,
-      changes: { notes: 'A note for this role only.' },
-    });
+    const next = jobSearchReducer(
+      state,
+      applicationUpdated({
+        id: roles[0].id,
+        changes: { notes: 'A note for this role only.' },
+      }),
+    );
     expect(
       next.opportunities.find((role) => role.id === roles[1].id)?.notes,
     ).toBe('');
@@ -134,26 +147,32 @@ describe('board presentation', () => {
     let state = createSampleState();
     const role = state.opportunities[0];
     expect(getNextAction(role, '2026-09-18').label).toBe('Find referral');
-    state = jobSearchReducer(state, {
-      type: 'set-task-completed',
-      id: role.id,
-      taskId: role.tasks[0].id,
-      completed: true,
-    });
+    state = jobSearchReducer(
+      state,
+      taskCompletionSet({
+        id: role.id,
+        taskId: role.tasks[0].id,
+        completed: true,
+      }),
+    );
     expect(getNextAction(state.opportunities[0], '2026-09-18').label).toBe(
       'No next action set',
     );
-    state = jobSearchReducer(state, {
-      type: 'update-application',
-      id: role.id,
-      changes: { followUpOn: '2026-09-18' },
-    });
+    state = jobSearchReducer(
+      state,
+      applicationUpdated({
+        id: role.id,
+        changes: { followUpOn: '2026-09-18' },
+      }),
+    );
     expect(getNextAction(state.opportunities[0], '2026-09-18').due).toBe(true);
-    state = jobSearchReducer(state, {
-      type: 'update-application',
-      id: role.id,
-      changes: { followUpOn: null },
-    });
+    state = jobSearchReducer(
+      state,
+      applicationUpdated({
+        id: role.id,
+        changes: { followUpOn: null },
+      }),
+    );
     expect(getNextAction(state.opportunities[0], '2026-09-18').label).toBe(
       'No next action set',
     );
@@ -193,5 +212,48 @@ describe('board presentation', () => {
         period: 'year',
       }),
     ).toBe('Salary not listed');
+  });
+});
+
+describe('presentation fallbacks', () => {
+  it('handles missing titles, source URLs and unavailable follow-up comparison dates', () => {
+    const role = createSampleState().opportunities[0];
+    expect(getRoleTitle(role)).toBe('Senior Product Engineer');
+    expect(getRoleTitle({ ...role, posting: null })).toBe('Saved opening');
+    expect(
+      getRoleTitle({
+        ...role,
+        posting: {
+          title: '',
+          location: null,
+          employmentType: null,
+          description: null,
+          requirements: [],
+          salary: null,
+        },
+      }),
+    ).toBe('Saved opening');
+    expect(getSourceHost(null)).toBeNull();
+    expect(getSourceHost('not a url')).toBeNull();
+    expect(getSourceHost('https://jobs.example.org/role')).toBe(
+      'jobs.example.org',
+    );
+    expect(getNextAction({ ...role, followUpOn: '2026-09-18' }, '')).toEqual({
+      label: 'Follow up · Sep 18, 2026',
+      due: false,
+    });
+    expect(getNextAction({ ...role, posting: null }, '')).toEqual({
+      label: 'Posting details unavailable',
+      due: false,
+    });
+    expect(formatSalary(undefined)).toBe('Salary not listed');
+    expect(
+      formatSalary({
+        minimum: 50,
+        maximum: 50,
+        currency: 'EUR',
+        period: 'hour',
+      }),
+    ).toBe('50 EUR / hour');
   });
 });

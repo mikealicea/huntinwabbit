@@ -2,15 +2,15 @@
 
 import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { JobSearchProvider } from '@/features/job-search/job-search.index';
+import { StoreProvider } from '@/state/state.index';
 import { SearchBoard } from './SearchBoard';
 
 describe('search board', () => {
   it('shows the whole search with independent interest, priority, salary, and next action', () => {
     render(
-      <JobSearchProvider>
+      <StoreProvider>
         <SearchBoard />
-      </JobSearchProvider>,
+      </StoreProvider>,
     );
     expect(
       screen.getByText('5 active roles', { exact: false }),
@@ -35,11 +35,13 @@ describe('search board', () => {
 
   it('keeps all stages and capture available when the search is empty', () => {
     render(
-      <JobSearchProvider
-        initialState={{ opportunities: [], companies: [], resumes: [] }}
+      <StoreProvider
+        preloadedState={{
+          jobSearch: { opportunities: [], companies: [], resumes: [] },
+        }}
       >
         <SearchBoard />
-      </JobSearchProvider>,
+      </StoreProvider>,
     );
     expect(screen.getAllByText('No roles here yet')).toHaveLength(6);
     expect(

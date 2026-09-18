@@ -110,17 +110,3 @@ export interface CapturedLink {
   sourceUrl: string;
   interest: Interest;
 }
-
-export type JobSearchAction =
-  | { type: 'capture'; links: CapturedLink[] }
-  | {
-      type: 'update-application';
-      id: string;
-      changes: Partial<ApplicationFields>;
-    }
-  | {
-      type: 'set-task-completed';
-      id: string;
-      taskId: string;
-      completed: boolean;
-    };

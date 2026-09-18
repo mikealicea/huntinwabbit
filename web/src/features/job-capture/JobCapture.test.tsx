@@ -3,16 +3,16 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
-import { JobSearchProvider } from '@/features/job-search/job-search.index';
 import { SearchBoard } from '@/features/search-board/search-board.index';
+import { StoreProvider } from '@/state/state.index';
 
 describe('job capture on the board', () => {
   it('grows rows, validates the whole batch, preserves input, and saves individual interests', async () => {
     const user = userEvent.setup();
     render(
-      <JobSearchProvider>
+      <StoreProvider>
         <SearchBoard />
-      </JobSearchProvider>,
+      </StoreProvider>,
     );
     await user.click(screen.getByRole('button', { name: 'Add job links' }));
     const first = screen.getByRole('textbox', { name: 'Job link 1' });
@@ -54,9 +54,9 @@ describe('job capture on the board', () => {
   it('keeps a draft when capture is closed and reopened', async () => {
     const user = userEvent.setup();
     render(
-      <JobSearchProvider>
+      <StoreProvider>
         <SearchBoard />
-      </JobSearchProvider>,
+      </StoreProvider>,
     );
     await user.click(screen.getByRole('button', { name: 'Add job links' }));
     await user.type(

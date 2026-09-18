@@ -214,6 +214,11 @@ payloads in logs, fixtures or committed sample data.
 
 - Keep composition, product logic and external adapters separate. Introduce interfaces at real
   boundaries; do not create a service or state wrapper for every small component.
+- In the web app, keep component-owned state in pure `useState` updates and shared mutable feature
+  state in Redux Toolkit slices. Do not add custom product-state context/reducer providers. Follow
+  the [web state conventions](web/docs/state-management.md) and test every handwritten branch in
+  providers, actions, reducers and selectors with real stores. Vendor adapters retain their own
+  browser mechanics rather than duplicating them in Redux.
 - Give mutable state one owner whose lifetime matches the work. Durable or paid work cannot rely
   on a page or component staying mounted. Handle stale results, cancellation and repeated requests
   deliberately, and test the behavior that matters.

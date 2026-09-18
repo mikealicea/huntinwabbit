@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { requireUser, submitAuth } from '@/features/auth/auth.server.index';
 import { Header } from '@/features/header/header.index';
-import { JobSearchProvider } from '@/features/job-search/job-search.index';
+import { StoreProvider } from '@/state/state.index';
 
 export default async function ApplicationLayout({
   children,
@@ -10,7 +10,7 @@ export default async function ApplicationLayout({
 }) {
   const identity = await requireUser();
   return (
-    <JobSearchProvider key={identity.userId}>
+    <StoreProvider key={identity.userId}>
       <div className="min-h-screen bg-base-200">
         <a
           href="#app-content"
@@ -32,6 +32,6 @@ export default async function ApplicationLayout({
           {children}
         </main>
       </div>
-    </JobSearchProvider>
+    </StoreProvider>
   );
 }

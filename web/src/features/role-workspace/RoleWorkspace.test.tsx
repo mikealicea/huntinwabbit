@@ -3,16 +3,16 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
-import { JobSearchProvider } from '@/features/job-search/job-search.index';
+import { StoreProvider } from '@/state/state.index';
 import { RoleWorkspace } from './RoleWorkspace';
 
 describe('role workspace', () => {
   it('edits application choices independently and preserves submitted materials', async () => {
     const user = userEvent.setup();
     render(
-      <JobSearchProvider>
+      <StoreProvider>
         <RoleWorkspace roleId="northstar-platform" />
-      </JobSearchProvider>,
+      </StoreProvider>,
     );
     await user.selectOptions(
       screen.getByRole('combobox', { name: 'Stage' }),
@@ -49,9 +49,9 @@ describe('role workspace', () => {
 
   it('offers recovery for an unknown or expired sample role', () => {
     render(
-      <JobSearchProvider>
+      <StoreProvider>
         <RoleWorkspace roleId="missing" />
-      </JobSearchProvider>,
+      </StoreProvider>,
     );
     expect(
       screen.getByRole('heading', { name: 'Role not found' }),

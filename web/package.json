@@ -15,11 +15,13 @@
     "check": "biome check .",
     "check:fix": "biome check --write .",
     "check-types": "next typegen && tsc --noEmit",
-    "test:auth": "vitest run src/features/auth --coverage"
+    "test:auth": "vitest run src/features/auth --coverage",
+    "test:state": "vitest run --config vitest.state.config.ts --coverage"
   },
   "dependencies": {
     "@dnd-kit/dom": "^0.5.0",
     "@dnd-kit/react": "^0.5.0",
+    "@reduxjs/toolkit": "^2.12.0",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.116.0",
     "next": "16.3.5",
@@ -28,6 +30,7 @@
     "nextra-theme-blog": "^4.6.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "react-redux": "^9.3.0",
     "server-only": "^0.0.1"
   },
   "devDependencies": {

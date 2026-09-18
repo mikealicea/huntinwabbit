@@ -76,5 +76,7 @@ review their diffs. The ordinary check command is read-only.
 
 [AGENTS.md](AGENTS.md) indexes feature ownership and the focused Next.js, design and accessibility
 guides. The stack uses Next.js App Router, React, TypeScript, Tailwind, daisyUI, next-themes,
-dnd-kit, Vitest, Testing Library and Playwright. The [blog guide](src/features/blog/blog.AGENTS.md)
+dnd-kit, Redux Toolkit, React Redux, Vitest, Testing Library and Playwright.
+[Client state conventions](docs/state-management.md) explain local state, feature slices and
+`npm run test:state`, the complete state-branch coverage gate. The [blog guide](src/features/blog/blog.AGENTS.md)
 owns MDX authoring and Nextra/Pagefind integration.

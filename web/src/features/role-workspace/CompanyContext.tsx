@@ -2,12 +2,19 @@
 
 import {
   type Opportunity,
-  useJobSearch,
+  selectCompany,
+  selectCompanyRoleCount,
 } from '@/features/job-search/job-search.index';
 
+import { useAppSelector } from '@/state/state.index';
+
 export function CompanyContext({ role }: { role: Opportunity }) {
-  const { state } = useJobSearch();
-  const company = state.companies.find((item) => item.id === role.companyId);
+  const company = useAppSelector((state) =>
+    selectCompany(state, role.companyId),
+  );
+  const roleCount = useAppSelector((state) =>
+    selectCompanyRoleCount(state, role.companyId),
+  );
   return (
     <section
       className="card border border-base-300 bg-base-100 shadow-sm"
@@ -58,12 +65,7 @@ export function CompanyContext({ role }: { role: Opportunity }) {
               </p>
             </div>
             <p className="border-t border-base-300 pt-3 text-sm text-base-content/75">
-              {
-                state.opportunities.filter(
-                  (item) => item.companyId === company.id,
-                ).length
-              }{' '}
-              saved roles at this company
+              {roleCount} saved roles at this company
             </p>
           </>
         )}

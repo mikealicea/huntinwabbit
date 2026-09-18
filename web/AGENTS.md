@@ -39,6 +39,16 @@ MDX blog. [The product README](../README.md) distinguishes implemented flows fro
   before introducing a real integration. The auth feature integrates directly with Supabase from
   the Next.js server; the application-data backend has no API client integration yet.
 
+## State and testing conventions
+
+Read [Client state with Redux Toolkit](docs/state-management.md) before changing state ownership.
+Use pure local `useState` for component-owned state and RTK slices for mutable state shared across
+components. Custom product-state context/reducer providers are deprecated; use the typed Redux
+hooks and generated slice actions. Keep effects outside reducers and selectors, and test every
+handwritten branch in providers, actions, reducers and selectors with real stores.
+The [state barrel](src/state/state.AGENTS.md) owns composition, account isolation and clock lifetime.
+Run `npm run test:state` when changing state or its adapters, in addition to the gates below.
+
 ## Product, copy and data boundaries
 
 The root README describes intended product behavior; starter content is not a product decision.

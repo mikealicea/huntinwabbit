@@ -54,7 +54,8 @@ separately from provider revocation. Only the current session is targeted; do no
 invalidation of all outstanding access tokens or other devices.
 
 Session refresh happens on requests, not a background browser timer. Leaving or reloading the sample
-workspace discards its edits. Its provider is keyed by verified user ID. A server response lost after
+workspace discards its edits. Its [Redux provider](../../state/state.AGENTS.md) is keyed by verified
+user ID. Auth inputs and Server Action feedback stay local; credentials and tokens never enter Redux. A server response lost after
 a provider mutation can leave its outcome uncertain; this feature has no durable operation ledger.
 Do not silently repeat password updates to resolve that uncertainty.
 

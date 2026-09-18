@@ -11,13 +11,16 @@ import {
   INTEREST_LABELS,
   type Opportunity,
   PRIORITY_LABELS,
-  useJobSearch,
+  selectCompanies,
 } from '@/features/job-search/job-search.index';
 
+import { selectToday, useAppSelector } from '@/state/state.index';
+
 export function RoleCard({ role }: { role: Opportunity }) {
-  const { state, today } = useJobSearch();
+  const companies = useAppSelector(selectCompanies);
+  const today = useAppSelector(selectToday);
   const title = getRoleTitle(role);
-  const company = getCompanyLabel(role, state.companies);
+  const company = getCompanyLabel(role, companies);
   const { ref, handleRef, isDragging } = useDraggable({
     id: role.id,
     data: { label: `${title} at ${company}` },

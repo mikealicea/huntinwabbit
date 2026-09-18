@@ -3,7 +3,8 @@
 ## Purpose and owners
 
 The application supports logical light/dark themes and an initial system preference. It is not a second
-product-settings store. [theme.index.ts](theme.index.ts) owns the public exports;
+product-settings store. This is an intentional vendor adapter exception to the
+[RTK policy](../../../docs/state-management.md): do not mirror next-themes state in Redux. [theme.index.ts](theme.index.ts) owns the public exports;
 [theme.utils.ts](theme.utils.ts) maps logical names to daisyUI's CSS theme names. Light maps to Emerald
 and dark to Forest. Keep that mapping in agreement with [globals.css](../../app/globals.css).
 
@@ -22,7 +23,9 @@ as a completed preference. Keep controls semantic and verify both palettes for c
 
 The [header tests](../header/Header.test.tsx) cover a mocked switch from light to dark.
 [Browser tests](../../../e2e/job-search.spec.ts) exercise actual theme switching and the initial light
-system preference. Dedicated hydration and persisted-preference regression tests are not present.
+system preference. [Theme.test.tsx](Theme.test.tsx) exercises the real adapter with controlled browser boundaries:
+system changes, both switch directions, persisted preference, storage events and server hydration.
+`npm run test:state` covers every handwritten branch in this adapter and switch.
 The switch is mounted in the application header; global CSS and the provider also theme the landing
 and blog. Application data never shares theme storage. Browser checks are needed when changing these
 behaviors. Run the full gate in the [web guide](../../../AGENTS.md); follow the

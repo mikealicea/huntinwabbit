@@ -7,7 +7,9 @@ interest. Typing in the last row adds an empty row; blank rows are ignored on su
 reopening the form keeps its draft while the board remains mounted. Navigation away from the board
 discards the draft. Successful submission resets rows and focuses the first field for another batch.
 
-[JobCapture.tsx](JobCapture.tsx) owns form state, field focus and announcements.
+[JobCapture.tsx](JobCapture.tsx) owns component-local `useState` drafts, errors, visibility and
+announcements. Its updaters are pure; DOM focus and ID allocation happen outside updaters.
+Saved opportunities become shared Redux state.
 [job-capture.validation.ts](job-capture.validation.ts) owns URL validation. The whole batch must be
 valid before dispatch: errors retain all input and focus the first invalid field. Only HTTP/HTTPS
 URLs without embedded credentials are accepted. Duplicate URLs are allowed as separate captures;
@@ -16,7 +18,7 @@ there is no deduplication or external request.
 ## Data flow and boundaries
 
 [job-capture.index.ts](job-capture.index.ts) is the public component export. The form allocates IDs
-and dispatches through the [job-search public surface](../job-search/job-search.index.ts). Captures
+before dispatching the generated batch-capture action through the [job-search public surface](../job-search/job-search.index.ts). Captures
 start in Collected with unset priority, no verified company and no posting facts. The source URL
 stays separate from employer identity. Copy must not claim that extraction is running or will finish.
 

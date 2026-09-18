@@ -1,4 +1,3 @@
-export { JobSearchProvider, useJobSearch } from './JobSearchProvider';
 export {
   formatCalendarDate,
   formatSalary,
@@ -6,7 +5,22 @@ export {
   getNextAction,
   getRoleTitle,
   getSourceHost,
+  toLocalDate,
 } from './job-search.selectors';
+export {
+  applicationUpdated,
+  jobSearchReducer,
+  linksCaptured,
+  selectActiveRoleCount,
+  selectCompanies,
+  selectCompany,
+  selectCompanyRoleCount,
+  selectOpportunities,
+  selectOpportunity,
+  selectResumes,
+  selectRolesByStage,
+  taskCompletionSet,
+} from './job-search.slice';
 export type {
   ApplicationFields,
   CapturedLink,

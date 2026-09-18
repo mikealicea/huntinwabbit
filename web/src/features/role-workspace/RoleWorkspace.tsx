@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import {
   type ApplicationFields,
+  applicationUpdated,
   getCompanyLabel,
   getNextAction,
   getRoleTitle,
@@ -16,15 +17,24 @@ import {
   STAGE_LABELS,
   STAGES,
   type Stage,
-  useJobSearch,
+  selectCompanies,
+  selectOpportunity,
+  taskCompletionSet,
 } from '@/features/job-search/job-search.index';
+import {
+  selectToday,
+  useAppDispatch,
+  useAppSelector,
+} from '@/state/state.index';
 import { ApplicationMaterials } from './ApplicationMaterials';
 import { CompanyContext } from './CompanyContext';
 import { JobDetails } from './JobDetails';
 
 export function RoleWorkspace({ roleId }: { roleId: string }) {
-  const { state, dispatch, today } = useJobSearch();
-  const role = state.opportunities.find((item) => item.id === roleId);
+  const dispatch = useAppDispatch();
+  const today = useAppSelector(selectToday);
+  const companies = useAppSelector(selectCompanies);
+  const role = useAppSelector((state) => selectOpportunity(state, roleId));
   if (!role)
     return (
       <section className="mx-auto max-w-xl py-16">
@@ -41,7 +51,7 @@ export function RoleWorkspace({ roleId }: { roleId: string }) {
   const next = getNextAction(role, today);
   const roleName = getRoleTitle(role);
   function updateApplication(changes: Partial<ApplicationFields>) {
-    dispatch({ type: 'update-application', id: roleId, changes });
+    dispatch(applicationUpdated({ id: roleId, changes }));
   }
 
   return (
@@ -52,7 +62,7 @@ export function RoleWorkspace({ roleId }: { roleId: string }) {
       <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="mb-2 text-sm font-medium text-base-content/75">
-            {getCompanyLabel(role, state.companies)}
+            {getCompanyLabel(role, companies)}
           </p>
           <h1 className="break-words text-3xl font-bold tracking-tight sm:text-4xl">
             {roleName}
@@ -153,12 +163,13 @@ export function RoleWorkspace({ roleId }: { roleId: string }) {
                       className="checkbox checkbox-primary"
                       checked={task.completed}
                       onChange={(event) =>
-                        dispatch({
-                          type: 'set-task-completed',
-                          id: role.id,
-                          taskId: task.id,
-                          completed: event.target.checked,
-                        })
+                        dispatch(
+                          taskCompletionSet({
+                            id: role.id,
+                            taskId: task.id,
+                            completed: event.target.checked,
+                          }),
+                        )
                       }
                     />
                     <span

@@ -5,12 +5,13 @@ import {
   INTEREST_LABELS,
   INTERESTS,
   type Interest,
-  useJobSearch,
+  linksCaptured,
 } from '@/features/job-search/job-search.index';
+import { useAppDispatch } from '@/state/state.index';
 import { type CaptureRow, validateCapture } from './job-capture.validation';
 
 export function JobCapture() {
-  const { dispatch } = useJobSearch();
+  const dispatch = useAppDispatch();
   const [isOpen, setIsOpen] = useState(false);
   const [rows, setRows] = useState<CaptureRow[]>([
     { id: 0, url: '', interest: 'not-set' },
@@ -54,10 +55,11 @@ export function JobCapture() {
       inputs.current.get(firstInvalid.id)?.focus();
       return;
     }
-    dispatch({
-      type: 'capture',
-      links: result.links.map((link) => ({ ...link, id: crypto.randomUUID() })),
-    });
+    dispatch(
+      linksCaptured(
+        result.links.map((link) => ({ ...link, id: crypto.randomUUID() })),
+      ),
+    );
     setRows([{ id: 0, url: '', interest: 'not-set' }]);
     setNotice(
       `${result.links.length} ${result.links.length === 1 ? 'link added' : 'links added'} to Collected. Posting details are unavailable in this sample.`,

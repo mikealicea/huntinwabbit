@@ -2,19 +2,15 @@
 
 import { useDroppable } from '@dnd-kit/react';
 import {
-  type Opportunity,
   STAGE_LABELS,
   type Stage,
+  selectRolesByStage,
 } from '@/features/job-search/job-search.index';
+import { useAppSelector } from '@/state/state.index';
 import { RoleCard } from './RoleCard';
 
-export function BoardColumn({
-  stage,
-  roles,
-}: {
-  stage: Stage;
-  roles: Opportunity[];
-}) {
+export function BoardColumn({ stage }: { stage: Stage }) {
+  const roles = useAppSelector((state) => selectRolesByStage(state, stage));
   const { ref, isDropTarget } = useDroppable({ id: stage });
   return (
     <section
