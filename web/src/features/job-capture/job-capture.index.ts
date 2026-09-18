@@ -1,0 +1,1 @@
+export { JobCapture } from './JobCapture';

@@ -114,3 +114,7 @@ tmp-example/
 /temp/
 
 .obsidian
+
+# Browser test artifacts
+web/test-results/
+web/playwright-report/

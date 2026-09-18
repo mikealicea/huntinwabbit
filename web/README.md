@@ -1,83 +1,71 @@
 # huntinwabbit web
 
-The web application currently contains a small Next.js starter with feature-based architecture
-and an MDX blog. The [product README](../README.md) describes the intended job-search experience;
-the starter does not implement it yet.
+The initial job-search frontend lives at `/app`. It uses fictional data and in-memory edits;
+reloading restores the sample dataset. No backend is required.
 
-## Included
+## Available flows
 
-- Next.js 16 App Router and React 19
-- TypeScript 5
-- Tailwind CSS 4 and daisyUI 5
-- Light and dark themes with `next-themes`
-- Nextra-powered MDX posts and Pagefind indexing
-- Vitest for unit tests
-- React Testing Library and Biome
-- Repository guidance for coding agents
+- `/` — reserved landing page with a top-right **Open app** link.
+- `/app` — six-stage board, role counts, salary, interest, priority and next actions.
+- `/app/roles/[roleId]` — posting details, application choices, tasks, follow-ups, notes and materials.
+- Batch capture with optional interest per link and immediate saving to Collected.
+- Drag handles for moving roles between stages, plus a workspace stage selector.
+- Shared company research and contacts, seeded resume choices, and separate submitted-copy metadata.
+- Responsive daisyUI components, Emerald/Forest themes, and system theme preference.
 
-## Start the app
+Edits survive navigation within `/app`, but reloads and leaving the application can discard them.
+Newly captured URLs have unknown posting details; no URLs are fetched or parsed. Resume records are
+metadata only: there are no uploaded files or working document downloads. There is no authentication,
+persistent application storage, live integration, company editor or resume-library manager yet.
+The [product README](../README.md) records the broader intended experience.
+
+The inherited MDX blog remains available at `/blog` outside application navigation.
+
+## Start locally
+
+Run from `web/` with mise activated, or prefix npm commands with `mise exec --`:
 
 ```bash
-mise install   # Node 24 and its bundled npm
+mise install
 npm ci
 npm run dev
 ```
 
-Run commands from `web/` with mise activated, or use `mise exec -- npm ...`. This is an
-independent npm project with its own `package-lock.json`; there is no npm workspace. Use
-`npm install` when changing dependencies and commit the updated lockfile.
+Open [the app](http://localhost:3000/app). Node and npm versions come from
+[mise.toml](mise.toml) and [package.json](package.json). This is an independent npm package;
+there is no root workspace. Commit the lockfile when changing dependencies.
 
-Open [http://localhost:3000](http://localhost:3000).
+## Architecture
 
-## Project structure
+App Router files compose flat feature slices under `src/features/`. Each slice exports a public
+`<feature>.index.ts`, colocates tests and maintains a feature guide. The application layout owns the
+mock-state provider so route changes do not discard edits. Posting facts are separate from application
+choices; [job-search.types.ts](src/features/job-search/job-search.types.ts) owns the frontend contracts.
+These types are not yet a server API contract. Shared behavior lives in `src/shared/` only when it
+has a reusable contract.
 
-```text
-src/
-  app/                 # Routing files only
-  content/             # MDX blog posts
-  features/            # Flat, self-contained feature slices
-  shared/              # App-wide components
-```
-
-Each feature exposes a single `<feature>.index.ts` public API. Code outside a feature imports from that file rather than reaching into feature internals.
-
-## Add a post
-
-Create an MDX file in `src/content`:
-
-```mdx
----
-title: "Post title"
-date: "2026-07-28"
-description: "A short description."
----
-
-Post content.
-```
-
-The filename becomes the route under `/blog`.
-
-## Commands
+## Verification
 
 ```bash
-npm run dev         # Start the development server
-npm run build       # Build the app and generate the Pagefind index
-npm start           # Serve the production build
-npm test            # Run unit tests once
-npm run test:watch  # Run unit tests in watch mode
-npm run check-types # Generate route types and check TypeScript
-npm run check       # Check formatting, lint and import organization
-npm run check:fix   # Apply safe Biome fixes
-npm run lint        # Lint with Biome
-npm run format      # Format with Biome
+npm run check-types
+npm run check
+npm test
+npm run build
+npx playwright install chromium
+npm run test:e2e
 ```
 
-Biome handles JavaScript, TypeScript, JSON and CSS, including Tailwind directives. Markdown
-and MDX content are reviewed manually. Generated files are excluded, and utility class
-sorting is not enabled.
+The build includes the blog's Pagefind index. Browser tests start an isolated development server on
+port 3100; that port must be free. Chromium installation is required once per browser version.
+See the [browser test guide](e2e/e2e.AGENTS.md) for coverage and limitations. Test results and traces
+are ignored. Root documentation changes also require both checks in the [root guide](../AGENTS.md).
 
-## Agent guidance
+`npm run test:watch` runs Vitest interactively. `npm run check:fix` and `npm run format` write changes;
+review their diffs. The ordinary check command is read-only.
 
-Repository conventions live in [AGENTS.md](AGENTS.md), with focused guides for
-[Next.js](docs/nextjs.AGENTS.md), [design and Tailwind](docs/design.AGENTS.md), and
-[accessibility](docs/accessibility.AGENTS.md). The project guide indexes each feature barrel.
+## Guides
+
+[AGENTS.md](AGENTS.md) indexes feature ownership and the focused Next.js, design and accessibility
+guides. The stack uses Next.js App Router, React, TypeScript, Tailwind, daisyUI, next-themes,
+dnd-kit, Vitest, Testing Library and Playwright. The [blog guide](src/features/blog/blog.AGENTS.md)
+owns MDX authoring and Nextra/Pagefind integration.

@@ -25,7 +25,7 @@ export function ThemeSwitch() {
   return (
     <button
       type="button"
-      className="btn btn-ghost btn-sm"
+      className="btn btn-ghost min-h-11"
       disabled={!isHydrated}
       aria-label={isHydrated ? `Switch to ${nextTheme} theme` : 'Theme loading'}
       onClick={() => setTheme(nextTheme)}

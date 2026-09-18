@@ -6,9 +6,13 @@
 company research, referrals, and interview preparation into one place. Its home screen should answer
 one question: **Where does everything stand?**
 
-The current focus is product design. This README records the intended experience and the decisions
-made so far; it is not a claim that these features are implemented. The app is being designed around
-one person's real job-search habits first, with both desktop and mobile use in mind.
+The web app now implements an initial board, batch link capture, and role workspace at `/app`, with
+fictional data and edits that reset on reload. `/` is reserved for a future landing page and currently
+links into the app. See the [web README](web/README.md) for setup and implemented boundaries.
+
+The rest of this README records the intended experience and product decisions; it is not a claim
+that every feature is implemented. The app is being designed around one person's real job-search
+habits first, with both desktop and mobile use in mind.
 
 ## The core experience
 
@@ -117,6 +121,6 @@ ends, a postmortem should help capture what happened and what to learn for the n
 - [Initial product notes](<docs/oneOff/Sanctum 2026-09-17 11.27.44 Job application tracking tool.combined.md>)
   — the original ramble that started the design discussion.
 
-The board, role workspace, and quick-add flow are the first design explorations. Dedicated company
-and resume-library experiences, detailed interview tracking, postmortems, and referral discovery
-still need further design.
+The web app implements the initial board, role workspace, and quick-add flows with mock data.
+Dedicated company and resume-library experiences, detailed interview tracking, postmortems, and
+referral discovery still need further design.

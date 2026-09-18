@@ -32,7 +32,7 @@ describe('site header', () => {
     mocks.setTheme.mockClear();
   });
 
-  it('links to every public page', () => {
+  it('links the application brand to the board without starter navigation', () => {
     render(<Header />);
 
     const navigation = screen.getByRole('navigation', {
@@ -40,11 +40,11 @@ describe('site header', () => {
     });
 
     expect(
-      within(navigation).getByRole('link', { name: 'Home' }),
-    ).toHaveAttribute('href', '/');
+      within(navigation).getByRole('link', { name: 'huntinwabbit' }),
+    ).toHaveAttribute('href', '/app');
     expect(
-      within(navigation).getByRole('link', { name: 'Blog' }),
-    ).toHaveAttribute('href', '/blog');
+      within(navigation).queryByRole('link', { name: 'Blog' }),
+    ).not.toBeInTheDocument();
   });
 
   it('switches from the light theme to the dark theme', () => {

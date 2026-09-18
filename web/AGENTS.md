@@ -2,8 +2,8 @@
 
 Read the [root guide](../AGENTS.md) first for branch workflow, documentation ownership, product
 boundaries and handoff. This package is huntinwabbit's primary user interface. It currently contains
-starter home, navigation, theme and MDX blog features, not the job-search experience described in
-[the product README](../README.md).
+a mock-data job-search application under `/app`, a minimal landing entry at `/`, and an inherited
+MDX blog. [The product README](../README.md) distinguishes implemented flows from longer-term intent.
 
 ## Executable owners
 
@@ -16,6 +16,8 @@ starter home, navigation, theme and MDX blog features, not the job-search experi
 | Root layout, provider lifetime and fonts | [src/app/layout.tsx](src/app/layout.tsx) |
 | Tailwind and daisyUI themes | [src/app/globals.css](src/app/globals.css) |
 | Test environment and cleanup | [vitest.config.ts](vitest.config.ts), [vitest.setup.ts](vitest.setup.ts) |
+| Browser verification | [playwright.config.ts](playwright.config.ts), [browser test guide](e2e/e2e.AGENTS.md) |
+| Application shell and state lifetime | [application layout](src/app/app/layout.tsx), [job-search barrel](src/features/job-search/job-search.AGENTS.md) |
 
 ## Architecture
 
@@ -73,7 +75,11 @@ changes. Exact shapes remain in executable owners; barrels explain intent and im
 
 | Area | Owner |
 |---|---|
-| Starter home | [home.AGENTS.md](src/features/home/home.AGENTS.md) |
+| Landing entry | [home.AGENTS.md](src/features/home/home.AGENTS.md) |
+| Job-search state and contracts | [job-search.AGENTS.md](src/features/job-search/job-search.AGENTS.md) |
+| Search board and dragging | [search-board.AGENTS.md](src/features/search-board/search-board.AGENTS.md) |
+| Batch link capture | [job-capture.AGENTS.md](src/features/job-capture/job-capture.AGENTS.md) |
+| Role workspace | [role-workspace.AGENTS.md](src/features/role-workspace/role-workspace.AGENTS.md) |
 | Navigation | [header.AGENTS.md](src/features/header/header.AGENTS.md) |
 | Light/dark theme and hydration | [theme.AGENTS.md](src/features/theme/theme.AGENTS.md) |
 | MDX blog, metadata and Pagefind | [blog.AGENTS.md](src/features/blog/blog.AGENTS.md) |
@@ -105,6 +111,10 @@ diffs. Markdown/MDX are reviewed manually and Tailwind utility sorting is not en
 The build includes Pagefind via `postbuild`; it verifies route, MDX and static-generation integration.
 Unit tests do not replace it. Generated `.next/`, `next-env.d.ts`, TypeScript caches and Pagefind
 output are local artifacts, not source to commit.
+
+For application interaction changes, also run `npm run test:e2e`. Install its browser once with
+`npx playwright install chromium`. The [browser test guide](e2e/e2e.AGENTS.md) explains the isolated
+local server on port 3100 and ignored test artifacts. The suite does not need the backend.
 
 Tests are colocated with features. Vitest defaults to Node; rendered tests opt into jsdom. Test
 user-visible outcomes through accessible roles and labels, with deterministic data and narrow mocks

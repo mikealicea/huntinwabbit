@@ -1,14 +1,14 @@
-# Header and navigation
+# Application header
 
-[Header.tsx](Header.tsx) provides the primary navigation landmark with Home and Blog links and the
-[theme switch](../theme/theme.AGENTS.md). It exports through [header.index.ts](header.index.ts) and
-is composed once in [the root layout](../../app/layout.tsx). It uses Next links and imports the
-theme feature through its public barrel. It has no independent route state or network work.
+[Header.tsx](Header.tsx) provides the application navigation landmark, a brand link back to `/app`,
+and the [theme switch](../theme/theme.AGENTS.md). It exports through [header.index.ts](header.index.ts)
+and is composed by [the application layout](../../app/app/layout.tsx), not the root or blog layout.
+It uses Next links and imports the theme feature through its public barrel. There is no independent
+route state, network work, mobile drawer or authenticated menu.
 
-Keep link names, destinations and keyboard access clear. Do not create a second theme owner in the
-header. There is no mobile drawer, active-route indicator or authenticated menu implemented yet;
-new navigation behavior must define focus, dismissal and responsive states when introduced.
+The header reflows on narrow screens; primary controls retain touch-sized targets. Keep link names,
+destinations and keyboard access clear. The landing page owns its separate application-entry link.
 
-[Header.test.tsx](Header.test.tsx) checks link destinations and light-to-dark switching with a mocked
-`next-themes` boundary. It does not test browser persistence, hydration or both real CSS themes.
-Use the full gate and UI verification rules in the [web guide](../../../AGENTS.md).
+[Header.test.tsx](Header.test.tsx) checks the board destination and logical theme switching with a
+mocked next-themes boundary. [Browser tests](../../../e2e/job-search.spec.ts) exercise the actual
+Emerald/Forest mapping. Follow the full [web gate](../../../AGENTS.md) and manual UI verification rules.

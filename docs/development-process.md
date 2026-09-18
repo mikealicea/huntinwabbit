@@ -33,8 +33,9 @@ wiki link or full Markdown syntax.
 
 ## Deliberate differences
 
-- `web/` is the intended application, not a marketing site for an iOS app. Existing blog/home content
-  remains starter scaffolding; no Sanctum routes, purchase flows or marketing claims were adopted.
+- `web/` is the application, not a marketing site for an iOS app. The job-search frontend uses mock
+  data; the blog remains inherited scaffolding. No Sanctum routes, purchase flows or marketing claims
+  were adopted.
 - Web and server are independent npm packages using mise and Biome. Read-only `check` and writing
   `check:fix` remain separate. No root npm workspace, pnpm, Prettier or Xcode workflow is introduced.
 - Native build generation, simulator rules, App Store release processes, DerivedData, SwiftData,
@@ -58,7 +59,8 @@ These are recorded limitations, not infrastructure added by this reconciliation:
 - There is no automated credential scanner. Biome and the documentation gate do not prove that
   staged content is free of secrets. Add a scanner as actual tooling, with failure-path tests,
   before claiming parity with Sanctum's committed-secret gate.
-- There is no browser accessibility/end-to-end suite, deployment verification suite or confirmed
+- [Browser end-to-end tests](../web/e2e/e2e.AGENTS.md) cover the initial job-search flows. They are not
+  a comprehensive accessibility audit. There is no deployment verification suite or confirmed
   huntinwabbit deployment. Feature barrels state what existing tests actually cover.
 - Blog date parsing validates a non-empty string rather than a valid ISO date. The
   [blog barrel](../web/src/features/blog/blog.AGENTS.md) records the narrower implementation.

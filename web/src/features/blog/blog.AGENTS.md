@@ -20,6 +20,8 @@ job-posting importer, company-research store or runtime CMS. Public claims follo
   [next.config.ts](../../../next.config.ts) synchronized.
 - Posts live in [src/content](../../content). Use ISO `YYYY-MM-DD` dates and non-empty titles.
   The parser only checks non-empty title/date strings; it does not validate ISO dates or trim them.
+- [The blog layout](../../app/blog/layout.tsx) owns its prose PageShell. It is separate from the
+  application shell and mock-state provider; the blog is not in primary application navigation.
 - The `postbuild` script in [package.json](../../../package.json) indexes generated blog HTML
   into ignored Pagefind output. Do not edit generated search files.
 

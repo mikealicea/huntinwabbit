@@ -10,6 +10,7 @@ export function AppThemeProvider({ children }: { children: ReactNode }) {
       attribute="data-theme"
       defaultTheme="system"
       enableSystem
+      disableTransitionOnChange
       themes={Object.values(THEME_NAMES)}
       value={DAISY_THEME_MAP}
     >

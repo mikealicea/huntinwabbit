@@ -49,6 +49,7 @@ browser/device and checks actually completed; explicitly name anything not exerc
 
 Rendered tests should find controls through accessible roles and labels and assert meaningful state
 transitions. jsdom tests cannot prove rendered contrast, hit targets, screen-reader reading order,
-real focus behavior or the whole application's accessibility. There is no browser accessibility
-suite configured yet. Add focused coverage with the feature that needs it rather than claiming an
-unrun audit passed.
+real focus behavior or the whole application's accessibility. The
+[browser suite](../e2e/e2e.AGENTS.md) covers selected real interactions and responsive behavior;
+it is not a complete accessibility audit. Add focused coverage with the feature that needs it rather
+than claiming an unrun audit passed.

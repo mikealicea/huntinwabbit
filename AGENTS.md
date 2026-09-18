@@ -36,7 +36,7 @@ facts that code cannot establish.
 
 | Folder | Project | Read first |
 |---|---|---|
-| `web/` | Next.js web application; currently includes starter pages and a blog | `web/AGENTS.md` |
+| `web/` | Next.js job-search frontend with mock data, a landing entry and inherited blog | `web/AGENTS.md` |
 | `server/` | Node 24, TypeScript ESM, Express API on Serverless/AWS Lambda | `server/AGENTS.md` |
 | `docs/` | Shared explanations, product notes and design prototypes | `docs/README.md` |
 | `product-workspace/` | Product projects and research | `product-workspace/product-workspace.AGENTS.md` |

@@ -11,10 +11,13 @@ data, not a source of implemented routes, persistence or a finalized design syst
 - [the root layout](../src/app/layout.tsx) loads Ubuntu and Ubuntu Mono once through `next/font`.
 - [the theme barrel](../src/features/theme/theme.AGENTS.md) owns the logical light/dark mapping and
   provider behavior. Keep CSS theme names and TypeScript mapping in agreement.
-- [PageShell](../src/shared/PageShell.tsx) owns the current main landmark and common content width.
-  Reuse its contract where appropriate; do not assume a future board must inherit a prose layout.
+- [PageShell](../src/shared/PageShell.tsx) owns the blog's main landmark and prose content width.
+  [The application layout](../src/app/app/layout.tsx) owns the wider job-search shell and main landmark;
+  the landing entry owns its own minimal layout.
 
 Use semantic colors and paired foreground/background tokens instead of per-feature color copies.
+The shared stylesheet strengthens form borders and placeholder contrast using the active theme's
+foreground token. Field errors use readable foreground text and an error-colored input boundary.
 Use the existing font tokens; changing typography, theme names or status meanings requires updating
 all owners in the same change. Meaning must survive color changes and assistive technology.
 
@@ -44,4 +47,4 @@ animation dependency for an isolated component without a concrete need.
 
 Verify changed layouts with representative long text, empty and populated data, narrow and wide
 viewports, both themes and zoom. Record the actual browser checks in the handoff. The current theme
-and starter pages are implementation facts, not a requirement to preserve boilerplate visuals forever.
+and landing entry are implementation facts, not a requirement to preserve their visuals forever.

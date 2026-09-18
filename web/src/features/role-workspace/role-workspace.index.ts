@@ -1,0 +1,1 @@
+export { RoleWorkspace } from './RoleWorkspace';

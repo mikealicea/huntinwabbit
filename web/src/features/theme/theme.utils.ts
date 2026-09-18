@@ -5,6 +5,6 @@ export const THEME_NAMES = {
 
 // These values must match the daisyUI themes configured in globals.css.
 export const DAISY_THEME_MAP = {
-  light: 'bumblebee',
-  dark: 'business',
+  light: 'emerald',
+  dark: 'forest',
 } as const;

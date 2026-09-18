@@ -1,9 +1,7 @@
 import './globals.css';
 import type { Metadata } from 'next';
 import { Ubuntu, Ubuntu_Mono } from 'next/font/google';
-import { Header } from '@/features/header/header.index';
 import { AppThemeProvider } from '@/features/theme/theme.index';
-import { PageShell } from '@/shared/shared.index';
 
 const ubuntuSans = Ubuntu({
   weight: ['300', '400', '500', '700'],
@@ -18,7 +16,8 @@ const ubuntuMono = Ubuntu_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Hello world',
+  title: { default: 'huntinwabbit', template: '%s · huntinwabbit' },
+  description: 'A personal workspace for your job search.',
 };
 
 export default function RootLayout({
@@ -31,10 +30,7 @@ export default function RootLayout({
       <body
         className={`${ubuntuSans.variable} ${ubuntuMono.variable} bg-base-100 text-base-content min-h-screen font-sans antialiased`}
       >
-        <AppThemeProvider>
-          <Header />
-          <PageShell>{children}</PageShell>
-        </AppThemeProvider>
+        <AppThemeProvider>{children}</AppThemeProvider>
       </body>
     </html>
   );
