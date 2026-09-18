@@ -26,7 +26,8 @@
         "server/**",
         "web/**",
         "docs/**",
-        "scripts/**"
+        "scripts/**",
+        "supabase/**"
       ],
       "exclude": [
         "docs/oneOff/**"
@@ -41,7 +42,8 @@
     {
       "guide": "AGENTS.md",
       "include": [
-        "scripts/*.AGENTS.md"
+        "scripts/*.AGENTS.md",
+        "supabase/*.AGENTS.md"
       ]
     },
     {

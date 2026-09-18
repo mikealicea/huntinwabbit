@@ -118,3 +118,7 @@ tmp-example/
 # Browser test artifacts
 web/test-results/
 web/playwright-report/
+
+# Supabase checkout-local linkage and CLI state
+supabase/.temp/
+supabase/.branches/

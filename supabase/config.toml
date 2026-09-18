@@ -1,0 +1,50 @@
+# One hosted project for local development, deployed dev, and production.
+# This is the local CLI identifier; mise.toml pins the remote push target.
+project_id = "huntinwabbit"
+
+[auth]
+enabled = true
+# Replace with the canonical HTTPS production origin when hosting is available.
+site_url = "http://localhost:3000"
+# Add exact HTTPS callback URLs for deployed dev/prod here; retain local URLs.
+# These are allowed destinations, not routes implemented by this setup.
+additional_redirect_urls = [
+  "http://localhost:3000/**",
+  "http://127.0.0.1:3000/**",
+]
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
+enable_signup = true
+enable_anonymous_sign_ins = false
+enable_manual_linking = false
+minimum_password_length = 12
+password_requirements = ""
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = true
+secure_password_change = true
+max_frequency = "1m"
+otp_length = 8
+otp_expiry = 3600
+
+[auth.sms]
+enable_signup = false
+
+[auth.external.google]
+enabled = false
+
+# Preserve the hosted project's existing TOTP capability.
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
+
+# No application migrations, seed data, buckets, or Edge Functions.
+# Supabase's internal Postgres remains necessary for Auth; application data goes to DynamoDB.
+[db.seed]
+enabled = false
+
+[storage]
+enabled = false

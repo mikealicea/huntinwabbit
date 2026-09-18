@@ -23,10 +23,11 @@ Do not maintain a second implementation in prose.
 
 - [Development practices and parity](development-process.md) — the adopted process, its local owners,
   deliberate differences from the reference app, and current implementation gaps.
+- [Authentication infrastructure](auth-infrastructure.md) — shared Supabase configuration, localhost
+  setup, deployment preparation and the Supabase/DynamoDB data boundary.
 
-Shared API, storage, authentication and processor/retention contracts do not exist yet. Add them when
-an actual feature establishes the boundary, linking its schemas/configuration rather than repeating
-exact fields and values here.
+Runtime API, storage and retention contracts do not exist yet. Add them when an actual feature
+establishes the boundary, linking its schemas/configuration rather than repeating exact fields here.
 
 ## Product evidence and prototypes
 

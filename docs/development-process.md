@@ -52,8 +52,9 @@ wiki link or full Markdown syntax.
 
 These are recorded limitations, not infrastructure added by this reconciliation:
 
-- Authentication, authorization, canonical persistence, API integration and retention decisions
-  remain open. The skeleton must gain those boundaries before handling private application data.
+- Supabase Auth and DynamoDB are now selected; [auth infrastructure](auth-infrastructure.md) owns
+  their boundary. Runtime authentication, authorization, persistence, API integration and retention
+  remain unimplemented. The skeleton must gain those boundaries before handling private data.
 - Server logs currently include raw paths and raw errors/causes. The
   [shared barrel](../server/src/shared/shared.AGENTS.md) records that behavior and its privacy gap.
 - There is no automated credential scanner. Biome and the documentation gate do not prove that

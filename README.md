@@ -10,6 +10,11 @@ The web app now implements an initial board, batch link capture, and role worksp
 fictional data and edits that reset on reload. `/` is reserved for a future landing page and currently
 links into the app. See the [web README](web/README.md) for setup and implemented boundaries.
 
+Authentication uses one shared Supabase project for development and production; application data
+will use DynamoDB through the backend. The [auth infrastructure runbook](docs/auth-infrastructure.md)
+explains the checked-in configuration and deployment preparation. Login UI, API authentication and
+DynamoDB persistence are not implemented yet.
+
 The rest of this README records the intended experience and product decisions; it is not a claim
 that every feature is implemented. The app is being designed around one person's real job-search
 habits first, with both desktop and mobile use in mind.

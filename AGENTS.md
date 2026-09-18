@@ -41,6 +41,7 @@ facts that code cannot establish.
 | `docs/` | Shared explanations, product notes and design prototypes | `docs/README.md` |
 | `product-workspace/` | Product projects and research | `product-workspace/product-workspace.AGENTS.md` |
 | `scripts/` | Repository documentation validation | `scripts/scripts.AGENTS.md` |
+| `supabase/` | Shared hosted authentication configuration | [supabase.AGENTS.md](supabase/supabase.AGENTS.md) |
 
 Project guides own stack-specific conventions. When adapting inherited scaffolding, update affected
 guidance to describe huntinwabbit and the code that actually exists. Keep unrelated cleanup separately
