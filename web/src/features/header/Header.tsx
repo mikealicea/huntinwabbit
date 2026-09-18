@@ -1,7 +1,8 @@
 import Link from 'next/link';
+import { type AuthAction, SignOutButton } from '@/features/auth/auth.index';
 import { ThemeSwitch } from '@/features/theme/theme.index';
 
-export function Header() {
+export function Header({ signOutAction }: { signOutAction: AuthAction }) {
   return (
     <header className="border-base-300 bg-base-100 border-b">
       <nav
@@ -25,7 +26,10 @@ export function Header() {
             Your job search
           </span>
         </div>
-        <ThemeSwitch />
+        <div className="flex flex-wrap items-center gap-2">
+          <ThemeSwitch />
+          <SignOutButton action={signOutAction} />
+        </div>
       </nav>
     </header>
   );

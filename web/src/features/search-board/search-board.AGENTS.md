@@ -2,6 +2,7 @@
 
 ## Purpose and visible behavior
 
+The [auth boundary](../auth/auth.AGENTS.md) protects the route before rendering sample data.
 The board at `/app` makes the overall search understandable at a glance. It shows all stages,
 including empty ones, and derives active/closed totals from the session state. Cards expose posting
 and workflow context with unavailable facts labeled honestly. The board reflows from six columns to

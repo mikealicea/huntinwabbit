@@ -1,14 +1,16 @@
 import type { ReactNode } from 'react';
+import { requireUser, submitAuth } from '@/features/auth/auth.server.index';
 import { Header } from '@/features/header/header.index';
 import { JobSearchProvider } from '@/features/job-search/job-search.index';
 
-export default function ApplicationLayout({
+export default async function ApplicationLayout({
   children,
 }: {
   children: ReactNode;
 }) {
+  const identity = await requireUser();
   return (
-    <JobSearchProvider>
+    <JobSearchProvider key={identity.userId}>
       <div className="min-h-screen bg-base-200">
         <a
           href="#app-content"
@@ -16,7 +18,7 @@ export default function ApplicationLayout({
         >
           Skip to content
         </a>
-        <Header />
+        <Header signOutAction={submitAuth.bind(null, 'signout')} />
         <main
           id="app-content"
           className="mx-auto max-w-[1600px] px-4 py-8 sm:px-8 sm:py-10"

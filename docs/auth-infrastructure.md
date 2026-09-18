@@ -2,8 +2,10 @@
 
 The adopted split is Supabase Auth for identities and sessions, and DynamoDB for application data
 behind the Express/Lambda backend. The [Supabase barrel](../supabase/supabase.AGENTS.md) describes
-the configuration boundary. Login UI, session handling, API JWT verification, ownership checks and
-DynamoDB tables are separate implementation work; current app data remains mock data.
+the configuration boundary. The [web auth feature](../web/src/features/auth/auth.AGENTS.md) implements
+login, signup, email confirmation, recovery, session handling and protected workspace routes. API JWT
+verification, application-data ownership checks and DynamoDB tables remain separate implementation
+work; current app data remains mock data.
 
 ## One shared project
 
@@ -42,22 +44,56 @@ Use `mise run docs:check` for local documentation validation.
 ## Localhost now, deployed URLs later
 
 [config.toml](../supabase/config.toml) contains the current localhost Site URL and redirect allowlist.
-Allowed URLs do not implement callback routes. When deploying the app:
+The web app implements `/auth/confirm` for both confirmation and recovery emails. When deploying the app:
 
 1. Set `auth.site_url` to the canonical HTTPS production origin.
 2. Add the exact dev/prod callback and recovery destinations implemented by the app to
    `auth.additional_redirect_urls`, retaining localhost entries. Avoid broad hosted-domain wildcards.
 3. Push once to the shared project, then verify readback. There are no separate dev/prod pushes.
-4. Have each app deployment explicitly request its own allowlisted redirect destination; the shared
-   Site URL is the fallback and cannot vary by caller.
+4. Set each web deployment’s APP_ORIGIN to its own HTTPS origin. The app explicitly requests
+   APP_ORIGIN plus `/auth/confirm`; templates use RedirectTo rather than the shared Site URL.
 
-The app integration will use `https://zjwbikkvzexdplwudzqy.supabase.co` and a publishable API key.
+The app integration uses `https://zjwbikkvzexdplwudzqy.supabase.co` and a publishable API key.
 The hosted issuer is that URL plus `/auth/v1`, and its public JWKS endpoint is the issuer plus
 `/.well-known/jwks.json`. Check the project's signing-key configuration when implementing JWT
-verification; this setup does not rotate keys or establish an authentication middleware.
+verification on the Express API; web route protection uses Supabase’s verified user lookup.
+This setup does not rotate signing keys.
 The management token and secret/service-role keys must never enter browser configuration.
 
+## Web environment and team smoke test
+
+Copy [the web environment example](../web/.env.example) to ignored `web/.env.local`, then fill its
+publishable key from this project's API settings. Do not use a management, secret or service-role
+key. These values are server-only; the browser uses Next.js Server Actions. APP_ORIGIN defaults to
+localhost in the example and must match the origin where the app is opened. Use the same shared
+Supabase URL/key in hosted dev and production, with different APP_ORIGIN values.
+
+The checked-in confirmation and recovery templates are applied by `mise run auth:push`. Review the
+complete diff and require an up-to-date second run. They use the per-request `/auth/confirm`
+destination and a token hash; a confirmation page button consumes the token. Opening the link in
+another browser works without copying the original browser’s session. Localhost links still require
+the app to be reachable on that device; they do not make a local server remotely accessible.
+
+For a deliberate live check with an eligible team address:
+
+1. Start the web app on the configured origin; create a dedicated development account at `/signup`.
+2. Confirm the delivered email in another browser on the same machine. Verify that `/app` opens and
+   the URL no longer contains the token. Sign out and verify protected role links return to login.
+3. Request recovery at `/forgot-password`, open the email, continue and set a new password.
+4. Verify the new password logs in and the old password fails. Avoid repeated attempts that consume
+   the shared sender quota. Never reset or delete unrelated shared-project accounts.
+
+`npm run test:auth` checks components and every auth-code branch. `npm run test:e2e` uses local fake
+provider credentials, sends no remote email, and needs neither the shared project nor the Express
+backend. These checks do not validate actual SMTP delivery. The automated fixture is not a full
+Supabase emulator; secure password-change enforcement, shared quotas and sender eligibility require
+provider verification.
+
 ## Data and email boundary
+
+The Next.js server processes submitted email/password forms and forwards authentication requests
+to Supabase. Session credentials are stored in HTTP-only browser cookies. Do not enable request-body
+logging or token-bearing confirmation-URL logging in hosting infrastructure.
 
 Supabase processes account identifiers, password-derived authentication data, sessions, tokens and
 authentication request metadata. Application notes, resumes, company research and contacts must
@@ -84,3 +120,8 @@ Checked 2026-09-18 against official documentation and CLI v2.111.0 source:
   and exact production destinations.
 - [Custom SMTP](https://supabase.com/docs/guides/auth/auth-smtp) describes default-sender restrictions.
 - [JWT signing keys](https://supabase.com/docs/guides/auth/signing-keys) describes hosted key discovery.
+
+- [Server-side sessions](https://supabase.com/docs/guides/auth/server-side/creating-a-client) describes
+  cookie refresh, verified identity and response-cache requirements.
+- [Email templates](https://supabase.com/docs/guides/auth/auth-email-templates) documents RedirectTo
+  and token-hash verification.

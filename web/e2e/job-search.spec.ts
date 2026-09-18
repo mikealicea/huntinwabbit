@@ -2,6 +2,13 @@ import { expect, type Page, test } from '@playwright/test';
 
 test.beforeEach(async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-09-18T16:00:00Z'));
+  await page.goto('/login');
+  await page
+    .getByLabel('Email', { exact: true })
+    .fill('workspace@example.test');
+  await page.getByLabel('Password', { exact: true }).fill('fictional-password');
+  await page.getByRole('button', { name: 'Log in', exact: true }).click();
+  await expect(page).toHaveURL('/app');
 });
 
 async function moveProductRole(page: Page, targetStage: string) {

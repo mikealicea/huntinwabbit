@@ -7,7 +7,7 @@ enabled = true
 # Replace with the canonical HTTPS production origin when hosting is available.
 site_url = "http://localhost:3000"
 # Add exact HTTPS callback URLs for deployed dev/prod here; retain local URLs.
-# These are allowed destinations, not routes implemented by this setup.
+# The web app requests /auth/confirm on its configured APP_ORIGIN.
 additional_redirect_urls = [
   "http://localhost:3000/**",
   "http://127.0.0.1:3000/**",
@@ -29,6 +29,14 @@ secure_password_change = true
 max_frequency = "1m"
 otp_length = 8
 otp_expiry = 3600
+
+[auth.email.template.confirmation]
+subject = "Confirm your huntinwabbit email"
+content_path = "./supabase/templates/confirmation.html"
+
+[auth.email.template.recovery]
+subject = "Reset your huntinwabbit password"
+content_path = "./supabase/templates/recovery.html"
 
 [auth.sms]
 enable_signup = false

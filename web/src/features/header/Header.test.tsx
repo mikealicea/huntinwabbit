@@ -33,7 +33,9 @@ describe('site header', () => {
   });
 
   it('links the application brand to the board without starter navigation', () => {
-    render(<Header />);
+    render(
+      <Header signOutAction={async () => ({ status: 'idle', message: '' })} />,
+    );
 
     const navigation = screen.getByRole('navigation', {
       name: 'Primary navigation',
@@ -48,7 +50,9 @@ describe('site header', () => {
   });
 
   it('switches from the light theme to the dark theme', () => {
-    render(<Header />);
+    render(
+      <Header signOutAction={async () => ({ status: 'idle', message: '' })} />,
+    );
 
     fireEvent.click(
       screen.getByRole('button', { name: 'Switch to dark theme' }),

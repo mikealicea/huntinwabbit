@@ -14,17 +14,21 @@
     "postbuild": "pagefind --site .next/server/app/blog --output-path public/_pagefind",
     "check": "biome check .",
     "check:fix": "biome check --write .",
-    "check-types": "next typegen && tsc --noEmit"
+    "check-types": "next typegen && tsc --noEmit",
+    "test:auth": "vitest run src/features/auth --coverage"
   },
   "dependencies": {
     "@dnd-kit/dom": "^0.5.0",
     "@dnd-kit/react": "^0.5.0",
-    "next": "16.1.1",
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.116.0",
+    "next": "16.3.5",
     "next-themes": "^0.4.6",
     "nextra": "^4.6.1",
     "nextra-theme-blog": "^4.6.1",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.4",
@@ -37,6 +41,7 @@
     "@types/node": "~24",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitest/coverage-v8": "^4.1.10",
     "daisyui": "^5.5.14",
     "jsdom": "^30.0.0",
     "pagefind": "^1.4.0",

@@ -24,8 +24,9 @@ do not convert the whole route tree to client components to access theme state. 
 credentials and provider integrations out of client imports and browser-exposed variables.
 
 For new data flows, explicitly choose freshness, caching, authorization and invalidation behavior.
-Do not share private user data through a public cache. The starter has no user-data cache, Server
-Actions, proxy or API integration to preserve. Add abstractions only for the feature being built.
+Do not share private user data through a public cache. The [auth feature](../src/features/auth/auth.AGENTS.md) owns Server Actions, session verification
+and Proxy cookie refresh. Its routes prohibit shared response caching. Application data still has
+no API integration or user-data cache. Add abstractions only for the feature being built.
 
 ## Metadata, generation and recovery
 
@@ -40,3 +41,13 @@ server details. Describe the actual behavior in the feature barrel and test mean
 Run the full web gate from the project guide. Its production build exercises static generation and
 Pagefind as well as compilation. Browser behavior, focus and navigation still need the UI checks
 appropriate to the changed flow; a successful build is not visual evidence.
+
+## Authentication framework requirements
+
+The installed Next.js 16 patch level includes fixes for Server Action origin validation and Proxy
+bypasses. Server guards remain mandatory even with Proxy in place. `skipProxyUrlNormalize` preserves
+the configured auth origin for loopback redirects; `NEXT_DIST_DIR` isolates browser-test output.
+Confirmation requests are excluded from Next's development URL logging because they carry tokens.
+Checked 2026-09-18 against the installed framework and the upstream
+[Server Actions advisory](https://github.com/vercel/next.js/security/advisories/GHSA-mq59-m269-xvcx)
+and [Proxy advisory](https://github.com/vercel/next.js/security/advisories/GHSA-26hh-7cqf-hhc6).

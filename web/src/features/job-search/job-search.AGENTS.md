@@ -7,7 +7,9 @@ companies, tasks and materials. It supports the board, capture and role workspac
 It is not authentication, persistent storage, a parser or an API client.
 
 [JobSearchProvider.tsx](JobSearchProvider.tsx) is mounted in the
-[application layout](../../app/app/layout.tsx). Navigation within `/app` preserves edits. Reloading
+[application layout](../../app/app/layout.tsx). The layout requires a verified identity and keys this provider by user ID so account changes
+cannot inherit another user’s in-memory edits. [Auth](../auth/auth.AGENTS.md) owns that boundary.
+Navigation within `/app` preserves edits. Reloading
 creates fresh fictional fixtures; leaving the layout can also discard the session. No application
 data is written to browser storage, sent to a service or included in logs. Theme preferences have a
 separate owner. The provider's date clock refreshes due labels on visibility changes and each minute.

@@ -40,6 +40,7 @@ Carthage/Checkouts/
 # server/src/shared/shared.env.ts.
 .env
 .env.*
+!web/.env.example
 Secrets.swift
 !Secrets.swift.example
 
@@ -97,6 +98,7 @@ mise.local.toml
 
 # Next.js / Pagefind (landing page)
 .next/
+.next-e2e/
 out/
 _pagefind/
 .vercel/

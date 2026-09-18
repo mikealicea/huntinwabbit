@@ -20,10 +20,23 @@ export default defineConfig({
       },
     },
   ],
-  webServer: {
-    command: 'npm run dev -- --hostname 127.0.0.1 --port 3100',
-    url: 'http://127.0.0.1:3100',
-    reuseExistingServer: false,
-    timeout: 120000,
-  },
+  webServer: [
+    {
+      command: 'node e2e/auth-provider.mjs',
+      url: 'http://127.0.0.1:3101/health',
+      reuseExistingServer: false,
+    },
+    {
+      command: 'npm run dev -- --hostname 127.0.0.1 --port 3100',
+      url: 'http://127.0.0.1:3100',
+      reuseExistingServer: false,
+      timeout: 120000,
+      env: {
+        NEXT_DIST_DIR: '.next-e2e',
+        SUPABASE_URL: 'http://127.0.0.1:3101',
+        SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_fictional',
+        APP_ORIGIN: 'http://127.0.0.1:3100',
+      },
+    },
+  ],
 });

@@ -13,7 +13,8 @@ do not bulk-reset users or weaken production auth settings for tests.
 
 Supabase's internal Postgres supports Auth. Application records belong in DynamoDB behind the
 backend, with separate dev/prod resources when persistence is implemented. This setup provisions
-neither DynamoDB tables nor app authorization. The current mock UI and hello API remain unchanged.
+neither DynamoDB tables nor API authorization. The [web auth feature](../web/src/features/auth/auth.AGENTS.md)
+implements account flows and protects the mock workspace. The hello API remains unchanged.
 
 ## Owners and operation
 
@@ -22,6 +23,9 @@ neither DynamoDB tables nor app authorization. The current mock UI and hello API
   retained; this does not implement an MFA flow in the app.
 - [Root mise.toml](../mise.toml) pins the CLI and remote project target and owns the push command.
   Run its task from the repository root. Do not substitute a linked project or a stage-based target.
+- The confirmation and recovery templates referenced by config send users to the caller’s allowlisted
+  `/auth/confirm` endpoint. Token hashes are opaque provider values, including PKCE-prefixed hashes;
+  server verification exchanges them for sessions without the original browser’s verifier cookie.
 - No migrations, seed users, Storage buckets, Edge Functions or app credentials are managed here.
 
 The pinned CLI reviews multiple service categories, not only auth. Inspect all proposed changes

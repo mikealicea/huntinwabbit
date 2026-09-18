@@ -36,7 +36,8 @@ MDX blog. [The product README](../README.md) distinguishes implemented flows fro
   choice. Durable work needs an explicit lifecycle beyond the component that displays it.
 - Isolate vendor integration in the feature or adapter that owns it. UI components should not
   choose provider credentials or duplicate backend business rules. Define the web/server contract
-  before introducing a real integration; no API client or authentication flow exists here yet.
+  before introducing a real integration. The auth feature integrates directly with Supabase from
+  the Next.js server; the application-data backend has no API client integration yet.
 
 ## Product, copy and data boundaries
 
@@ -75,6 +76,7 @@ changes. Exact shapes remain in executable owners; barrels explain intent and im
 
 | Area | Owner |
 |---|---|
+| Authentication | [auth.AGENTS.md](src/features/auth/auth.AGENTS.md) |
 | Landing entry | [home.AGENTS.md](src/features/home/home.AGENTS.md) |
 | Job-search state and contracts | [job-search.AGENTS.md](src/features/job-search/job-search.AGENTS.md) |
 | Search board and dragging | [search-board.AGENTS.md](src/features/search-board/search-board.AGENTS.md) |
@@ -121,3 +123,13 @@ user-visible outcomes through accessible roles and labels, with deterministic da
 for external framework/content boundaries. Cover meaningful errors and state transitions. Do not
 commit `.only` or `.skip`, or claim browser accessibility from jsdom tests alone. For UI changes,
 record the browser, viewport, states and manual accessibility checks actually exercised.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

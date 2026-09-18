@@ -22,7 +22,7 @@ with the count of all roles linked to that company.
 - [role-workspace.index.ts](role-workspace.index.ts) exports the route-facing component.
 
 The [route](../../app/app/roles/[roleId]/page.tsx) resolves framework params and passes only the opaque
-role ID. State and actions come through [job-search.index.ts](../job-search/job-search.index.ts), not
+role ID after requiring a verified [auth identity](../auth/auth.AGENTS.md). State and actions come through [job-search.index.ts](../job-search/job-search.index.ts), not
 through the URL or a duplicated local store. No personal content is added to route metadata.
 
 Unknown IDs show a recovery explanation and board link. A newly captured role's URL becomes missing

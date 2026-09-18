@@ -53,7 +53,7 @@ wiki link or full Markdown syntax.
 These are recorded limitations, not infrastructure added by this reconciliation:
 
 - Supabase Auth and DynamoDB are now selected; [auth infrastructure](auth-infrastructure.md) owns
-  their boundary. Runtime authentication, authorization, persistence, API integration and retention
+  their boundary. Web authentication is implemented; backend authorization, persistence, API integration and retention
   remain unimplemented. The skeleton must gain those boundaries before handling private data.
 - Server logs currently include raw paths and raw errors/causes. The
   [shared barrel](../server/src/shared/shared.AGENTS.md) records that behavior and its privacy gap.
