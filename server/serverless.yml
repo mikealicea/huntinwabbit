@@ -1,0 +1,29 @@
+# "org" ensures this Service is used with the correct Serverless Framework Access Key.
+# Set this to your Serverless dashboard org (or remove it if you don't use the dashboard).
+org: builtinspace
+service: serverless-typescript-boilerplate
+
+frameworkVersion: '4'
+
+provider:
+  name: aws
+  runtime: nodejs24.x
+  region: us-east-1
+
+# v4 bundles src/ with built-in esbuild — handlers point at source, not build output.
+# Reference: docs/SERVERLESS-V4.AGENTS.md
+build:
+  esbuild:
+    sourcemap:
+      type: linked
+      setNodeOptions: true # readable TS stack traces in CloudWatch
+    exclude: ['@aws-sdk/*'] # SDK v3 ships in the nodejs runtime
+    # ESM output + CJS deps (serverless-http, express) need a require shim.
+    configFile: ./esbuild.config.mjs
+
+functions:
+  api:
+    handler: src/lambda.handler
+    timeout: 30
+    memorySize: 512
+    url: true

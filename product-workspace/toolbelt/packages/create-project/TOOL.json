@@ -1,0 +1,5 @@
+{
+  "name": "create-project",
+  "description": "Scaffolds a dated project folder with correct naming, frontmatter, and subdirectory structure",
+  "exec": "bun index.ts"
+}

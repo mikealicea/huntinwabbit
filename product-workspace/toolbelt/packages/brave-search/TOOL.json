@@ -1,0 +1,5 @@
+{
+  "name": "brave-search",
+  "description": "Search Brave web results or LLM context for web research workflows",
+  "exec": "bun index.ts"
+}

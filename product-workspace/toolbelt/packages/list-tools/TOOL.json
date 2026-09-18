@@ -1,0 +1,5 @@
+{
+  "name": "list-tools",
+  "description": "Lists all available toolbelt tools with their descriptions and invocation commands",
+  "exec": "bun index.ts"
+}

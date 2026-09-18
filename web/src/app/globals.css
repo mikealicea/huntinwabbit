@@ -1,0 +1,16 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+@plugin "daisyui" {
+  themes:
+    bumblebee,
+    business --prefersdark;
+}
+
+@custom-variant dark (
+  &:where([data-theme="business"], [data-theme="business"] *)
+);
+
+@theme inline {
+  --font-sans: var(--font-ubuntu-sans);
+  --font-mono: var(--font-ubuntu-mono);
+}

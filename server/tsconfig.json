@@ -1,0 +1,42 @@
+{
+  "compilerOptions": {
+    // output
+    "target": "ES2024",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "lib": ["ES2024"],
+    "types": ["node"],
+    "rootDir": "src",
+    "outDir": "build",
+    "declaration": false, // set to `false` for an app, keep `true` for a library
+    "sourceMap": true,
+
+    // module interop
+    // .ts extensions in relative imports so `node src/local.ts` runs natively
+    // on Node 24 (type stripping); tsc rewrites them to .js in build output
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true,
+    "allowSyntheticDefaultImports": true,
+    "importHelpers": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+
+    // type safety
+    "strict": true,
+    "alwaysStrict": true,
+    "forceConsistentCasingInFileNames": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+    "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+
+    // build performance
+    "incremental": true,
+    "skipLibCheck": true,
+    "tsBuildInfoFile": ".tsbuildinfo"
+  },
+  "include": ["src"],
+  // tests are colocated in src/ but never built; tsconfig.vitest.json type-checks them
+  "exclude": ["**/*.test.ts", "**/*.spec.ts"]
+}
