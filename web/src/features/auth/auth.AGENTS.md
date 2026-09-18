@@ -18,9 +18,17 @@ the processor boundary. Do not relax the shared project's policies for tests.
 - [auth.client.ts](auth.client.ts), [auth.config.ts](auth.config.ts) and
   [auth.session.ts](auth.session.ts) own per-request SDK construction, environment validation,
   cookies and server verification. [auth.proxy.ts](auth.proxy.ts) persists refreshes before rendering.
-- [AuthPage.tsx](AuthPage.tsx) composes the account pages;
-  [AuthForm.tsx](AuthForm.tsx) owns transient inputs, pending state, field focus and resend UI.
-  Confirmation uses [AuthConfirmationPage.tsx](AuthConfirmationPage.tsx) and an explicit POST form.
+- [AuthPage.container.tsx](AuthPage.container.tsx) coordinates server identity and page selection;
+  [AuthFrame.container.tsx](AuthFrame.container.tsx) supplies a theme-control slot to the
+  [frame component](AuthFrame.component.tsx).
+- [AuthForm.container.tsx](AuthForm.container.tsx) owns action/pending lifecycles and the sign-out
+  recovery slot. [AuthForm.component.tsx](AuthForm.component.tsx) owns transient local inputs and
+  focus, renders supplied action feedback and emits form submissions. Credentials never enter Redux.
+- [ConfirmForm.container.tsx](ConfirmForm.container.tsx) and [SignOutButton.container.tsx](SignOutButton.container.tsx)
+  coordinate their action lifecycles; [confirmation](ConfirmForm.component.tsx) and
+  [sign-out](SignOutButton.component.tsx) presentation receive status and submit callbacks.
+  [PasswordField.component.tsx](PasswordField.component.tsx) keeps its simple show/hide state local.
+  [AuthConfirmationPage.container.tsx](AuthConfirmationPage.container.tsx) composes the explicit POST flow.
 
 ## Sessions, failures and recovery
 
@@ -63,8 +71,9 @@ Do not silently repeat password updates to resolve that uncertainty.
 
 Run the full web gate and Playwright suite in [the web guide](../../../AGENTS.md), plus `npm run
 test:auth`. The coverage configuration requires all statements, branches, functions and lines in
-handwritten auth implementation files; export-only barrels are excluded. Tests cover every new
-component, configuration, provider failures, verification ordering, cookie refresh/cleanup,
+handwritten auth implementation files; export-only barrels are excluded. [Props-based tests](auth.presentation.test.tsx) render presentation without auth/theme adapters;
+[container interaction tests](auth.components.test.tsx) exercise real React action lifecycles with
+controlled action boundaries. Tests cover every new component, configuration, provider failures, verification ordering, cookie refresh/cleanup,
 redirect validation, token handling, and password-update partial success. Keep cases for both arms
 when adding a decision; coverage is evidence of execution, not proof of provider behavior.
 

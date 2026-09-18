@@ -19,7 +19,7 @@ and [TypeScript reference](https://nextjs.org/docs/app/api-reference/config/type
 Recheck version-sensitive APIs when changing the framework.
 
 Keep browser hooks and events behind small client boundaries. The existing
-[theme provider](../src/features/theme/AppThemeProvider.tsx) composes server-rendered children;
+[theme provider](../src/features/theme/AppThemeProvider.provider.tsx) composes server-rendered children;
 do not convert the whole route tree to client components to access theme state. Keep server-only
 credentials and provider integrations out of client imports and browser-exposed variables.
 
@@ -27,6 +27,26 @@ For new data flows, explicitly choose freshness, caching, authorization and inva
 Do not share private user data through a public cache. The [auth feature](../src/features/auth/auth.AGENTS.md) owns Server Actions, session verification
 and Proxy cookie refresh. Its routes prohibit shared response caching. Application data still has
 no API integration or user-data cache. Add abstractions only for the feature being built.
+
+## React architecture and rendering
+
+Follow [the React architecture guide](react-architecture.AGENTS.md). A container is a coordination
+role, not a synonym for a Client Component. Server containers can load data and compose client
+islands; Redux/action/vendor-state containers require a client boundary. Presentation code remains
+server-compatible when it needs no client hooks, and becomes part of the client module graph when
+imported by a client entry point. Client Components can receive server-generated initial HTML;
+SSR/static generation and Server/Client Component roles are separate decisions.
+
+Only pass serializable data and supported framework references across the server/client boundary.
+Ordinary event callbacks stay within a client subtree; Server Action references retain their framework
+contract. Pass server-rendered content through composition slots rather than importing server-only
+modules into client code. Add `server-only` protection to server data adapters; filenames alone do
+not prevent a browser import. Preserve existing static generation, authorization and cache policy.
+
+These distinctions were checked on 2026-09-18 against the installed Next.js documentation and the
+[official Server and Client Components guide](https://nextjs.org/docs/app/getting-started/server-and-client-components).
+The installed Vitest guide recommends browser coverage for async Server Components; unit tests of
+extracted logic or manually awaited functions are not proof of framework rendering and hydration.
 
 ## Metadata, generation and recovery
 

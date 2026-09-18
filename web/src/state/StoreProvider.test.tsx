@@ -9,7 +9,7 @@ import {
   applicationUpdated,
   selectOpportunity,
 } from '@/features/job-search/job-search.index';
-import { StoreProvider } from './StoreProvider';
+import { StoreProvider } from './StoreProvider.provider';
 import { selectToday } from './state.clock';
 import { useAppDispatch, useAppSelector } from './state.hooks';
 

@@ -15,9 +15,9 @@ vi.mock('next-themes', () => ({
   useTheme: () => ({ resolvedTheme: 'light', setTheme: vi.fn() }),
 }));
 
-import { AuthConfirmationPage } from './AuthConfirmationPage';
-import { AuthPage } from './AuthPage';
-import { AuthUnavailablePage } from './AuthUnavailablePage';
+import { AuthConfirmationPageContainer } from './AuthConfirmationPage.container';
+import { AuthPageContainer } from './AuthPage.container';
+import { AuthUnavailablePageContainer } from './AuthUnavailablePage.container';
 
 beforeEach(() => {
   mocks.identity.mockResolvedValue({ status: 'anonymous' });
@@ -27,14 +27,16 @@ describe('server auth pages', () => {
   it.each(['login', 'signup', 'forgot-password'] as const)(
     'renders anonymous %s',
     async (mode) => {
-      render(await AuthPage({ mode, searchParams: Promise.resolve({}) }));
+      render(
+        await AuthPageContainer({ mode, searchParams: Promise.resolve({}) }),
+      );
       expect(screen.getByRole('heading', { level: 1 })).toBeVisible();
       expect(screen.getByLabelText('Email')).toBeVisible();
     },
   );
   it('offers a new recovery request for a missing session', async () => {
     render(
-      await AuthPage({
+      await AuthPageContainer({
         mode: 'reset-password',
         searchParams: Promise.resolve({}),
       }),
@@ -52,7 +54,7 @@ describe('server auth pages', () => {
       userId: 'fictional',
     });
     render(
-      await AuthPage({
+      await AuthPageContainer({
         mode: 'reset-password',
         searchParams: Promise.resolve({}),
       }),
@@ -69,7 +71,7 @@ describe('server auth pages', () => {
         userId: 'fictional',
       });
       await expect(
-        AuthPage({
+        AuthPageContainer({
           mode,
           searchParams: Promise.resolve({ next: '/app/roles/example' }),
         }),
@@ -82,7 +84,7 @@ describe('server auth pages', () => {
       userId: 'fictional',
     });
     render(
-      await AuthPage({
+      await AuthPageContainer({
         mode: 'forgot-password',
         searchParams: Promise.resolve({}),
       }),
@@ -94,7 +96,7 @@ describe('server auth pages', () => {
   it('redirects verification outages to the retry page', async () => {
     mocks.identity.mockResolvedValue({ status: 'unavailable' });
     await expect(
-      AuthPage({ mode: 'login', searchParams: Promise.resolve({}) }),
+      AuthPageContainer({ mode: 'login', searchParams: Promise.resolve({}) }),
     ).rejects.toThrow('REDIRECT:/auth/unavailable?next=/login');
   });
   it.each([
@@ -104,7 +106,7 @@ describe('server auth pages', () => {
     'signout-incomplete',
   ])('renders known notice %s', async (notice) => {
     render(
-      await AuthPage({
+      await AuthPageContainer({
         mode: 'login',
         searchParams: Promise.resolve({ notice }),
       }),
@@ -113,7 +115,7 @@ describe('server auth pages', () => {
   });
   it('does not render arbitrary notice text', async () => {
     render(
-      await AuthPage({
+      await AuthPageContainer({
         mode: 'login',
         searchParams: Promise.resolve({ notice: 'untrusted text' }),
       }),
@@ -127,7 +129,9 @@ describe('server auth pages', () => {
     { type: ['email'], token_hash: ['token'] },
   ])('renders confirmation without consuming tokens %j', async (params) => {
     render(
-      await AuthConfirmationPage({ searchParams: Promise.resolve(params) }),
+      await AuthConfirmationPageContainer({
+        searchParams: Promise.resolve(params),
+      }),
     );
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
       params.type === 'recovery' ? 'Reset your password' : 'Confirm your email',
@@ -143,7 +147,9 @@ describe('server auth pages', () => {
     [undefined, '/app'],
   ])('limits retry destination %s to %s', async (next, expected) => {
     render(
-      await AuthUnavailablePage({ searchParams: Promise.resolve({ next }) }),
+      await AuthUnavailablePageContainer({
+        searchParams: Promise.resolve({ next }),
+      }),
     );
     expect(screen.getByRole('link', { name: 'Try again' })).toHaveAttribute(
       'href',

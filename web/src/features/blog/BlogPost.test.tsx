@@ -2,7 +2,9 @@
 
 import { render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { BlogPost } from './BlogPost';
+import { BlogPostContainer } from './BlogPost.container';
+
+vi.mock('server-only', () => ({}));
 
 const mocks = vi.hoisted(() => ({
   importPage: vi.fn(),
@@ -27,7 +29,7 @@ describe('blog post page', () => {
   });
 
   it('renders post metadata, content, and a blog breadcrumb', async () => {
-    render(await BlogPost({ mdxPath: ['hello-world'] }));
+    render(await BlogPostContainer({ mdxPath: ['hello-world'] }));
 
     expect(
       screen.getByRole('heading', { level: 1, name: 'Hello, World' }),
@@ -46,7 +48,7 @@ describe('blog post page', () => {
   });
 
   it('loads the requested MDX path', async () => {
-    render(await BlogPost({ mdxPath: ['hello-world'] }));
+    render(await BlogPostContainer({ mdxPath: ['hello-world'] }));
 
     expect(mocks.importPage).toHaveBeenCalledWith(['hello-world']);
   });

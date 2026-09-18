@@ -214,11 +214,20 @@ payloads in logs, fixtures or committed sample data.
 
 - Keep composition, product logic and external adapters separate. Introduce interfaces at real
   boundaries; do not create a service or state wrapper for every small component.
-- In the web app, keep component-owned state in pure `useState` updates and shared mutable feature
-  state in Redux Toolkit slices. Do not add custom product-state context/reducer providers. Follow
-  the [web state conventions](web/docs/state-management.md) and test every handwritten branch in
-  providers, actions, reducers and selectors with real stores. Vendor adapters retain their own
-  browser mechanics rather than duplicating them in Redux.
+- The web app uses container/component architecture. `Name.container.tsx` coordinates state,
+  services and view selection; `Name.component.tsx` renders typed props and emits callbacks.
+  Presentation components must not import containers or application-state/service adapters, including
+  indirectly through barrels or hooks. Containers compose connected children through slots or
+  `children`. Keep business rules in pure functions, selectors and reducers; do not add empty containers.
+  Follow the [React architecture guide](web/docs/react-architecture.AGENTS.md).
+- Keep component-owned state in pure `useState` updates. A local parent may pass state and callbacks
+  to nearby children without promoting them to Redux. Use Redux Toolkit slices when mutable feature
+  state needs shared ownership or a longer lifetime. Do not add custom product-state context/reducer
+  providers. Follow the [web state conventions](web/docs/state-management.md). Test presentation
+  contracts through props and connected containers with fresh real stores and deterministic data;
+  do not mock Redux hooks, actions, reducers or selectors. Test every handwritten branch in providers,
+  actions, reducers and selectors. Vendor adapters retain their own browser mechanics rather than
+  duplicating them in Redux.
 - Give mutable state one owner whose lifetime matches the work. Durable or paid work cannot rely
   on a page or component staying mounted. Handle stale results, cancellation and repeated requests
   deliberately, and test the behavior that matters.

@@ -1,6 +1,6 @@
 # Landing entry
 
-[HomePage.tsx](HomePage.tsx) renders the reserved landing page at `/` with one visible control:
+[HomePage.component.tsx](HomePage.component.tsx) renders the reserved landing page at `/` with one visible control:
 a top-right Open app link to `/app`. A screen-reader heading identifies the page. It does not mount
 the application shell or session provider, show sample cards, or implement marketing content.
 

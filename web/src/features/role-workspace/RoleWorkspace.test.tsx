@@ -4,14 +4,14 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { StoreProvider } from '@/state/state.index';
-import { RoleWorkspace } from './RoleWorkspace';
+import { RoleWorkspaceContainer } from './RoleWorkspace.container';
 
 describe('role workspace', () => {
   it('edits application choices independently and preserves submitted materials', async () => {
     const user = userEvent.setup();
     render(
       <StoreProvider>
-        <RoleWorkspace roleId="northstar-platform" />
+        <RoleWorkspaceContainer roleId="northstar-platform" />
       </StoreProvider>,
     );
     await user.selectOptions(
@@ -50,7 +50,7 @@ describe('role workspace', () => {
   it('offers recovery for an unknown or expired sample role', () => {
     render(
       <StoreProvider>
-        <RoleWorkspace roleId="missing" />
+        <RoleWorkspaceContainer roleId="missing" />
       </StoreProvider>,
     );
     expect(

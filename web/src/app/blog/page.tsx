@@ -1,5 +1,5 @@
-import { BlogIndex } from '@/features/blog/blog.index';
+import { BlogIndexContainer } from '@/features/blog/blog.server.index';
 
 export default function BlogPage() {
-  return <BlogIndex />;
+  return <BlogIndexContainer />;
 }

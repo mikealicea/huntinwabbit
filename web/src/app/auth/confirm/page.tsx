@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { AuthConfirmationPage } from '@/features/auth/auth.server.index';
+import { AuthConfirmationPageContainer } from '@/features/auth/auth.server.index';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
@@ -11,5 +11,5 @@ export const metadata: Metadata = {
 export default async function Page({
   searchParams,
 }: PageProps<'/auth/confirm'>) {
-  return <AuthConfirmationPage searchParams={searchParams} />;
+  return <AuthConfirmationPageContainer searchParams={searchParams} />;
 }

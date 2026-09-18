@@ -1,19 +1,19 @@
-'use client';
 import Link from 'next/link';
-import { useActionState } from 'react';
-import { type AuthAction, initialAuthState } from './auth.types';
-
 export function ConfirmForm({
-  action,
+  dispatch,
+  pending,
+  message,
   token,
   type,
+  isRecovery,
 }: {
-  action: AuthAction;
+  dispatch: (form: FormData) => void;
+  pending: boolean;
+  message: string;
   token: string;
   type: string;
+  isRecovery: boolean;
 }) {
-  const [state, dispatch, pending] = useActionState(action, initialAuthState);
-  const recovery = type === 'recovery';
   return (
     <form action={dispatch} className="space-y-5">
       <input type="hidden" name="token_hash" value={token} />
@@ -25,16 +25,16 @@ export function ConfirmForm({
       >
         {pending
           ? 'Verifying…'
-          : recovery
+          : isRecovery
             ? 'Continue to reset password'
             : 'Confirm email'}
       </button>
       <p role="status" className="text-sm">
-        {state.message}
+        {message}
       </p>
       <Link
         className="link block text-center text-sm"
-        href={recovery ? '/forgot-password' : '/login'}
+        href={isRecovery ? '/forgot-password' : '/login'}
       >
         Request a new email
       </Link>

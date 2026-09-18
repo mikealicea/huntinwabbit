@@ -11,7 +11,7 @@ data, not a source of implemented routes, persistence or a finalized design syst
 - [the root layout](../src/app/layout.tsx) loads Ubuntu and Ubuntu Mono once through `next/font`.
 - [the theme barrel](../src/features/theme/theme.AGENTS.md) owns the logical light/dark mapping and
   provider behavior. Keep CSS theme names and TypeScript mapping in agreement.
-- [PageShell](../src/shared/PageShell.tsx) owns the blog's main landmark and prose content width.
+- [PageShell](../src/shared/PageShell.component.tsx) owns the blog's main landmark and prose content width.
   [The application layout](../src/app/app/layout.tsx) owns the wider job-search shell and main landmark;
   the landing entry owns its own minimal layout.
 

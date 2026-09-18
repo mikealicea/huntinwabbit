@@ -1,10 +1,10 @@
 import type { Metadata } from 'next';
 import { generateStaticParamsFor } from 'nextra/pages';
 import {
-  BlogPost,
+  BlogPostContainer,
   type BlogRouteProps,
   getBlogPostMetadata,
-} from '@/features/blog/blog.index';
+} from '@/features/blog/blog.server.index';
 
 export const generateStaticParams = generateStaticParamsFor('mdxPath');
 
@@ -23,5 +23,5 @@ export async function generateMetadata({
 export default async function BlogPostPage({ params }: BlogRouteProps) {
   const { mdxPath } = await params;
 
-  return <BlogPost mdxPath={mdxPath} />;
+  return <BlogPostContainer mdxPath={mdxPath} />;
 }

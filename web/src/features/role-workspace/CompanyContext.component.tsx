@@ -1,20 +1,11 @@
-'use client';
-
-import {
-  type Opportunity,
-  selectCompany,
-  selectCompanyRoleCount,
-} from '@/features/job-search/job-search.index';
-
-import { useAppSelector } from '@/state/state.index';
-
-export function CompanyContext({ role }: { role: Opportunity }) {
-  const company = useAppSelector((state) =>
-    selectCompany(state, role.companyId),
-  );
-  const roleCount = useAppSelector((state) =>
-    selectCompanyRoleCount(state, role.companyId),
-  );
+import type { Company } from '@/features/job-search/job-search.index';
+export function CompanyContext({
+  company,
+  roleCount,
+}: {
+  company: Company | undefined;
+  roleCount: number;
+}) {
   return (
     <section
       className="card border border-base-300 bg-base-100 shadow-sm"

@@ -1,1 +1,1 @@
-export { SearchBoard } from './SearchBoard';
+export { SearchBoardContainer } from './SearchBoard.container';

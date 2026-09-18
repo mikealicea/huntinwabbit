@@ -1,4 +1,3 @@
-import { importPage } from 'nextra/pages';
 import type { BlogPostMetadata } from './blog.types';
 
 export function formatDate(date: Date) {
@@ -35,10 +34,14 @@ export function parseBlogPostMetadata(value: unknown): BlogPostMetadata {
   };
 }
 
-export async function getBlogPostMetadata(
-  mdxPath: string[],
-): Promise<BlogPostMetadata> {
-  const { metadata } = await importPage(mdxPath);
-
-  return parseBlogPostMetadata(metadata);
+export function sortBlogPosts<
+  T extends { name: string; frontMatter: { date?: string } },
+>(posts: T[]): T[] {
+  return posts
+    .filter((post) => post.name !== 'index')
+    .sort(
+      (first, second) =>
+        new Date(second.frontMatter.date || '').getTime() -
+        new Date(first.frontMatter.date || '').getTime(),
+    );
 }

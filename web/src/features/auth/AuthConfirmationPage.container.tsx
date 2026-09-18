@@ -1,9 +1,9 @@
-import { AuthFrame } from './AuthFrame';
-import type { AuthSearch } from './AuthPage';
+import { AuthFrameContainer } from './AuthFrame.container';
+import type { AuthSearch } from './AuthPage.container';
 import { submitAuth } from './auth.actions';
-import { ConfirmForm } from './ConfirmForm';
+import { ConfirmFormContainer } from './ConfirmForm.container';
 
-export async function AuthConfirmationPage({
+export async function AuthConfirmationPageContainer({
   searchParams,
 }: {
   searchParams: AuthSearch;
@@ -12,15 +12,15 @@ export async function AuthConfirmationPage({
   const token = typeof params.token_hash === 'string' ? params.token_hash : '';
   const type = typeof params.type === 'string' ? params.type : '';
   return (
-    <AuthFrame
+    <AuthFrameContainer
       title={type === 'recovery' ? 'Reset your password' : 'Confirm your email'}
       description="Continue to verify this email link. Only continue if you requested it for your account."
     >
-      <ConfirmForm
+      <ConfirmFormContainer
         action={submitAuth.bind(null, 'confirm')}
         token={token}
         type={type}
       />
-    </AuthFrame>
+    </AuthFrameContainer>
   );
 }

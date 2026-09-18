@@ -1,1 +1,1 @@
-export { RoleWorkspace } from './RoleWorkspace';
+export { RoleWorkspaceContainer } from './RoleWorkspace.container';

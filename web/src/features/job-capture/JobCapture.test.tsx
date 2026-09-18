@@ -3,7 +3,7 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
-import { SearchBoard } from '@/features/search-board/search-board.index';
+import { SearchBoardContainer } from '@/features/search-board/search-board.index';
 import { StoreProvider } from '@/state/state.index';
 
 describe('job capture on the board', () => {
@@ -11,7 +11,7 @@ describe('job capture on the board', () => {
     const user = userEvent.setup();
     render(
       <StoreProvider>
-        <SearchBoard />
+        <SearchBoardContainer />
       </StoreProvider>,
     );
     await user.click(screen.getByRole('button', { name: 'Add job links' }));
@@ -55,7 +55,7 @@ describe('job capture on the board', () => {
     const user = userEvent.setup();
     render(
       <StoreProvider>
-        <SearchBoard />
+        <SearchBoardContainer />
       </StoreProvider>,
     );
     await user.click(screen.getByRole('button', { name: 'Add job links' }));

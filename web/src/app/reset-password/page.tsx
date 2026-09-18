@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { AuthPage } from '@/features/auth/auth.server.index';
+import { AuthPageContainer } from '@/features/auth/auth.server.index';
 
 export const metadata: Metadata = {
   title: 'Reset password',
@@ -9,5 +9,7 @@ export const metadata: Metadata = {
 export default async function Page({
   searchParams,
 }: PageProps<'/reset-password'>) {
-  return <AuthPage mode="reset-password" searchParams={searchParams} />;
+  return (
+    <AuthPageContainer mode="reset-password" searchParams={searchParams} />
+  );
 }

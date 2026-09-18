@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
-import { AuthForm } from './AuthForm';
-import { AuthFrame } from './AuthFrame';
+import { AuthFormContainer } from './AuthForm.container';
+import { AuthFrameContainer } from './AuthFrame.container';
 import { submitAuth } from './auth.actions';
 import { serverIdentity } from './auth.session';
 import type { AuthMode } from './auth.types';
@@ -37,7 +37,7 @@ const notices: Record<string, string> = {
 };
 export type AuthSearch = Promise<Record<string, string | string[] | undefined>>;
 
-export async function AuthPage({
+export async function AuthPageContainer({
   mode,
   searchParams,
 }: {
@@ -55,24 +55,24 @@ export async function AuthPage({
     redirect(safeReturnPath(params.next));
   if (mode === 'reset-password' && identity.status === 'anonymous') {
     return (
-      <AuthFrame
+      <AuthFrameContainer
         title="Request a new reset link"
         description="Your session is missing or has expired. Request another email to reset your password."
       >
-        <AuthForm
+        <AuthFormContainer
           mode="forgot-password"
           action={submitAuth.bind(null, 'forgot-password')}
           resendAction={submitAuth.bind(null, 'resend')}
           signOutAction={submitAuth.bind(null, 'signout')}
         />
-      </AuthFrame>
+      </AuthFrameContainer>
     );
   }
   const notice =
     typeof params.notice === 'string' ? notices[params.notice] : undefined;
   return (
-    <AuthFrame {...copy[mode]}>
-      <AuthForm
+    <AuthFrameContainer {...copy[mode]}>
+      <AuthFormContainer
         mode={mode}
         action={submitAuth.bind(null, mode)}
         resendAction={submitAuth.bind(null, 'resend')}
@@ -80,6 +80,6 @@ export async function AuthPage({
         next={safeReturnPath(params.next)}
         notice={notice}
       />
-    </AuthFrame>
+    </AuthFrameContainer>
   );
 }

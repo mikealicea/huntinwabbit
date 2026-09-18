@@ -2,7 +2,9 @@
 
 import { render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { BlogIndex } from './BlogIndex';
+import { BlogIndexContainer } from './BlogIndex.container';
+
+vi.mock('server-only', () => ({}));
 
 const mocks = vi.hoisted(() => ({
   getPageMap: vi.fn(),
@@ -45,7 +47,7 @@ describe('blog index page', () => {
   });
 
   it('renders posts newest first and excludes the index entry', async () => {
-    render(await BlogIndex());
+    render(await BlogIndexContainer());
 
     expect(
       screen.getByRole('heading', { level: 1, name: 'Blog' }),
@@ -64,7 +66,7 @@ describe('blog index page', () => {
   });
 
   it('loads the page map using the blog route', async () => {
-    render(await BlogIndex());
+    render(await BlogIndexContainer());
 
     expect(mocks.getPageMap).toHaveBeenCalledWith('/blog');
     expect(mocks.normalizePages).toHaveBeenCalledWith({

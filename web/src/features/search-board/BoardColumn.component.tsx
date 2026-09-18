@@ -1,20 +1,25 @@
-'use client';
-
-import { useDroppable } from '@dnd-kit/react';
+import type { ReactNode, Ref } from 'react';
 import {
   STAGE_LABELS,
   type Stage,
-  selectRolesByStage,
 } from '@/features/job-search/job-search.index';
-import { useAppSelector } from '@/state/state.index';
-import { RoleCard } from './RoleCard';
-
-export function BoardColumn({ stage }: { stage: Stage }) {
-  const roles = useAppSelector((state) => selectRolesByStage(state, stage));
-  const { ref, isDropTarget } = useDroppable({ id: stage });
+export interface BoardColumnProps {
+  stage: Stage;
+  roleCount: number;
+  isDropTarget: boolean;
+  dropRef: Ref<HTMLElement>;
+  children: ReactNode;
+}
+export function BoardColumn({
+  stage,
+  roleCount,
+  isDropTarget,
+  dropRef,
+  children,
+}: BoardColumnProps) {
   return (
     <section
-      ref={ref}
+      ref={dropRef}
       aria-label={STAGE_LABELS[stage]}
       className={`min-w-0 rounded-xl border p-2 ${isDropTarget ? 'border-primary bg-primary/10 ring-2 ring-primary' : 'border-transparent'}`}
     >
@@ -27,13 +32,13 @@ export function BoardColumn({ stage }: { stage: Stage }) {
           {STAGE_LABELS[stage]}
         </h2>
         <span className="badge badge-sm border-base-300 bg-base-100">
-          {roles.length}
+          {roleCount}
           <span className="sr-only"> roles</span>
         </span>
       </div>
       <div className="flex min-h-36 flex-col gap-3">
-        {roles.length ? (
-          roles.map((role) => <RoleCard key={role.id} role={role} />)
+        {roleCount ? (
+          children
         ) : (
           <p className="rounded-xl border border-dashed border-base-content/30 px-4 py-8 text-center text-sm text-base-content/75">
             No roles here yet

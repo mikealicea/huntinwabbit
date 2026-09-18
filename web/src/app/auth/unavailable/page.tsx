@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { AuthUnavailablePage } from '@/features/auth/auth.server.index';
+import { AuthUnavailablePageContainer } from '@/features/auth/auth.server.index';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
@@ -11,5 +11,5 @@ export const metadata: Metadata = {
 export default async function Page({
   searchParams,
 }: PageProps<'/auth/unavailable'>) {
-  return <AuthUnavailablePage searchParams={searchParams} />;
+  return <AuthUnavailablePageContainer searchParams={searchParams} />;
 }

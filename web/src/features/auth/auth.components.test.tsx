@@ -8,12 +8,12 @@ import {
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { AuthForm } from './AuthForm';
-import { AuthFrame } from './AuthFrame';
+import { AuthFormContainer } from './AuthForm.container';
+import { AuthFrameContainer } from './AuthFrame.container';
 import type { AuthAction, AuthMode, AuthState } from './auth.types';
-import { ConfirmForm } from './ConfirmForm';
-import { PasswordField } from './PasswordField';
-import { SignOutButton } from './SignOutButton';
+import { ConfirmFormContainer } from './ConfirmForm.container';
+import { PasswordField } from './PasswordField.component';
+import { SignOutButtonContainer } from './SignOutButton.container';
 
 vi.mock('next-themes', () => ({
   useTheme: () => ({ resolvedTheme: 'light', setTheme: vi.fn() }),
@@ -33,7 +33,7 @@ beforeEach(() => {
 });
 function renderForm(mode: AuthMode, notice?: string) {
   return render(
-    <AuthForm
+    <AuthFormContainer
       mode={mode}
       action={action}
       resendAction={resendAction}
@@ -46,9 +46,9 @@ function renderForm(mode: AuthMode, notice?: string) {
 describe('authentication components', () => {
   it('renders a page landmark, heading, home link and theme control', () => {
     render(
-      <AuthFrame title="Log in" description="Your workspace">
+      <AuthFrameContainer title="Log in" description="Your workspace">
         <p>Form content</p>
-      </AuthFrame>,
+      </AuthFrameContainer>,
     );
     expect(screen.getByRole('main')).toContainElement(
       screen.getByRole('heading', { level: 1, name: 'Log in' }),
@@ -302,7 +302,11 @@ describe('authentication components', () => {
         }),
       );
       render(
-        <ConfirmForm action={action} token={'a'.repeat(64)} type={type} />,
+        <ConfirmFormContainer
+          action={action}
+          token={'a'.repeat(64)}
+          type={type}
+        />,
       );
       expect(action).not.toHaveBeenCalled();
       expect(
@@ -327,7 +331,7 @@ describe('authentication components', () => {
         finish = resolve;
       }),
     );
-    render(<SignOutButton action={action} />);
+    render(<SignOutButtonContainer action={action} />);
     await userEvent.click(screen.getByRole('button', { name: 'Sign out' }));
     expect(screen.getByRole('button', { name: 'Signing out…' })).toBeDisabled();
     await act(async () => finish({ status: 'error', message: 'Try again' }));

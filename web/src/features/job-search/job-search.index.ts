@@ -24,6 +24,7 @@ export {
 export type {
   ApplicationFields,
   CapturedLink,
+  Company,
   Interest,
   Opportunity,
   Priority,

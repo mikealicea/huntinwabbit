@@ -1,34 +1,34 @@
-'use client';
-
-import { useDraggable } from '@dnd-kit/react';
 import Link from 'next/link';
+import type { Ref } from 'react';
 import {
   formatSalary,
-  getCompanyLabel,
-  getNextAction,
-  getRoleTitle,
   getSourceHost,
   INTEREST_LABELS,
   type Opportunity,
   PRIORITY_LABELS,
-  selectCompanies,
 } from '@/features/job-search/job-search.index';
 
-import { selectToday, useAppSelector } from '@/state/state.index';
-
-export function RoleCard({ role }: { role: Opportunity }) {
-  const companies = useAppSelector(selectCompanies);
-  const today = useAppSelector(selectToday);
-  const title = getRoleTitle(role);
-  const company = getCompanyLabel(role, companies);
-  const { ref, handleRef, isDragging } = useDraggable({
-    id: role.id,
-    data: { label: `${title} at ${company}` },
-  });
-  const next = getNextAction(role, today);
+export interface RoleCardProps {
+  role: Opportunity;
+  title: string;
+  company: string;
+  next: { label: string; due: boolean };
+  isDragging: boolean;
+  cardRef: Ref<HTMLElement>;
+  dragHandleRef: Ref<HTMLButtonElement>;
+}
+export function RoleCard({
+  role,
+  title,
+  company,
+  next,
+  isDragging,
+  cardRef,
+  dragHandleRef,
+}: RoleCardProps) {
   return (
     <article
-      ref={ref}
+      ref={cardRef}
       aria-label={`${title} at ${company}`}
       className={`card min-w-0 border border-base-300 bg-base-100 shadow-sm ${isDragging ? 'opacity-50' : ''}`}
     >
@@ -39,7 +39,7 @@ export function RoleCard({ role }: { role: Opportunity }) {
           </p>
           <button
             id={`move-${role.id}`}
-            ref={handleRef}
+            ref={dragHandleRef}
             type="button"
             className="btn btn-ghost size-11 min-h-11 shrink-0 cursor-grab touch-none p-2 active:cursor-grabbing"
             aria-label={`Move ${title} at ${company}`}

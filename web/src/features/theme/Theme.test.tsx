@@ -4,8 +4,8 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import { hydrateRoot } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AppThemeProvider } from './AppThemeProvider';
-import { ThemeSwitch } from './ThemeSwitch';
+import { AppThemeProvider } from './AppThemeProvider.provider';
+import { ThemeSwitchContainer } from './ThemeSwitch.container';
 
 let systemDark = false;
 let systemListener: (event: { matches: boolean }) => void;
@@ -35,7 +35,7 @@ describe('theme browser adapter', () => {
   it('resolves system light, follows system changes and persists explicit choices', () => {
     render(
       <AppThemeProvider>
-        <ThemeSwitch />
+        <ThemeSwitchContainer />
       </AppThemeProvider>,
     );
     expect(document.documentElement).toHaveAttribute('data-theme', 'emerald');
@@ -60,7 +60,7 @@ describe('theme browser adapter', () => {
     localStorage.setItem('theme', 'dark');
     render(
       <AppThemeProvider>
-        <ThemeSwitch />
+        <ThemeSwitchContainer />
       </AppThemeProvider>,
     );
     expect(
@@ -77,7 +77,7 @@ describe('theme browser adapter', () => {
   it('renders an honest disabled server state and hydrates without mismatches', async () => {
     const ui = (
       <AppThemeProvider>
-        <ThemeSwitch />
+        <ThemeSwitchContainer />
       </AppThemeProvider>
     );
     const container = document.createElement('div');

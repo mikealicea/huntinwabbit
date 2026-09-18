@@ -1,2 +1,2 @@
-export { AppThemeProvider } from './AppThemeProvider';
-export { ThemeSwitch } from './ThemeSwitch';
+export { AppThemeProvider } from './AppThemeProvider.provider';
+export { ThemeSwitchContainer } from './ThemeSwitch.container';

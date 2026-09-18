@@ -39,11 +39,38 @@ MDX blog. [The product README](../README.md) distinguishes implemented flows fro
   before introducing a real integration. The auth feature integrates directly with Supabase from
   the Next.js server; the application-data backend has no API client integration yet.
 
+## Container/component architecture
+
+Read [the React architecture guide](docs/react-architecture.AGENTS.md) before changing React code.
+These conventions apply across workspace, authentication, theme, navigation, public pages and shared UI.
+
+- Use `Name.container.tsx` and a named `NameContainer` export for coordination. Containers connect
+  Redux, server data, Server Actions, navigation decisions and stateful vendor adapters, and select
+  which views to render. Keep substantive business decisions in pure helpers, selectors and reducers.
+- Use `Name.component.tsx` and a named `Name` export for presentation. Components render typed props
+  and emit callbacks. Small local `useState`, refs and UI effects are allowed; Redux connections,
+  service access and workflow orchestration are not. A component needs no container unless there
+  is coordination to separate.
+- Presentation components must not import containers, providers or external-state adapters, even
+  through feature barrels or custom hooks. Containers assemble connected children through explicit
+  slots or `children`; presentation contracts must be testable without application providers.
+- Keep a parent's local state local when it serves a nearby child. Use Redux for mutable feature
+  state that needs broader ownership or lifetime, not simply because a prop crosses a boundary.
+- Keep Server/Client Component boundaries separate from the container/component distinction.
+  Preserve server composition and small client boundaries; filenames do not establish rendering mode.
+  Providers and adapters use explicit `.provider.tsx`/`.adapter.tsx` roles. Next.js route filenames
+  and the existing MDX integration retain their required names.
+- Test components with props and observable callbacks. Test connected containers using fresh real
+  stores with deterministic initial data and real actions; mock external boundaries rather than Redux.
+  The [architecture checks](src/architecture/architecture.AGENTS.md) enforce naming and dependency
+  rules in `npm test`; run `npm run test:architecture` for a focused check.
+
 ## State and testing conventions
 
 Read [Client state with Redux Toolkit](docs/state-management.md) before changing state ownership.
-Use pure local `useState` for component-owned state and RTK slices for mutable state shared across
-components. Custom product-state context/reducer providers are deprecated; use the typed Redux
+Use pure local `useState` for component-owned state, including nearby children receiving props,
+and RTK slices for mutable feature state requiring broader ownership or lifetime. Custom product-state
+context/reducer providers are deprecated; use the typed Redux
 hooks and generated slice actions. Keep effects outside reducers and selectors, and test every
 handwritten branch in providers, actions, reducers and selectors with real stores.
 The [state barrel](src/state/state.AGENTS.md) owns composition, account isolation and clock lifetime.
@@ -75,6 +102,7 @@ Read these focused guides before related changes:
 
 | Work | Guide |
 |---|---|
+| React coordination, presentation and import boundaries | [React architecture](docs/react-architecture.AGENTS.md) |
 | Routes, server/client boundaries, metadata and caching | [Next.js](docs/nextjs.AGENTS.md) |
 | Layout, Tailwind, themes and shared visual primitives | [Design](docs/design.AGENTS.md) |
 | Controls, focus, responsive text, motion and UI verification | [Accessibility](docs/accessibility.AGENTS.md) |
@@ -86,6 +114,7 @@ changes. Exact shapes remain in executable owners; barrels explain intent and im
 
 | Area | Owner |
 |---|---|
+| Shared presentation | [shared.AGENTS.md](src/shared/shared.AGENTS.md) |
 | Authentication | [auth.AGENTS.md](src/features/auth/auth.AGENTS.md) |
 | Landing entry | [home.AGENTS.md](src/features/home/home.AGENTS.md) |
 | Job-search state and contracts | [job-search.AGENTS.md](src/features/job-search/job-search.AGENTS.md) |

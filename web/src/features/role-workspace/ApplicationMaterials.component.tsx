@@ -1,17 +1,17 @@
-'use client';
-
 import {
-  applicationUpdated,
   formatCalendarDate,
   type Opportunity,
-  selectResumes,
 } from '@/features/job-search/job-search.index';
-
-import { useAppDispatch, useAppSelector } from '@/state/state.index';
-
-export function ApplicationMaterials({ role }: { role: Opportunity }) {
-  const dispatch = useAppDispatch();
-  const resumes = useAppSelector(selectResumes);
+export interface ApplicationMaterialsProps {
+  role: Opportunity;
+  resumes: readonly { id: string; label: string }[];
+  onResumeChange: (id: string | null) => void;
+}
+export function ApplicationMaterials({
+  role,
+  resumes,
+  onResumeChange,
+}: ApplicationMaterialsProps) {
   return (
     <section
       className="card border border-base-300 bg-base-100 shadow-sm"
@@ -29,14 +29,7 @@ export function ApplicationMaterials({ role }: { role: Opportunity }) {
             id="planned-resume"
             className="select min-h-11 w-full text-base"
             value={role.plannedResumeId ?? ''}
-            onChange={(event) =>
-              dispatch(
-                applicationUpdated({
-                  id: role.id,
-                  changes: { plannedResumeId: event.target.value || null },
-                }),
-              )
-            }
+            onChange={(event) => onResumeChange(event.target.value || null)}
           >
             <option value="">None selected</option>
             {resumes.map((resume) => (

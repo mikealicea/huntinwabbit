@@ -1,9 +1,12 @@
-'use client';
-import { useActionState } from 'react';
-import { type AuthAction, initialAuthState } from './auth.types';
-
-export function SignOutButton({ action }: { action: AuthAction }) {
-  const [state, dispatch, pending] = useActionState(action, initialAuthState);
+export function SignOutButton({
+  dispatch,
+  pending,
+  message,
+}: {
+  dispatch: (form: FormData) => void;
+  pending: boolean;
+  message: string;
+}) {
   return (
     <form action={dispatch} className="max-w-xs">
       <button
@@ -14,7 +17,7 @@ export function SignOutButton({ action }: { action: AuthAction }) {
         {pending ? 'Signing out…' : 'Sign out'}
       </button>
       <p role="status" className="text-sm">
-        {state.message}
+        {message}
       </p>
     </form>
   );

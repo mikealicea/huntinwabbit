@@ -7,10 +7,12 @@ when upgrading. This decision concerns the web app, not server request state or 
 ## Ownership and purity
 
 Use local `useState` for component-owned drafts, visibility and feedback. Updaters must be pure:
-allocate IDs and read external values before calling them. Move mutable feature state shared by
-multiple components into an RTK slice. Do not add custom context/reducer providers for product
-state or copy slice values into synchronized local state. Props remain appropriate for read-only
-composition. These choices follow the [Redux style guide](https://redux.js.org/style-guide/).
+allocate IDs and read external values before calling them. A local parent may pass values and
+callbacks to nearby children; that alone does not require Redux.
+Move mutable feature state into an RTK slice when its ownership or lifetime extends beyond the
+local interaction. Do not add custom context/reducer providers for product
+state or copy slice values into synchronized local state. Props remain appropriate for data,
+callbacks and composition slots. These choices follow the [Redux style guide](https://redux.js.org/style-guide/).
 
 Use `configureStore`, `createSlice`, generated typed actions, and the app's typed React Redux hooks.
 Reducers and selectors are deterministic functions of their inputs. Immer draft writes belong
@@ -26,6 +28,17 @@ derived copies. Preserve collection order and use IDs for relationships. Introdu
 when collection operations justify it, not as a prerequisite for a small ordered collection.
 See [deriving data](https://redux.js.org/usage/deriving-data-selectors) and
 [typed hooks](https://react-redux.js.org/using-react-redux/usage-with-typescript).
+
+## React coordination and presentation
+
+Follow [container/component architecture](react-architecture.AGENTS.md). Containers own Redux
+subscriptions and dispatch, and pass selected data and intent callbacks to components. Presentational
+components must not reach Redux through a helper, hook or public barrel. Keep selectors and reducers
+pure; container code coordinates them rather than becoming another business-logic layer.
+
+Local drafts and UI state may live in a component or a container, whichever owns the interaction.
+Simple toggles remain local. `useActionState` belongs in action-coordinating containers; credentials
+and form feedback must not move into Redux. Third-party browser state remains in its vendor adapter.
 
 ## App Router lifetime and boundaries
 

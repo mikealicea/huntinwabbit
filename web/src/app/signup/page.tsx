@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { AuthPage } from '@/features/auth/auth.server.index';
+import { AuthPageContainer } from '@/features/auth/auth.server.index';
 
 export const metadata: Metadata = {
   title: 'Create account',
@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default async function Page({ searchParams }: PageProps<'/signup'>) {
-  return <AuthPage mode="signup" searchParams={searchParams} />;
+  return <AuthPageContainer mode="signup" searchParams={searchParams} />;
 }

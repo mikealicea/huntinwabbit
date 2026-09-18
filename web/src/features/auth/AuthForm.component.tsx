@@ -1,10 +1,8 @@
 'use client';
 import Link from 'next/link';
-import { useActionState, useEffect, useRef, useState } from 'react';
-import type { AuthAction, AuthMode } from './auth.types';
-import { initialAuthState } from './auth.types';
-import { PasswordField } from './PasswordField';
-import { SignOutButton } from './SignOutButton';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
+import type { AuthMode, AuthState } from './auth.types';
+import { PasswordField } from './PasswordField.component';
 
 const labels: Record<AuthMode, string> = {
   login: 'Log in',
@@ -13,26 +11,30 @@ const labels: Record<AuthMode, string> = {
   'reset-password': 'Save new password',
 };
 
+export interface AuthFormProps {
+  mode: AuthMode;
+  state: AuthState;
+  dispatch: (form: FormData) => void;
+  pending: boolean;
+  resendState: AuthState;
+  resendDispatch: (form: FormData) => void;
+  resending: boolean;
+  signOut: ReactNode;
+  next: string;
+  notice: string;
+}
 export function AuthForm({
   mode,
-  action,
-  resendAction,
-  signOutAction,
-  next = '/app',
-  notice = '',
-}: {
-  mode: AuthMode;
-  action: AuthAction;
-  resendAction: AuthAction;
-  signOutAction: AuthAction;
-  next?: string;
-  notice?: string;
-}) {
-  const [state, dispatch, pending] = useActionState(action, initialAuthState);
-  const [resendState, resendDispatch, resending] = useActionState(
-    resendAction,
-    initialAuthState,
-  );
+  state,
+  dispatch,
+  pending,
+  resendState,
+  resendDispatch,
+  resending,
+  signOut,
+  next,
+  notice,
+}: AuthFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
@@ -123,9 +125,7 @@ export function AuthForm({
           {pending ? 'Submitting…' : state.message}
         </p>
       </form>
-      {success && mode === 'reset-password' && (
-        <SignOutButton action={signOutAction} />
-      )}
+      {signOut}
       {success && mode === 'signup' && (
         <a className="link mt-4 block text-center text-sm" href="/signup">
           Use another email address

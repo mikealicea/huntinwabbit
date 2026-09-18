@@ -1,15 +1,16 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { ThemeSwitch } from '@/features/theme/theme.index';
 
 export function AuthFrame({
   title,
   description,
   children,
+  themeSwitch,
 }: {
   title: string;
   description: string;
   children: ReactNode;
+  themeSwitch: ReactNode;
 }) {
   return (
     <div className="min-h-screen bg-base-200">
@@ -26,7 +27,7 @@ export function AuthFrame({
           </span>
           huntinwabbit
         </Link>
-        <ThemeSwitch />
+        {themeSwitch}
       </header>
       <main className="mx-auto w-full max-w-md px-5 pb-12 pt-8 sm:pt-16">
         <div className="min-w-0 rounded-2xl border border-base-300 bg-base-100 p-4 shadow-sm sm:p-8">

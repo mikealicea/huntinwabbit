@@ -1,1 +1,1 @@
-export { JobCapture } from './JobCapture';
+export { JobCaptureContainer } from './JobCapture.container';

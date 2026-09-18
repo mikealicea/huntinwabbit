@@ -1,8 +1,12 @@
 import Link from 'next/link';
-import { type AuthAction, SignOutButton } from '@/features/auth/auth.index';
-import { ThemeSwitch } from '@/features/theme/theme.index';
-
-export function Header({ signOutAction }: { signOutAction: AuthAction }) {
+import type { ReactNode } from 'react';
+export function Header({
+  themeSwitch,
+  signOut,
+}: {
+  themeSwitch: ReactNode;
+  signOut: ReactNode;
+}) {
   return (
     <header className="border-base-300 bg-base-100 border-b">
       <nav
@@ -27,8 +31,8 @@ export function Header({ signOutAction }: { signOutAction: AuthAction }) {
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <ThemeSwitch />
-          <SignOutButton action={signOutAction} />
+          {themeSwitch}
+          {signOut}
         </div>
       </nav>
     </header>

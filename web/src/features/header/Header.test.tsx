@@ -3,7 +3,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { Header } from './Header';
+import { HeaderContainer } from './Header.container';
 
 const mocks = vi.hoisted(() => ({
   setTheme: vi.fn(),
@@ -34,7 +34,9 @@ describe('site header', () => {
 
   it('links the application brand to the board without starter navigation', () => {
     render(
-      <Header signOutAction={async () => ({ status: 'idle', message: '' })} />,
+      <HeaderContainer
+        signOutAction={async () => ({ status: 'idle', message: '' })}
+      />,
     );
 
     const navigation = screen.getByRole('navigation', {
@@ -51,7 +53,9 @@ describe('site header', () => {
 
   it('switches from the light theme to the dark theme', () => {
     render(
-      <Header signOutAction={async () => ({ status: 'idle', message: '' })} />,
+      <HeaderContainer
+        signOutAction={async () => ({ status: 'idle', message: '' })}
+      />,
     );
 
     fireEvent.click(

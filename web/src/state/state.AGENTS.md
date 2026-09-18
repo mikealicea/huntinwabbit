@@ -12,7 +12,7 @@ owns gates and feature boundaries. New shared product state belongs in feature-o
 - [state.store.ts](state.store.ts) creates a fresh configured store, infers types from the combined
   reducers and accepts optional serializable initial state. Default RTK middleware stays enabled.
   Redux DevTools are available outside production only; no logger or persistence middleware exists.
-- [StoreProvider.tsx](StoreProvider.tsx) creates one store with a lazy initializer and supplies the
+- [StoreProvider.provider.tsx](StoreProvider.provider.tsx) creates one store with a lazy initializer and supplies the
   standard React Redux provider. Initial props seed a new mount, not subsequent rerenders.
 - [state.hooks.ts](state.hooks.ts) owns typed dispatch and selector hooks. [state.index.ts](state.index.ts)
   is the public composition surface. Never export a singleton store or import the factory to dispatch

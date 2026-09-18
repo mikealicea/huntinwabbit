@@ -1,8 +1,8 @@
 import 'server-only';
 
-export { AuthConfirmationPage } from './AuthConfirmationPage';
-export { AuthPage } from './AuthPage';
-export { AuthUnavailablePage } from './AuthUnavailablePage';
+export { AuthConfirmationPageContainer } from './AuthConfirmationPage.container';
+export { AuthPageContainer } from './AuthPage.container';
+export { AuthUnavailablePageContainer } from './AuthUnavailablePage.container';
 export { submitAuth } from './auth.actions';
 export { refreshAuth } from './auth.proxy';
 export { requireUser } from './auth.session';

@@ -6,7 +6,7 @@ This feature owns one temporary job-search session: application choices, posting
 companies, tasks and materials. It supports the board, capture and role workspace without a backend.
 It is not authentication, persistent storage, a parser or an API client.
 
-[StoreProvider.tsx](../../state/StoreProvider.tsx) is mounted in the
+[StoreProvider.provider.tsx](../../state/StoreProvider.provider.tsx) is mounted in the
 [application layout](../../app/app/layout.tsx). The layout requires a verified identity and keys this provider by user ID so account changes
 cannot inherit another user’s in-memory edits. [Auth](../auth/auth.AGENTS.md) owns that boundary.
 Navigation within `/app` preserves edits. Reloading

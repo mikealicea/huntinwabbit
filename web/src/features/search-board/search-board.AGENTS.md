@@ -10,13 +10,16 @@ three to stacked stages; it is not a separate mobile router or duplicated data v
 
 ## Owners and seams
 
-- [SearchBoard.tsx](SearchBoard.tsx) composes capture, columns, drag handling and live feedback.
-- [BoardColumn.tsx](BoardColumn.tsx) selects each stage through a memoized RTK selector and owns
-  its drop target, count and empty state.
-- [RoleCard.tsx](RoleCard.tsx) presents role context and separates its navigation link from its drag
-  handle. Links use the framework route system; handles support pointer, touch and keyboard input.
-- [search-board.index.ts](search-board.index.ts) is the public export. Data and presentation rules
-  come through [job-search.index.ts](../job-search/job-search.index.ts).
+- [SearchBoard.container.tsx](SearchBoard.container.tsx) selects totals and coordinates capture,
+  columns, drag completion and live feedback. [SearchBoard.component.tsx](SearchBoard.component.tsx)
+  renders the summary, empty state, capture/column slots and drag-preview presentation.
+- [BoardColumn.container.tsx](BoardColumn.container.tsx) owns the stage subscription and drop target;
+  [BoardColumn.component.tsx](BoardColumn.component.tsx) accepts count, drop state/ref and card children.
+- [RoleCard.container.tsx](RoleCard.container.tsx) resolves company/date context and drag mechanics;
+  [RoleCard.component.tsx](RoleCard.component.tsx) renders supplied data and distinct link/handle refs.
+- [search-board.index.ts](search-board.index.ts) exports the board container. Data and pure helpers
+  come through [job-search.index.ts](../job-search/job-search.index.ts). Components do not connect
+  Redux or dnd-kit and never import their child containers.
 
 `@dnd-kit/react` and its DOM accessibility adapter are confined to this feature.
 [search-board.drag.ts](search-board.drag.ts) replaces vendor announcements with role and stage labels
@@ -30,7 +33,9 @@ interest and priority are unaffected by movement, including movement backward in
 
 ## Verification
 
-[SearchBoard.test.tsx](SearchBoard.test.tsx) covers cards, counts, empty stages and an empty search.
+[SearchBoard.test.tsx](SearchBoard.test.tsx) covers cards, counts, empty stages and an empty search
+with a real store. [Presentation tests](search-board.presentation.test.tsx) exercise standalone
+props, refs, missing details and composition slots without providers.
 The [capture integration tests](../job-capture/JobCapture.test.tsx) exercise updates through the real
 Redux provider. jsdom uses a no-layout ResizeObserver adapter; it cannot establish working drag geometry.
 [Playwright tests](../../../e2e/job-search.spec.ts) exercise populated/empty targets, keyboard moves,

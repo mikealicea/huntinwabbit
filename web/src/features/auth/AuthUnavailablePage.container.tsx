@@ -1,8 +1,8 @@
-import { AuthFrame } from './AuthFrame';
-import type { AuthSearch } from './AuthPage';
+import { AuthFrameContainer } from './AuthFrame.container';
+import type { AuthSearch } from './AuthPage.container';
 import { safeReturnPath } from './auth.validation';
 
-export async function AuthUnavailablePage({
+export async function AuthUnavailablePageContainer({
   searchParams,
 }: {
   searchParams: AuthSearch;
@@ -14,13 +14,13 @@ export async function AuthUnavailablePage({
       ? next
       : safeReturnPath(next);
   return (
-    <AuthFrame
+    <AuthFrameContainer
       title="Unable to connect"
       description="Authentication is temporarily unavailable. Your workspace stays protected. Please try again."
     >
       <a href={retry} className="btn btn-primary min-h-11 w-full">
         Try again
       </a>
-    </AuthFrame>
+    </AuthFrameContainer>
   );
 }

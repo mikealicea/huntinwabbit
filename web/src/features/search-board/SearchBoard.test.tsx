@@ -3,13 +3,13 @@
 import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { StoreProvider } from '@/state/state.index';
-import { SearchBoard } from './SearchBoard';
+import { SearchBoardContainer } from './SearchBoard.container';
 
 describe('search board', () => {
   it('shows the whole search with independent interest, priority, salary, and next action', () => {
     render(
       <StoreProvider>
-        <SearchBoard />
+        <SearchBoardContainer />
       </StoreProvider>,
     );
     expect(
@@ -40,7 +40,7 @@ describe('search board', () => {
           jobSearch: { opportunities: [], companies: [], resumes: [] },
         }}
       >
-        <SearchBoard />
+        <SearchBoardContainer />
       </StoreProvider>,
     );
     expect(screen.getAllByText('No roles here yet')).toHaveLength(6);

@@ -41,15 +41,23 @@ async function moveProductRole(page: Page, targetStage: string) {
       name: 'Open Senior Product Engineer at Northstar',
     }),
   ).toBeVisible();
+  // Moving across columns remounts the handle; wait for the promised focus restoration
+  // before starting another pointer or keyboard interaction.
+  await expect(handle).toBeFocused();
+  await expect(handle).toHaveAttribute('aria-pressed', 'false');
 }
 
 test('landing entry, capture, role editing, navigation, and reload recovery', async ({
   page,
-}) => {
+}, testInfo) => {
   await page.goto('/');
   await expect(page.getByRole('link')).toHaveCount(1);
   await page.getByRole('link', { name: 'Open app' }).click();
   await expect(page).toHaveURL('/app');
+  await page.screenshot({
+    path: testInfo.outputPath('board-desktop.png'),
+    fullPage: true,
+  });
   await page.getByRole('button', { name: 'Add job links' }).click();
   await page
     .getByRole('textbox', { name: 'Job link 1' })
@@ -73,6 +81,10 @@ test('landing entry, capture, role editing, navigation, and reload recovery', as
     .first()
     .click();
   await expect(page).toHaveURL(/\/app\/roles\//);
+  await page.screenshot({
+    path: testInfo.outputPath('role-desktop.png'),
+    fullPage: true,
+  });
   const temporaryRoleUrl = page.url();
   await expect(
     page.getByText(
@@ -275,11 +287,16 @@ test('changing a planned resume preserves the submission and company context', a
   await expect(page.getByText('platform-engineering-v2.pdf')).toBeVisible();
 });
 
-test('mobile capture and workspace reflow in both themes', async ({ page }) => {
+test('mobile capture and workspace reflow in both themes', async ({
+  page,
+}, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });
   await page.goto('/app');
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'emerald');
+  await page.screenshot({
+    path: testInfo.outputPath('board-mobile-light.png'),
+  });
   await page.getByRole('button', { name: 'Switch to dark theme' }).click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'forest');
   await page.getByRole('button', { name: 'Add job links' }).click();
@@ -290,13 +307,22 @@ test('mobile capture and workspace reflow in both themes', async ({ page }) => {
   await page
     .getByRole('link', { name: 'Open Saved opening at Company unknown' })
     .click();
+  await expect(page).toHaveURL(/\/app\/roles\//);
   await expect(
-    page.getByRole('heading', { name: 'Saved opening' }),
+    page.getByRole('heading', { name: 'Saved opening', level: 1 }),
   ).toBeVisible();
+  await page.screenshot({
+    path: testInfo.outputPath('role-mobile-dark.png'),
+    fullPage: true,
+  });
   const fitsViewport = await page.evaluate(
     () => document.documentElement.scrollWidth <= window.innerWidth,
   );
   expect(fitsViewport).toBe(true);
   await page.getByRole('button', { name: 'Switch to light theme' }).click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'emerald');
+  await page.screenshot({
+    path: testInfo.outputPath('role-mobile-light.png'),
+    fullPage: true,
+  });
 });

@@ -7,9 +7,11 @@ interest. Typing in the last row adds an empty row; blank rows are ignored on su
 reopening the form keeps its draft while the board remains mounted. Navigation away from the board
 discards the draft. Successful submission resets rows and focuses the first field for another batch.
 
-[JobCapture.tsx](JobCapture.tsx) owns component-local `useState` drafts, errors, visibility and
+[JobCapture.container.tsx](JobCapture.container.tsx) owns container-local `useState` drafts, errors, visibility and
 announcements. Its updaters are pure; DOM focus and ID allocation happen outside updaters.
 Saved opportunities become shared Redux state.
+[JobCapture.component.tsx](JobCapture.component.tsx) accepts draft rows, feedback, refs and intent
+callbacks. It renders the form without importing Redux or owning another copy of the draft.
 [job-capture.validation.ts](job-capture.validation.ts) owns URL validation. The whole batch must be
 valid before dispatch: errors retain all input and focus the first invalid field. Only HTTP/HTTPS
 URLs without embedded credentials are accepted. Duplicate URLs are allowed as separate captures;
@@ -29,6 +31,7 @@ must not erase successfully captured opportunities.
 ## Verification
 
 [validation tests](job-capture.validation.test.ts) cover blanks, individual interests, invalid schemes
-and embedded credentials. [rendered tests](JobCapture.test.tsx) cover row growth, all-or-nothing
+and embedded credentials. [presentation tests](job-capture.presentation.test.tsx) verify errors and emitted row intents without
+a store; [rendered tests](JobCapture.test.tsx) cover row growth, all-or-nothing
 validation, retained drafts, focus and resulting cards. [browser tests](../../../e2e/job-search.spec.ts)
 cover capture through navigation and reload. Run the gates in the [web guide](../../../AGENTS.md).
