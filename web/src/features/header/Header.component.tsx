@@ -2,10 +2,10 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 export function Header({
   themeSwitch,
-  signOut,
+  actions,
 }: {
   themeSwitch: ReactNode;
-  signOut: ReactNode;
+  actions: ReactNode;
 }) {
   return (
     <header className="border-base-300 bg-base-100 border-b">
@@ -32,7 +32,7 @@ export function Header({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {themeSwitch}
-          {signOut}
+          {actions}
         </div>
       </nav>
     </header>

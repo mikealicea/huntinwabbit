@@ -15,6 +15,13 @@ describe('home page', () => {
       'href',
       '/app',
     );
-    expect(screen.getAllByRole('link')).toHaveLength(1);
+    expect(
+      screen.getByRole('navigation', { name: 'Primary navigation' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'huntinwabbit' })).toHaveAttribute(
+      'href',
+      '/app',
+    );
+    expect(screen.queryByRole('button', { name: 'Sign out' })).toBeNull();
   });
 });

@@ -7,7 +7,7 @@ it('renders supplied controls without theme or auth providers', () => {
   render(
     <Header
       themeSwitch={<button type="button">Theme slot</button>}
-      signOut={<button type="button">Sign-out slot</button>}
+      actions={<button type="button">Sign-out slot</button>}
     />,
   );
   expect(screen.getByRole('link', { name: 'huntinwabbit' })).toHaveAttribute(

@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import {
   type AuthAction,
   SignOutButtonContainer,
@@ -7,12 +8,20 @@ import { Header } from './Header.component';
 export function HeaderContainer({
   signOutAction,
 }: {
-  signOutAction: AuthAction;
+  signOutAction?: AuthAction;
 }) {
   return (
     <Header
       themeSwitch={<ThemeSwitchContainer />}
-      signOut={<SignOutButtonContainer action={signOutAction} />}
+      actions={
+        signOutAction ? (
+          <SignOutButtonContainer action={signOutAction} />
+        ) : (
+          <Link href="/app" className="btn btn-primary min-h-11">
+            Open app
+          </Link>
+        )
+      }
     />
   );
 }

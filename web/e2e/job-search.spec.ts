@@ -51,7 +51,9 @@ test('landing entry, capture, role editing, navigation, and reload recovery', as
   page,
 }, testInfo) => {
   await page.goto('/');
-  await expect(page.getByRole('link')).toHaveCount(1);
+  await expect(
+    page.getByRole('navigation', { name: 'Primary navigation' }),
+  ).toBeVisible();
   await page.getByRole('link', { name: 'Open app' }).click();
   await expect(page).toHaveURL('/app');
   await page.screenshot({
