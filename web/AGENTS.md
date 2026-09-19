@@ -14,6 +14,7 @@ MDX blog. [The product README](../README.md) distinguishes implemented flows fro
 | TypeScript and import alias | [tsconfig.json](tsconfig.json) |
 | Lint, formatting and exclusions | [biome.json](biome.json) |
 | Root layout, provider lifetime and fonts | [src/app/layout.tsx](src/app/layout.tsx) |
+| Brand artwork, icons and social previews | [brand asset guide](../assets/assets.AGENTS.md) |
 | Tailwind and daisyUI themes | [src/app/globals.css](src/app/globals.css) |
 | Test environment and cleanup | [vitest.config.ts](vitest.config.ts), [vitest.setup.ts](vitest.setup.ts) |
 | Browser verification | [playwright.config.ts](playwright.config.ts), [browser test guide](e2e/e2e.AGENTS.md) |

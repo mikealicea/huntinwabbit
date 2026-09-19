@@ -21,6 +21,11 @@ the processor boundary. Do not relax the shared project's policies for tests.
 - [AuthPage.container.tsx](AuthPage.container.tsx) coordinates server identity and page selection;
   [AuthFrame.container.tsx](AuthFrame.container.tsx) supplies a theme-control slot to the
   [frame component](AuthFrame.component.tsx).
+  The frame centers the supplied rabbit/wordmark inside the auth card, directly above its heading,
+  and links home. CSS selects
+  the light/dark artwork through the existing theme attribute without adding client theme state.
+  Both decorative images share one accessible link label; [brand assets](../../../../assets/assets.AGENTS.md)
+  owns their source and optimized exports.
 - [AuthForm.container.tsx](AuthForm.container.tsx) owns action/pending lifecycles and the sign-out
   recovery slot. [AuthForm.component.tsx](AuthForm.component.tsx) owns transient local inputs and
   focus, renders supplied action feedback and emits form submissions. Credentials never enter Redux.

@@ -10,6 +10,10 @@ sign-out Server Action; without that action, the header shows an Open app link t
 The public header does not load a session or expose sign-out; the [auth feature](../auth/auth.AGENTS.md) owns session and failure semantics.
 There is no independent route state or mobile drawer.
 
+The brand link pairs the optimized rabbit artwork with visible text. The image is decorative
+so the link retains a single accessible name. [Brand assets](../../../../assets/assets.AGENTS.md)
+owns the source artwork and export procedure.
+
 The header reflows on narrow screens; primary controls retain touch-sized targets. Keep link names,
 destinations and keyboard access clear. Both surfaces share the same navigation layout.
 

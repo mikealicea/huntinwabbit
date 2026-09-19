@@ -39,6 +39,7 @@ facts that code cannot establish.
 | `web/` | Next.js job-search frontend with mock data, a landing entry and inherited blog | `web/AGENTS.md` |
 | `server/` | Node 24, TypeScript ESM, Express API on Serverless/AWS Lambda | `server/AGENTS.md` |
 | `docs/` | Shared explanations, product notes and design prototypes | `docs/README.md` |
+| `assets/` | Source brand artwork and optimized web exports | [assets.AGENTS.md](assets/assets.AGENTS.md) |
 | `product-workspace/` | Product projects and research | `product-workspace/product-workspace.AGENTS.md` |
 | `scripts/` | Repository documentation validation | `scripts/scripts.AGENTS.md` |
 | `supabase/` | Shared hosted authentication configuration | [supabase.AGENTS.md](supabase/supabase.AGENTS.md) |

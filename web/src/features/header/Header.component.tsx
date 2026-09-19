@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 export function Header({
@@ -18,12 +19,15 @@ export function Header({
             href="/app"
             className="flex min-h-11 items-center gap-2 text-lg font-bold tracking-tight"
           >
-            <span
-              aria-hidden="true"
-              className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-content"
-            >
-              h
-            </span>
+            <Image
+              src="/brand/huntinwabbit-logo.webp"
+              alt=""
+              width={124}
+              height={128}
+              className="size-12 object-contain"
+              loading="eager"
+              unoptimized
+            />
             huntinwabbit
           </Link>
           <span className="badge badge-outline hidden sm:inline-flex">

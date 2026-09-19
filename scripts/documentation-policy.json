@@ -23,6 +23,7 @@
       "include": [
         "AGENTS.md",
         "README.md",
+        "assets/**",
         "server/**",
         "web/**",
         "docs/**",
@@ -43,6 +44,7 @@
       "guide": "AGENTS.md",
       "include": [
         "scripts/*.AGENTS.md",
+        "assets/*.AGENTS.md",
         "supabase/*.AGENTS.md"
       ]
     },

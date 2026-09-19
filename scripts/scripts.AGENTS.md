@@ -28,6 +28,7 @@ barrels, project-guide coverage, selected document indexes, deprecated locations
 `CLAUDE.md -> AGENTS.md` symlinks. Maintain the policy when adding documentation roots or indexes.
 Workspace project/research entry indexes are checked without treating all historical notes as current
 product documentation.
+The source-brand guide under `assets/` is current documentation and is indexed by the root guide.
 
 ## Limits and verification
 
