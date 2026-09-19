@@ -41,6 +41,8 @@ Carthage/Checkouts/
 .env
 .env.*
 !web/.env.example
+!server/.env.example
+!server/.env.e2e.example
 Secrets.swift
 !Secrets.swift.example
 

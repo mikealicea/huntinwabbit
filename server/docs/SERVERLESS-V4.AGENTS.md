@@ -3,7 +3,8 @@
 Read the [server guide](../AGENTS.md) before changing deployment configuration. Exact values belong
 to [serverless.yml](../serverless.yml), [esbuild.config.mjs](../esbuild.config.mjs),
 [package.json](../package.json) and its lockfile. This guide explains the operational boundaries.
-The current service and organization values are inherited boilerplate, not a verified deployment.
+The service targets the `builtinspace` AWS account (339050855812). The dev stack is
+`huntinwabbit-dev` in the configured region. Production deployment remains separate work.
 
 ## Build and packaging
 
@@ -22,13 +23,17 @@ or assume every upstream option exists in the locked version.
 
 ## Configuration, secrets and IAM
 
-The current function uses a Lambda Function URL, not an API Gateway HTTP API. No application
-authentication or custom data resources are configured. Select intentional service, organization,
+The current function uses a Lambda Function URL, not an API Gateway HTTP API. Application bearer authentication runs in Express for all routes after public health. No custom
+data resources or gateway authorizer are configured. Select intentional service, organization,
 stage, region and access boundaries before deploying anything that handles personal data.
 
 For new configuration, reconcile the stage value, environment parser, dependency construction,
 resource access and tests together. Disabled and configured-but-broken capabilities are different
 states. Keep local bypasses out of deployed composition.
+
+SUPABASE_URL is required during packaging/deployment and is passed to Lambda. The
+[auth parser](../src/features/auth/auth.config.ts) validates it at runtime construction. Public-key
+verification requires no runtime API key or signing secret.
 
 Keep credentials and rendered templates out of Git. A deploy-time SSM lookup is not equivalent to
 runtime secret retrieval: consider where plaintext ends up and which principal can read it. Give
@@ -64,3 +69,36 @@ Run them only for the target and action authorized by the task. `serverless dev`
 function with a local-development shim; ordinary HTTP work uses `npm run dev`. A successful package
 does not prove production permissions or runtime behavior; plan target-specific smoke tests when
 an actual deployment is authorized.
+
+After an authorized deployment, run `npm run test:e2e` with the explicit target and dedicated-user
+configuration described in the [E2E guide](../e2e/e2e.AGENTS.md). It signs in, checks the live API and
+signs out its own session. It does not deploy or prove that the running artifact matches local source.
+
+## Verified dev deployment
+
+On 2026-09-19, the packaged service was deployed to `huntinwabbit-dev` in AWS account
+339050855812, `us-east-1`. CloudFormation reported `CREATE_COMPLETE`, and the Node 24 Lambda
+reported `Active` with a successful update. The Function URL is
+<https://npfc4q33hhjbfn6dybjgtz7ydu0wurtw.lambda-url.us-east-1.on.aws/>.
+
+Live checks returned public health 200 and protected-route 401 for missing credentials, malformed
+tokens, the wrong scheme, query/cookie credentials, comma-joined credentials and a forged signature
+using the hosted signing-key ID. These 401 responses retained `Cache-Control: no-store` and the
+generic error body. Repeated Authorization header fields were rejected by the AWS front end with
+400 before reaching Express.
+
+A dedicated development user was provisioned through the Supabase admin API on the same date.
+A real password sign-in issued an ES256 access token, and the Function URL returned 200 with
+`{"message":"Hello, world!"}` and `Cache-Control: no-store` when given that token. A following
+request without credentials returned 401. The test session was signed out afterward. This was a
+direct API check; browser sign-in and email delivery were not exercised. The development browser
+connection was unavailable.
+
+The automated `npm run test:e2e` suite subsequently passed all 13 scenarios against this dev
+deployment on 2026-09-19, including dedicated-user sign-in and session teardown. The offline suite
+remained separate and passed 56 tests.
+
+The same live response inspection found that the Function URL remaps `WWW-Authenticate` to
+`x-amzn-Remapped-www-authenticate`. Local and Lambda-handler tests establish the application header,
+but clients of this deployment do not receive a standard bearer-challenge header. This is a known
+transport limitation; changing the front door is separately scoped work.

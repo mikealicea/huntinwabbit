@@ -3,7 +3,7 @@ import type { NextFunction, Request, Response } from 'express';
 /**
  * Typed application error. Services throw these; the error middleware maps
  * them to the contract's envelope `{ "message": "…" }` with the right status.
- * `message` is shown to the user for 400/409/5xx — write it accordingly.
+ * `message` is public for every AppError — write it accordingly.
  */
 export class AppError extends Error {
   readonly statusCode: number;
@@ -53,17 +53,21 @@ export function errorMiddleware(
   void _next;
   if (error instanceof AppError) {
     if (error.statusCode >= 500) {
-      console.error(
-        'AppError',
-        error.statusCode,
-        error.message,
-        error.cause ?? '',
-      );
+      console.error({
+        event: 'request.error',
+        category: 'application',
+        status: error.statusCode,
+      });
     }
+    if (error.statusCode === 401) res.set('WWW-Authenticate', 'Bearer');
     res.status(error.statusCode).json({ message: error.message });
     return;
   }
 
-  console.error('Unhandled error', error);
+  console.error({
+    event: 'request.error',
+    category: 'unexpected',
+    status: 500,
+  });
   res.status(500).json({ message: 'Something went wrong. Please try again.' });
 }

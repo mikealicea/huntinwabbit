@@ -6,7 +6,7 @@ import {
 
 export default defineConfig({
   test: {
-    exclude: [...configDefaults.exclude, 'build/**/*'],
+    exclude: [...configDefaults.exclude, 'build/**/*', 'e2e/**/*'],
     coverage: {
       provider: 'v8',
       exclude: [...coverageConfigDefaults.exclude, 'build/**/*'],

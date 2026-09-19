@@ -1,6 +1,6 @@
 import serverlessHttp from 'serverless-http';
 
-import { buildApp } from './app.ts';
+import { buildRuntimeApp } from './runtime.ts';
 
 type LambdaHandler = (event: unknown, context: unknown) => Promise<unknown>;
 
@@ -8,7 +8,7 @@ type LambdaHandler = (event: unknown, context: unknown) => Promise<unknown>;
 let cachedHandler: LambdaHandler | undefined;
 
 function buildHandler(): LambdaHandler {
-  return serverlessHttp(buildApp()) as LambdaHandler;
+  return serverlessHttp(buildRuntimeApp()) as LambdaHandler;
 }
 
 export async function handler(

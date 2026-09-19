@@ -26,7 +26,8 @@ Do not maintain a second implementation in prose.
 - [Authentication infrastructure](auth-infrastructure.md) — shared Supabase configuration, localhost
   setup, web account flows, deployment preparation and the Supabase/DynamoDB data boundary.
 
-Runtime API, storage and retention contracts do not exist yet. Add them when an actual feature
+The [API auth barrel](../server/src/features/auth/auth.AGENTS.md) owns the initial protected hello
+contract. Storage and retention contracts do not exist yet. Add them when an actual feature
 establishes the boundary, linking its schemas/configuration rather than repeating exact fields here.
 
 ## Product evidence and prototypes

@@ -53,16 +53,19 @@ wiki link or full Markdown syntax.
 These are recorded limitations, not infrastructure added by this reconciliation:
 
 - Supabase Auth and DynamoDB are now selected; [auth infrastructure](auth-infrastructure.md) owns
-  their boundary. Web authentication is implemented; backend authorization, persistence, API integration and retention
-  remain unimplemented. The skeleton must gain those boundaries before handling private data.
-- Server logs currently include raw paths and raw errors/causes. The
-  [shared barrel](../server/src/shared/shared.AGENTS.md) records that behavior and its privacy gap.
+  their boundary. Web authentication and API token verification are implemented; resource ownership authorization,
+  persistence, web API integration and retention remain unimplemented. The skeleton must gain those boundaries before handling private data.
+- Server request and error logs omit paths, credentials and raw errors/causes. The
+  [shared barrel](../server/src/shared/shared.AGENTS.md) records that boundary; hosting infrastructure
+  logging still requires separate verification.
 - There is no automated credential scanner. Biome and the documentation gate do not prove that
   staged content is free of secrets. Add a scanner as actual tooling, with failure-path tests,
   before claiming parity with Sanctum's committed-secret gate.
 - [Browser end-to-end tests](../web/e2e/e2e.AGENTS.md) cover the initial job-search flows. They are not
-  a comprehensive accessibility audit. There is no deployment verification suite or confirmed
-  huntinwabbit deployment. Feature barrels state what existing tests actually cover.
+  a comprehensive accessibility audit. The opt-in [API E2E suite](../server/e2e/e2e.AGENTS.md) checks
+  live hello authentication with a dedicated hosted account. The
+  [deployment guide](../server/docs/SERVERLESS-V4.AGENTS.md) records deployment checks and their limits.
+  Feature barrels state what existing tests actually cover.
 - Blog date parsing validates a non-empty string rather than a valid ISO date. The
   [blog barrel](../web/src/features/blog/blog.AGENTS.md) records the narrower implementation.
 

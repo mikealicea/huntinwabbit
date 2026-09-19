@@ -10,10 +10,11 @@ The server uses strict TypeScript, Node 24, native ESM, Express 5, Vitest, Biome
 Framework v4. Versions and commands live in [package.json](package.json),
 [package-lock.json](package-lock.json) and [mise.toml](mise.toml).
 
-This is a walking skeleton: a hello route, health route, error middleware, request logging, local
-listener and Lambda wrapper. It has no database, auth boundary, queue, provider adapter or connection
-to the web app. The service/org in `serverless.yml` are inherited setup values, not evidence of a
-huntinwabbit deployment. Do not claim the starter is ready to accept private application data.
+This is an authenticated walking skeleton: a protected hello route, public health route, safe error
+middleware and request logging, local listener and Lambda wrapper. Supabase JWT verification
+provides identity; there is no database, resource ownership authorization, queue or web API integration.
+The deployment identity lives in `serverless.yml`; the deployment guide records verified targets.
+Do not claim the starter is ready to accept private application data.
 
 ## Architecture and ownership
 
@@ -25,6 +26,7 @@ entry point -> app composition -> feature router -> feature service -> injected 
 
 | Concern | Executable owner |
 |---|---|
+| Runtime auth configuration and adapter construction | [src/runtime.ts](src/runtime.ts) |
 | HTTP composition and middleware ordering | [src/app.ts](src/app.ts) |
 | Local process and port | [src/local.ts](src/local.ts) |
 | Lazy Lambda handler construction | [src/lambda.ts](src/lambda.ts) |
@@ -43,7 +45,7 @@ entry point -> app composition -> feature router -> feature service -> injected 
   There is no `providers/` tree to import yet; add it only for an actual integration.
 - Parse required environment at construction time and fail clearly when an enabled capability is
   misconfigured. An intentionally disabled capability differs from a configured-but-broken one.
-  The current local entry point reads only `PORT`; a centralized environment parser does not exist.
+  Auth configuration is validated by its feature parser; the local entry point also reads `PORT`.
 - Avoid import-time I/O, network calls and credential reads in reusable modules. Entry points own
   process lifetime. The Lambda wrapper caches its constructed handler; do not cache per-user state.
 
@@ -83,8 +85,8 @@ uses erasable syntax, so avoid enums, namespaces and constructor parameter prope
   output. Logging and observability must not expose resumes, contact details, posting URLs, application
   notes or raw provider payloads. Current logging limitations are documented in the shared barrel.
 - Before adding private-data endpoints, implement and test authentication and resource ownership.
-  A local development bypass must be explicit and unavailable in deployed composition. No auth
-  provider or development key has been selected here.
+  A local development bypass must be explicit and unavailable in deployed composition. No
+  bypass is implemented; Supabase public-key verification is the runtime authentication boundary.
 - Keep IAM least-privilege. Reconcile actual adapter commands, resource ARNs, entry points and
   deployment tests when adding an AWS resource. Passing tests against a fake does not prove IAM.
 - Distinguish build/deploy credentials from runtime secrets. A deploy-time secret lookup may expose
@@ -99,9 +101,11 @@ uses erasable syntax, so avoid enums, namespaces and constructor parameter prope
 
 | Area | Owner |
 |---|---|
-| Hello example | [hello.AGENTS.md](src/features/hello/hello.AGENTS.md) |
+| API authentication | [auth.AGENTS.md](src/features/auth/auth.AGENTS.md) |
+| Protected hello endpoint | [hello.AGENTS.md](src/features/hello/hello.AGENTS.md) |
 | HTTP composition, errors and logging | [shared.AGENTS.md](src/shared/shared.AGENTS.md) |
 | Packaging, deployment configuration and IAM | [SERVERLESS-V4.AGENTS.md](docs/SERVERLESS-V4.AGENTS.md) |
+| Live API end-to-end tests | [e2e.AGENTS.md](e2e/e2e.AGENTS.md) |
 
 Update barrels when behavior, interfaces, persistence, failure handling, ordering or operational
 requirements change. Shared contracts explain the cross-stack agreement and link executable owners;
@@ -137,4 +141,8 @@ Tests are colocated. Test services through injected interfaces and routers throu
 meaningful guards, public errors, stored-value validation and, where present, replay, ordering and
 adapter failures. Keep fixtures deterministic, avoid `.only`/`.skip`, and keep live vendor calls out
 of unit tests. Do not infer implemented coverage from these requirements: current tests cover the
-hello router and selected error mappings only.
+hello responses, auth verification and failures, request privacy, runtime configuration and Lambda
+composition.
+
+`npm run test:e2e` separately exercises an explicitly configured live target using a dedicated
+Supabase account. Follow the [E2E guide](e2e/e2e.AGENTS.md); it is not part of the offline gate.

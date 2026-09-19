@@ -1,6 +1,6 @@
 import express from 'express';
 import request from 'supertest';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   badRequest,
@@ -8,6 +8,8 @@ import {
   unauthorized,
   unavailable,
 } from './shared.errors.ts';
+
+afterEach(() => vi.restoreAllMocks());
 
 function appThrowing(error: unknown): express.Express {
   const app = express();
@@ -34,6 +36,7 @@ describe('errorMiddleware', () => {
       appThrowing(unauthorized('Invalid or missing credentials.')),
     ).get('/');
     expect(response.status).toBe(401);
+    expect(response.headers['www-authenticate']).toBe('Bearer');
   });
 
   it('maps unavailable to 503', async () => {
@@ -44,12 +47,31 @@ describe('errorMiddleware', () => {
   });
 
   it('maps unknown errors to a generic 500 without leaking internals', async () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
     const response = await request(
       appThrowing(new Error('secret internal detail')),
     ).get('/');
     expect(response.status).toBe(500);
     expect(response.body).toEqual({
       message: 'Something went wrong. Please try again.',
+    });
+    expect(log).toHaveBeenCalledExactlyOnceWith({
+      event: 'request.error',
+      category: 'unexpected',
+      status: 500,
+    });
+  });
+
+  it('preserves causes internally but omits error details from logs', async () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const cause = new Error('private-provider-payload');
+    const error = unavailable('A safe public message.', cause);
+    expect(error.cause).toBe(cause);
+    expect((await request(appThrowing(error)).get('/')).status).toBe(503);
+    expect(log).toHaveBeenCalledExactlyOnceWith({
+      event: 'request.error',
+      category: 'application',
+      status: 503,
     });
   });
 });

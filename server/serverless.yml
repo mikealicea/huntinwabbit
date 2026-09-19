@@ -1,7 +1,6 @@
-# "org" ensures this Service is used with the correct Serverless Framework Access Key.
-# Set this to your Serverless dashboard org (or remove it if you don't use the dashboard).
+# Deployment identity for the huntinwabbit backend.
 org: builtinspace
-service: serverless-typescript-boilerplate
+service: huntinwabbit
 
 frameworkVersion: '4'
 
@@ -9,6 +8,8 @@ provider:
   name: aws
   runtime: nodejs24.x
   region: us-east-1
+  environment:
+    SUPABASE_URL: ${env:SUPABASE_URL}
 
 # v4 bundles src/ with built-in esbuild — handlers point at source, not build output.
 # Reference: docs/SERVERLESS-V4.AGENTS.md

@@ -3,17 +3,18 @@
 The adopted split is Supabase Auth for identities and sessions, and DynamoDB for application data
 behind the Express/Lambda backend. The [Supabase barrel](../supabase/supabase.AGENTS.md) describes
 the configuration boundary. The [web auth feature](../web/src/features/auth/auth.AGENTS.md) implements
-login, signup, email confirmation, recovery, session handling and protected workspace routes. API JWT
-verification, application-data ownership checks and DynamoDB tables remain separate implementation
-work; current app data remains mock data.
+login, signup, email confirmation, recovery, session handling and protected workspace routes. The
+[API auth feature](../server/src/features/auth/auth.AGENTS.md) verifies bearer JWTs for the
+protected hello endpoint. Application-data ownership checks, web-to-API calls and DynamoDB tables
+remain separate work; current app data remains mock data.
 
 ## One shared project
 
 The remote target is pinned in [mise.toml](../mise.toml). Dev and prod share users, auth policies,
 email quotas and signing authority. A dev token cannot be distinguished from a production token by
-project issuer alone. Future backend authorization must verify signature, issuer, audience and
-expiry, derive ownership from the verified user ID, and select DynamoDB resources from trusted
-deployment configuration. Do not accept a client-selected table or environment.
+project issuer alone. Backend authentication verifies signature, issuer, audience and expiry. Future
+resource authorization must derive ownership from the verified user ID and select DynamoDB resources from
+trusted deployment configuration. Do not accept a client-selected table or environment.
 
 Use dedicated development accounts. A password reset, user deletion, provider change or signing-key
 rotation affects the shared project. Keep dev/prod application data separate when adding DynamoDB
@@ -55,10 +56,42 @@ The web app implements `/auth/confirm` for both confirmation and recovery emails
 
 The app integration uses `https://zjwbikkvzexdplwudzqy.supabase.co` and a publishable API key.
 The hosted issuer is that URL plus `/auth/v1`, and its public JWKS endpoint is the issuer plus
-`/.well-known/jwks.json`. Check the project's signing-key configuration when implementing JWT
-verification on the Express API; web route protection uses Supabase’s verified user lookup.
+`/.well-known/jwks.json`. The Express API verifies asymmetric access tokens against these public keys;
+web route protection uses Supabase’s verified user lookup. Public discovery advertised an ES256 key when
+read on 2026-09-19. A dedicated development user's password sign-in and authenticated call to the
+deployed API later passed with an ES256 token on that date; the
+[deployment guide](../server/docs/SERVERLESS-V4.AGENTS.md) records the checks and their limits.
 This setup does not rotate signing keys.
 The management token and secret/service-role keys must never enter browser configuration.
+
+## API environment and verification
+
+A dedicated Codex development account is available for deliberate live smoke tests. Its credentials
+are kept in the ignored root `.env.codex-dev.json` file with owner-only permissions, not in application
+configuration or fixtures. Only the test user's credentials are retained there; administrative keys
+and access/refresh tokens are not saved. The account was individually confirmed through the admin
+API, so its creation does not establish that signup emails work. Shared auth policies were unchanged.
+The opt-in [API E2E suite](../server/e2e/e2e.AGENTS.md) uses this account, or explicit environment
+credentials, to sign in and verify the configured live API. It signs out its own session afterward;
+it neither provisions accounts nor changes provider settings.
+
+[The server environment example](../server/.env.example) supplies the shared hosted URL. The API
+needs no publishable key, management token, signing secret or service-role credential. Local and
+Lambda composition use the same verifier; [serverless.yml](../server/serverless.yml) supplies the
+runtime URL from deployment configuration. The [server README](../server/README.md) describes
+local startup and bearer-token smoke testing. There is no browser API integration yet; web session
+credentials remain in HTTP-only cookies, and future calls should preserve that boundary.
+
+The API verifies each request locally with discovered public keys. It does not query current user
+or session state, so logout and account deletion do not promise immediate access-token revocation.
+Signing-key discovery is cached; rotation/revocation visibility is delayed. The auth implementation
+owns exact cache and timeout settings. Unsupported legacy tokens fail authentication; this feature
+does not migrate or rotate shared keys. Provider failures deny access when usable keys are absent.
+
+The API receives user access tokens and retrieves public keys from Supabase; discovery does not
+send those tokens to Supabase. Only verified user IDs enter downstream request context. Request
+and error logs omit paths, credentials, payloads and raw provider causes. Hosted infrastructure
+logging still needs separate verification. No new data processor or application-data storage is added.
 
 ## Web environment and team smoke test
 

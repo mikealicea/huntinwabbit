@@ -13,8 +13,9 @@ do not bulk-reset users or weaken production auth settings for tests.
 
 Supabase's internal Postgres supports Auth. Application records belong in DynamoDB behind the
 backend, with separate dev/prod resources when persistence is implemented. This setup provisions
-neither DynamoDB tables nor API authorization. The [web auth feature](../web/src/features/auth/auth.AGENTS.md)
-implements account flows and protects the mock workspace. The hello API remains unchanged.
+no DynamoDB tables or resource-ownership policies. The [web auth feature](../web/src/features/auth/auth.AGENTS.md)
+implements account flows and protects the mock workspace. The [API auth feature](../server/src/features/auth/auth.AGENTS.md)
+protects the hello endpoint using public-key JWT verification; it does not mutate this configuration.
 
 ## Owners and operation
 

@@ -14,7 +14,6 @@ export function requestLogging(
     JSON.stringify({
       event: 'request.in',
       method: req.method,
-      path: req.path,
     }),
   );
   res.on('finish', () => {
@@ -22,7 +21,6 @@ export function requestLogging(
       JSON.stringify({
         event: 'request.done',
         method: req.method,
-        path: req.path,
         status: res.statusCode,
         durationMs: Date.now() - startedAt,
       }),

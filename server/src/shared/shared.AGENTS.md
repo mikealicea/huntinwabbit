@@ -2,41 +2,45 @@
 
 ## Purpose and owners
 
-The starter shares HTTP error mapping and request logging. There is no persistence, authentication,
-telemetry SDK or durable worker system. The [server guide](../../AGENTS.md) owns conventions for
-adding those boundaries.
+Shared infrastructure provides HTTP error mapping and request logging. The [server guide](../../AGENTS.md)
+owns architecture, and the [auth barrel](../features/auth/auth.AGENTS.md) owns authentication.
+There is no persistence, telemetry SDK or durable worker system.
 
-[app.ts](../app.ts) constructs Express, installs JSON parsing and request logging, adds health and
-the hello router, then installs the final error middleware. [local.ts](../local.ts) owns the process
-listener; [lambda.ts](../lambda.ts) lazily constructs and caches the Lambda adapter.
+[app.ts](../app.ts) constructs Express, installs request logging, adds public health, authentication,
+JSON parsing and the hello router, then installs final error middleware. [runtime.ts](../runtime.ts)
+validates auth configuration and chooses the concrete verifier. [local.ts](../local.ts) owns the
+listener; [lambda.ts](../lambda.ts) lazily constructs and caches the Lambda adapter. Invalid auth
+configuration fails construction. Public health bypasses token checks once the app is constructed;
+it is not a provider-readiness check.
 
-[shared.errors.ts](shared.errors.ts) owns `AppError`, its constructors and the public error envelope.
-Known application errors return their status and message. Unknown errors return a generic response.
-Preserve four-argument error-middleware arity; Express uses it to recognize an error handler.
+[shared.errors.ts](shared.errors.ts) owns AppError, its constructors and the public message envelope.
+Known application errors return their status and safe message; unauthorized responses include a
+bearer challenge at the application boundary. The deployed Function URL remaps that header, as
+recorded in the [deployment guide](../../docs/SERVERLESS-V4.AGENTS.md). Unknown errors return a generic response. Preserve four-argument error-middleware
+arity; Express uses it to recognize an error handler.
 
-[shared.middleware.ts](shared.middleware.ts) emits request-in and request-done JSON lines with
-method/path and completion status/duration. It does not log request bodies or query strings.
+[shared.middleware.ts](shared.middleware.ts) emits request-in and request-done JSON lines containing
+method and completion status/duration. It omits all paths, query strings, bodies and headers.
+Error logs contain only a fixed event/category and status. Raw errors, messages and causes are not
+logged; internal causes remain attached for programmatic inspection. Application error messages
+are public contracts and must not contain provider prose, secrets or personal data.
 
-## Known limitations and required boundaries
+## Limitations
 
-Current request logs contain raw paths, and the error middleware logs raw error objects/causes.
-Those are starter behaviors, not a privacy guarantee. Before handling personal data, design safe
-route identifiers and error metadata, redact sensitive fields, and test that logging boundary.
-Do not add application IDs, posting URLs, filenames, resumes or provider payloads to operational
-records. No Sentry SDK or automated secret scanner currently enforces these rules.
+Authentication runs before body parsing, so unauthenticated malformed input fails authentication.
+Authenticated parser errors remain generic server errors; there is no dedicated malformed-input
+mapping. All requests passing through Express logging now receive the ordinary request log pair,
+including parser failures. No Sentry SDK or automated secret scanner enforces these boundaries.
+Hosting infrastructure has separate logging settings and must not log token-bearing requests.
 
-The JSON parser runs before request logging, so parser failures do not receive the normal request
-log pair. Non-`AppError` failures, including parser errors, currently become the generic server error;
-there is no dedicated malformed-input mapping. Record changes to this behavior as an implementation
-change, not as a silent documentation correction.
-
-No central environment parser exists. `local.ts` converts `PORT` directly; new required configuration
-needs explicit validation at construction time. Do not describe future dependency injection or
-configuration gates as implemented.
+The local listener still converts PORT directly; the auth parser validates only its own capability.
+There is no application-wide readiness system or general environment schema.
 
 ## Verification
 
-[shared.errors.test.ts](shared.errors.test.ts) covers selected application-error mappings and the
-unknown-error public response. It does not prove log redaction, request logging, parser behavior,
-health, full app composition or Lambda packaging. Run the server gate; add focused regression tests
-when implementing those contracts. Follow the deployment guide for packaging/entry-point changes.
+[shared.errors.test.ts](shared.errors.test.ts) covers selected error mappings, safe logging and the
+unknown-error response. [Auth tests](../features/auth/auth.test.ts) exercise logging privacy, response caching,
+health, auth failures and complete app ordering. [Runtime tests](../runtime.test.ts) and
+[Lambda tests](../lambda.test.ts) check construction and entry-point composition. Run the server
+gate and build; follow the deployment guide for packaging checks. Local tests do not prove deployed
+access controls, hosting log redaction or live provider compatibility.

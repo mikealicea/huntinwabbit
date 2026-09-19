@@ -13,7 +13,8 @@ links into the app. See the [web README](web/README.md) for setup and implemente
 Authentication uses one shared Supabase project for development and production; application data
 will use DynamoDB through the backend. The [auth infrastructure runbook](docs/auth-infrastructure.md)
 explains the checked-in configuration and deployment preparation. The web app implements login, signup, email confirmation, password recovery, and protected workspace
-routes. API authentication and DynamoDB persistence are not implemented yet.
+routes. The backend verifies Supabase access tokens for its hello endpoint; web-to-API integration, resource
+ownership checks and DynamoDB persistence are not implemented yet.
 
 The rest of this README records the intended experience and product decisions; it is not a claim
 that every feature is implemented. The app is being designed around one person's real job-search
