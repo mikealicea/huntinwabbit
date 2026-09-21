@@ -85,3 +85,76 @@ it.each(['malformed', 'transport'] as const)(
     store.dispatch(postingApi.util.resetApiState());
   },
 );
+
+it('removes deleted postings from cached pages and refreshes detail', async () => {
+  const boundary = mockPostingApi();
+  const item = postingFixtures()[0];
+  const store = makeStore();
+  await store.dispatch(postingApi.endpoints.postings.initiate());
+  await store.dispatch(postingApi.endpoints.posting.initiate(item.id));
+  await store
+    .dispatch(
+      postingApi.endpoints.deletePosting.initiate({
+        id: item.id,
+        expectedApplicationVersion: item.applicationVersion,
+      }),
+    )
+    .unwrap();
+  await vi.waitFor(() =>
+    expect(
+      postingApi.endpoints.postings
+        .select()(store.getState())
+        .data?.pages.flatMap((page) => page.items)
+        .some((value) => value.id === item.id),
+    ).toBe(false),
+  );
+  await vi.waitFor(() =>
+    expect(
+      postingApi.endpoints.posting.select(item.id)(store.getState()).error,
+    ).toMatchObject({ status: 404 }),
+  );
+  expect(boundary.records.has(item.id)).toBe(false);
+  store.dispatch(postingApi.util.resetApiState());
+});
+it('retains cached data when deletion fails and rejects malformed delete success', async () => {
+  const boundary = mockPostingApi();
+  const item = postingFixtures()[0];
+  const store = makeStore();
+  await store.dispatch(postingApi.endpoints.postings.initiate());
+  for (const status of [503, 200]) {
+    boundary.fetcher.mockImplementationOnce(async () =>
+      Response.json({}, { status }),
+    );
+    const result = await store.dispatch(
+      postingApi.endpoints.deletePosting.initiate({
+        id: item.id,
+        expectedApplicationVersion: item.applicationVersion,
+      }),
+    );
+    expect(result.error).toBeDefined();
+    expect(boundary.records.has(item.id)).toBe(true);
+    await Promise.all(store.dispatch(postingApi.util.getRunningQueriesThunk()));
+  }
+  store.dispatch(postingApi.util.resetApiState());
+});
+it('reports extraction errors without overwriting cached facts', async () => {
+  const boundary = mockPostingApi();
+  const item = postingFixtures()[0];
+  const store = makeStore();
+  await store.dispatch(postingApi.endpoints.posting.initiate(item.id));
+  boundary.fetcher.mockImplementationOnce(async () =>
+    Response.json({}, { status: 503 }),
+  );
+  const result = await store.dispatch(
+    postingApi.endpoints.extractPosting.initiate({
+      id: item.id,
+      expectedGeneration: null,
+    }),
+  );
+  expect(result.error).toBeDefined();
+  expect(
+    postingApi.endpoints.posting.select(item.id)(store.getState()).data
+      ?.parsedPosting,
+  ).toEqual(item.parsedPosting);
+  store.dispatch(postingApi.util.resetApiState());
+});

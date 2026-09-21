@@ -14,6 +14,8 @@ import {
   STAGES,
   type Stage,
 } from '@/features/job-search/job-search.index';
+import { LoadingPulse } from '@/shared/shared.index';
+import { type DeleteOutcome, DeletePosting } from './DeletePosting.component';
 import { JobDetails } from './JobDetails.component';
 export interface RoleWorkspaceProps {
   role: Opportunity;
@@ -22,6 +24,9 @@ export interface RoleWorkspaceProps {
   nextActionLabel: string;
   onApplicationChange: (changes: Partial<ApplicationFields>) => unknown;
   saving?: boolean;
+  deleting?: boolean;
+  deleteDisabled?: boolean;
+  onDelete?: (version: number) => Promise<DeleteOutcome>;
   extracting?: boolean;
   onExtract?: () => void;
   onTaskCompletionChange: (taskId: string, completed: boolean) => void;
@@ -30,6 +35,9 @@ export interface RoleWorkspaceProps {
 }
 export function RoleWorkspace({
   saving = false,
+  deleting = false,
+  deleteDisabled = false,
+  onDelete,
   extracting = false,
   onExtract,
   role,
@@ -62,9 +70,20 @@ export function RoleWorkspace({
             </p>
           )}
         </div>
-        <span className="badge badge-outline h-auto py-2">
-          {STAGE_LABELS[role.stage]}
-        </span>
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="badge badge-outline h-auto py-2">
+            {STAGE_LABELS[role.stage]}
+          </span>
+          {onDelete && role.saved && (
+            <DeletePosting
+              roleName={roleName}
+              version={role.saved.applicationVersion}
+              pending={deleting}
+              disabled={deleteDisabled}
+              onDelete={onDelete}
+            />
+          )}
+        </div>
       </div>
       <div className="mb-7 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="fieldset p-0">
@@ -133,7 +152,8 @@ export function RoleWorkspace({
           <JobDetails
             role={role}
             onExtract={onExtract}
-            extracting={extracting}
+            extracting={extracting && !deleting}
+            disabled={deleting}
           />
           <section
             className="card border border-base-300 bg-base-100 shadow-sm"
@@ -230,8 +250,11 @@ export function RoleWorkspace({
                   Save notes
                 </button>
                 <p role="status" className="mt-1 text-sm text-base-content/75">
+                  {saving && !deleting && <LoadingPulse />}
                   {saving
-                    ? 'Saving…'
+                    ? deleting
+                      ? 'Deleting…'
+                      : 'Saving…'
                     : notes !== null
                       ? 'You have unsaved notes.'
                       : savedNotice

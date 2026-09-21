@@ -32,6 +32,15 @@ const validatedQuery: BaseQueryFn<
           },
         }
       : { error: { status: 'CUSTOM_ERROR', error: 'The request failed.' } };
+  if (api.endpoint === 'deletePosting')
+    return result.meta?.response?.status === 204
+      ? { data: null }
+      : {
+          error: {
+            status: 'CUSTOM_ERROR',
+            error: 'The API response was invalid.',
+          },
+        };
   const schema =
     api.endpoint === 'postings'
       ? listResponseSchema
@@ -112,6 +121,26 @@ export const postingApi = createApi({
       },
       invalidatesTags: ['Posting'],
     }),
+    deletePosting: build.mutation<
+      null,
+      { id: string; expectedApplicationVersion: number }
+    >({
+      query: ({ id, ...body }) => ({ url: `/${id}`, method: 'DELETE', body }),
+      async onQueryStarted({ id }, { dispatch, queryFulfilled }) {
+        try {
+          await queryFulfilled;
+          dispatch(
+            postingApi.util.updateQueryData('postings', undefined, (draft) => {
+              for (const page of draft.pages)
+                page.items = page.items.filter((item) => item.id !== id);
+            }),
+          );
+        } catch {
+          /* Keep cached records until deletion is acknowledged. */
+        }
+      },
+      invalidatesTags: ['Posting'],
+    }),
     extractPosting: build.mutation<
       SavedPosting,
       { id: string; expectedGeneration: string | null }
@@ -123,6 +152,18 @@ export const postingApi = createApi({
       }),
       transformResponse: (value: unknown) =>
         itemResponseSchema.parse(value).item,
+      async onQueryStarted({ id }, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          dispatch(
+            postingApi.util.upsertQueryEntries([
+              { endpointName: 'posting', arg: id, value: data },
+            ]),
+          );
+        } catch {
+          /* The mutation error is displayed by its container. */
+        }
+      },
       invalidatesTags: ['Posting'],
     }),
   }),
@@ -133,4 +174,5 @@ export const {
   useSavePostingMutation,
   useUpdatePostingMutation,
   useExtractPostingMutation,
+  useDeletePostingMutation,
 } = postingApi;

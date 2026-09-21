@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { AuthLocals } from '../auth/auth.index.ts';
 import { postingError } from './job-postings.errors.ts';
 import {
+  deleteRequestSchema,
   extractionRequestSchema,
   type JobPostings,
   listRequestSchema,
@@ -65,7 +66,7 @@ export function createJobPostingsRouter(postings?: JobPostings): Router {
       });
     },
   );
-  for (const operation of ['update', 'extract'] as const) {
+  for (const operation of ['update', 'extract', 'delete'] as const) {
     const handler = async (
       req: Request,
       res: Response<unknown, AuthLocals>,
@@ -81,7 +82,17 @@ export function createJobPostingsRouter(postings?: JobPostings): Router {
       if (!id.success) throw postingError('NOT_FOUND');
       if (!postings) throw postingError('STORAGE_DISABLED');
       const signal = AbortSignal.timeout(10_000);
-      if (operation === 'update') {
+      if (operation === 'delete') {
+        const input = deleteRequestSchema.safeParse(req.body);
+        if (!input.success) throw postingError('INVALID_REQUEST');
+        await postings.delete(
+          res.locals.identity.userId,
+          id.data,
+          input.data.expectedApplicationVersion,
+          signal,
+        );
+        res.status(204).end();
+      } else if (operation === 'update') {
         const input = updateRequestSchema.safeParse(req.body);
         if (!input.success) throw postingError('INVALID_REQUEST');
         res.json({
@@ -111,6 +122,12 @@ export function createJobPostingsRouter(postings?: JobPostings): Router {
       router.patch(
         '/job-postings/:id',
         express.json({ limit: '256kb' }),
+        handler,
+      );
+    else if (operation === 'delete')
+      router.delete(
+        '/job-postings/:id',
+        express.json({ limit: '16kb' }),
         handler,
       );
     else

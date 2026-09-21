@@ -1,7 +1,9 @@
 'use client';
+import { useRouter } from 'next/navigation';
 import {
   postingApi,
   RequestFeedback,
+  useDeletePostingMutation,
   useExtractPostingMutation,
   usePostingQuery,
   useUpdatePostingMutation,
@@ -18,6 +20,8 @@ import { RoleNotFound } from './RoleNotFound.component';
 import { RoleWorkspace } from './RoleWorkspace.component';
 import { UnavailableSection } from './UnavailableSection.component';
 export function RoleWorkspaceContainer({ roleId }: { roleId: string }) {
+  const router = useRouter();
+  const [remove, deletion] = useDeletePostingMutation();
   const cached = postingApi.endpoints.posting.useQueryState(roleId);
   const pending = ['queued', 'processing'].includes(
     cached.data?.extraction.status ?? '',
@@ -42,7 +46,8 @@ export function RoleWorkspaceContainer({ roleId }: { roleId: string }) {
     );
   const role = toOpportunity(query.currentData);
   async function change(changes: Partial<ApplicationFields>) {
-    if (!query.currentData || mutation.isLoading) return false;
+    if (!query.currentData || mutation.isLoading || deletion.isLoading)
+      return false;
     try {
       await update({
         id: roleId,
@@ -71,10 +76,37 @@ export function RoleWorkspaceContainer({ roleId }: { roleId: string }) {
         companyLabel={getCompanyLabel(role, [])}
         nextActionLabel={getNextAction(role, today).label}
         onApplicationChange={change}
-        saving={mutation.isLoading}
-        extracting={extraction.isLoading}
+        saving={mutation.isLoading || deletion.isLoading}
+        deleting={deletion.isLoading}
+        deleteDisabled={mutation.isLoading || extraction.isLoading}
+        onDelete={async (expectedApplicationVersion) => {
+          if (mutation.isLoading || extraction.isLoading || deletion.isLoading)
+            return 'failed';
+          try {
+            await remove({ id: roleId, expectedApplicationVersion }).unwrap();
+            router.replace('/app');
+            return 'deleted';
+          } catch (error) {
+            if (
+              typeof error === 'object' &&
+              error &&
+              'status' in error &&
+              error.status === 409
+            ) {
+              await query.refetch();
+              return 'conflict';
+            }
+            return 'failed';
+          }
+        }}
+        extracting={extraction.isLoading || deletion.isLoading}
         onExtract={() => {
-          if (query.currentData)
+          if (
+            query.currentData &&
+            !deletion.isLoading &&
+            !extraction.isLoading &&
+            !pending
+          )
             void extract({
               id: roleId,
               expectedGeneration: query.currentData.extraction.generation,

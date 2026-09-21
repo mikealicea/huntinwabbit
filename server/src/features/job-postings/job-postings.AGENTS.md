@@ -3,7 +3,7 @@
 ## Purpose and contracts
 
 Persist a user's saved roles, tracking choices and generated posting facts. [Schemas](job-postings.schemas.ts)
-own save/list/detail/update/extraction contracts; [router](job-postings.router.ts) validates HTTP input
+own save/list/detail/update/delete/extraction contracts; [router](job-postings.router.ts) validates HTTP input
 after authentication. Every record key is scoped to the verified subject. Missing and other-owner IDs
 return the same 404. Lists paginate newest first using owner-bound opaque cursors; failures never
 return a successful empty collection. Cursors are encoded, not signed or encrypted.
@@ -42,7 +42,10 @@ with conditional rereads preserving concurrent tracking changes. A newer generat
 
 The native Node worker reuses the existing agent-fetch/Redpill adapters. Parsing has a 60-second budget
 inside a 90-second Lambda. Provider failures become safe saved failure codes; no automatic paid retry
-or model repair occurs. Explicit user retry creates a new generation. Completing inference without
+or model repair occurs. Explicit user retry or refresh of completed details creates a new generation.
+Refresh retains previous generated facts until a successful replacement; failure keeps the last good
+result and tracking fields. Active requests return the pending generation; stale terminal requests
+conflict. Completing inference without
 persisting its result is an uncertain outcome, not permission to repeat the model request.
 
 The sparse pending-job index supports a minute-based recovery task: unclaimed jobs older than fifteen
@@ -54,6 +57,29 @@ errors; no notification recipients are configured. See [AWS stream delivery](htt
 and [failure destinations](https://docs.aws.amazon.com/lambda/latest/dg/services-dynamodb-errors.html),
 reviewed 2026-09-21. At-least-once delivery is why conditional claims are required.
 
+## Permanent deletion
+
+The versioned DELETE route removes only the authenticated owner's posting. Missing IDs are idempotent
+success, including another owner's IDs. Tracking-version conflicts require review; background fact
+changes can be rebased within the bounded transaction retry. There is no trash or undo.
+
+Operations atomically remove the chronological record, both lookup pointers and current job while
+creating a content-free deletion cleanup marker. Pointer conditions prevent deleting a replacement
+record. A lost acknowledgement is recovered through a strong ID-pointer read. The URL can immediately
+be saved again with a new ID. Existing legacy records still require the documented ID-pointer backfill.
+
+[Cleanup](job-postings.cleanup.ts) runs through scheduled recovery and the existing pending index. It
+queries one bounded page of the owner's job keys per marker per pass, deleting only rows with the
+original record key. Deletions and cursor progress commit atomically; concurrent/replayed cleanup
+checks the marker revision. Interrupted cleanup remains durable without a TTL and is exposed by the
+recovery error alarm. Older job metadata persists until cleanup succeeds; no source URL or notes enter
+the marker. API and recovery roles have transaction-only DeleteItem permission; no Scan is needed.
+
+Worker claims, results and recovery tolerate already-deleted jobs/postings. A provider request already
+in flight may finish, but a missing record or generation mismatch prevents resurrection. Cleanup of an
+old ID never touches a newly saved posting for the same URL. Existing backups and operational metadata
+retain their configured lifecycle; deletion is not an account-erasure or backup-purge guarantee.
+
 ## Privacy, operations and verification
 
 Never log owners, URLs, notes, cursors, stored records, stream payloads or raw SDK/provider errors.
@@ -64,7 +90,8 @@ owns retention and deletion limitations. The parser's external data boundary rem
 
 [Existing tests](job-postings.test.ts) cover save/list, normalization, corruption and uncertain writes;
 [lifecycle tests](job-postings.lifecycle.test.ts) cover ownership, version conflicts, duplicate delivery,
-concurrent edits, failure/retry, uncertain claims and stale workers. In-memory command adapters do not
+concurrent edits, refresh/failure/retry, uncertain claims, stale workers, deletion races, replay,
+URL reuse and paginated cleanup. In-memory command adapters do not
 prove AWS transaction scheduling, IAM or native runtime compatibility. Run server gates/build,
 documentation gates and package inspection. Deployment/live checks require an authorized target;
 ordinary tests never write hosted records or call paid providers.

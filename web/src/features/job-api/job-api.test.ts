@@ -206,3 +206,49 @@ describe('authenticated API bridge', () => {
     ).toBe(415);
   });
 });
+
+it('forwards versioned deletion and returns a bodyless 204', async () => {
+  const s = setup();
+  const id = postingFixtures()[0].id;
+  s.fetcher.mockResolvedValue(new Response(null, { status: 204 }));
+  const response = await s.bridge(
+    req(`/${id}`, 'DELETE', { expectedApplicationVersion: 4 }),
+  );
+  expect(response.status).toBe(204);
+  expect(await response.text()).toBe('');
+  expect(response.headers.get('cache-control')).toContain('no-store');
+  expect(s.fetcher).toHaveBeenCalledWith(
+    `https://dev.example.test/job-postings/${id}`,
+    expect.objectContaining({
+      method: 'DELETE',
+      body: '{"expectedApplicationVersion":4}',
+    }),
+  );
+});
+it('rejects invalid and cross-origin deletion without forwarding', async () => {
+  const s = setup();
+  const id = postingFixtures()[0].id;
+  expect((await s.bridge(req(`/${id}`, 'DELETE', {}))).status).toBe(400);
+  expect(
+    (
+      await s.bridge(
+        req(`/${id}/extraction`, 'DELETE', { expectedApplicationVersion: 0 }),
+      )
+    ).status,
+  ).toBe(405);
+  expect(
+    (
+      await s.bridge(
+        new Request(`http://localhost:3000/api/job-postings/${id}`, {
+          method: 'DELETE',
+          headers: { origin: 'http://foreign.test' },
+        }),
+      )
+    ).status,
+  ).toBe(403);
+  expect(s.fetcher).not.toHaveBeenCalled();
+  expect(
+    (await s.bridge(req(`/${id}`, 'DELETE', { expectedApplicationVersion: 0 })))
+      .status,
+  ).toBe(502);
+});

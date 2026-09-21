@@ -2,17 +2,23 @@ import {
   formatSalary,
   type Opportunity,
 } from '@/features/job-search/job-search.index';
+import { LoadingPulse } from '@/shared/shared.index';
 
 export function JobDetails({
   role,
   onExtract,
   extracting,
+  disabled = false,
 }: {
   role: Opportunity;
   onExtract?: () => void;
   extracting?: boolean;
+  disabled?: boolean;
 }) {
   const posting = role.posting;
+  const pending = ['queued', 'processing'].includes(
+    role.saved?.extraction.status ?? '',
+  );
   return (
     <section
       className="card border border-base-300 bg-base-100 shadow-sm"
@@ -55,32 +61,44 @@ export function JobDetails({
           <div className="space-y-2">
             <p role="status">
               {role.saved.extraction.status === 'queued'
-                ? 'Waiting to extract posting details…'
+                ? posting
+                  ? 'Waiting to refresh posting details…'
+                  : 'Waiting to extract posting details…'
                 : role.saved.extraction.status === 'processing'
-                  ? 'Extracting posting details…'
+                  ? posting
+                    ? 'Refreshing posting details…'
+                    : 'Extracting posting details…'
                   : role.saved.extraction.status === 'failed'
-                    ? 'Extraction could not finish. Your link is saved.'
+                    ? posting
+                      ? 'Refresh could not finish. Your previous details are still shown.'
+                      : 'Extraction could not finish. Your link is saved.'
                     : role.saved.extraction.status === 'disabled'
                       ? 'Extraction is currently unavailable. Your link is saved.'
                       : role.saved.extraction.status === 'complete'
                         ? 'Details extracted from the posting. Review them against the original.'
                         : 'Posting details have not been requested.'}
             </p>
-            {onExtract &&
-              ['not-requested', 'disabled', 'failed'].includes(
-                role.saved.extraction.status,
-              ) && (
-                <button
-                  type="button"
-                  className="btn"
-                  disabled={extracting}
-                  onClick={onExtract}
-                >
-                  {extracting
-                    ? 'Requesting extraction…'
-                    : 'Extract posting details'}
-                </button>
-              )}
+            {onExtract && (
+              <button
+                type="button"
+                className="btn"
+                disabled={disabled || extracting || pending}
+                onClick={onExtract}
+              >
+                {(extracting || pending) && <LoadingPulse />}
+                {extracting
+                  ? 'Requesting extraction…'
+                  : pending
+                    ? posting
+                      ? 'Refreshing posting…'
+                      : 'Extracting posting…'
+                    : role.saved.extraction.status === 'failed'
+                      ? 'Retry extraction'
+                      : posting
+                        ? 'Refresh posting'
+                        : 'Extract posting details'}
+              </button>
+            )}
           </div>
         )}
         {role.saved?.parsedPosting && (

@@ -322,3 +322,135 @@ test('mobile capture and workspace reflow in both themes', async ({
     fullPage: true,
   });
 });
+
+test('refresh retains facts and drafts on failure, then replaces facts on explicit retry', async ({
+  page,
+}) => {
+  await page
+    .getByRole('link', { name: 'Open Senior Product Engineer at Northstar' })
+    .click();
+  const notes = page.getByRole('textbox', { name: 'Prep & interview notes' });
+  await notes.fill('Keep my unsaved preparation');
+  await page
+    .getByRole('button', { name: 'Refresh posting', exact: true })
+    .click();
+  await expect(
+    page.getByText('Waiting to refresh posting details…'),
+  ).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+    'Senior Product Engineer',
+  );
+  await expect(
+    page.getByText(
+      'Refresh could not finish. Your previous details are still shown.',
+    ),
+  ).toBeVisible({ timeout: 10000 });
+  await expect(notes).toHaveValue('Keep my unsaved preparation');
+  await page.getByRole('button', { name: 'Retry extraction' }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+    'Refreshed Product Engineer',
+    { timeout: 10000 },
+  );
+  await expect(notes).toHaveValue('Keep my unsaved preparation');
+  await page.getByRole('button', { name: 'Save notes' }).click();
+  await expect(page.getByText('Notes saved.', { exact: true })).toBeVisible();
+  await page.reload();
+  await expect(notes).toHaveValue('Keep my unsaved preparation');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+    'Refreshed Product Engineer',
+  );
+});
+
+test('delete confirmation works by keyboard and removes the posting across reloads', async ({
+  page,
+}, testInfo) => {
+  await page
+    .getByRole('link', { name: 'Open Senior Product Engineer at Northstar' })
+    .click();
+  await expect(page).toHaveURL(/\/app\/roles\//);
+  const original = page.url();
+  const source = await page
+    .getByRole('link', { name: /Open original posting/ })
+    .getAttribute('href');
+  const opener = page.getByRole('button', {
+    name: 'Delete posting',
+    exact: true,
+  });
+  await opener.focus();
+  await page.keyboard.press('Enter');
+  const dialog = page.getByRole('dialog', { name: 'Delete posting?' });
+  await expect(dialog.getByRole('button', { name: 'Cancel' })).toBeFocused();
+  await page.keyboard.press('Shift+Tab');
+  await expect(
+    dialog.getByRole('button', { name: 'Delete permanently' }),
+  ).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(dialog.getByRole('button', { name: 'Cancel' })).toBeFocused();
+  await expect(dialog.locator('.modal-box')).toHaveCSS('opacity', '1');
+  await expect(dialog.getByRole('heading')).toBeInViewport();
+  await page.screenshot({
+    path: testInfo.outputPath('delete-desktop.png'),
+    animations: 'disabled',
+  });
+  await page.keyboard.press('Escape');
+  await expect(dialog).not.toBeVisible();
+  await expect(opener).toBeFocused();
+  await page.setViewportSize({ width: 390, height: 844 });
+  for (const [scheme, theme] of [
+    ['light', 'emerald'],
+    ['dark', 'forest'],
+  ] as const) {
+    await page.emulateMedia({ colorScheme: scheme });
+    await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
+    await opener.click();
+    await expect(dialog).toBeVisible();
+    await page.screenshot({
+      path: testInfo.outputPath(`delete-mobile-${scheme}.png`),
+      animations: 'disabled',
+    });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await dialog.getByRole('button', { name: 'Cancel' }).click();
+  }
+  await opener.click();
+  let failDelete = true;
+  await page.route('**/api/job-postings/*', async (route) => {
+    if (failDelete && route.request().method() === 'DELETE') {
+      failDelete = false;
+      return route.fulfill({ status: 503, json: { message: 'Unavailable' } });
+    }
+    return route.continue();
+  });
+  await dialog.getByRole('button', { name: 'Delete permanently' }).click();
+  await expect(dialog.getByRole('alert')).toHaveText(
+    'Deletion could not be confirmed. Try again.',
+  );
+  await dialog.getByRole('button', { name: 'Delete permanently' }).click();
+  await expect(page).toHaveURL('/app');
+  await expect(
+    page.getByRole('link', {
+      name: 'Open Senior Product Engineer at Northstar',
+    }),
+  ).toHaveCount(0);
+  await page.reload();
+  await expect(
+    page.getByRole('link', {
+      name: 'Open Senior Product Engineer at Northstar',
+    }),
+  ).toHaveCount(0);
+  await page.goto(original);
+  await expect(
+    page.getByRole('heading', { name: 'Role not found' }),
+  ).toBeVisible();
+  await page.goto('/app');
+  await page.getByRole('button', { name: 'Add job links' }).click();
+  await page.getByRole('textbox', { name: 'Job link 1' }).fill(source ?? '');
+  await page.getByRole('button', { name: 'Save to Collected' }).click();
+  await page
+    .getByRole('link', { name: 'Open Saved opening at Company unknown' })
+    .click();
+  expect(page.url()).not.toBe(original);
+});

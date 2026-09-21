@@ -15,6 +15,7 @@ import {
   type Stage,
   toOpportunity,
 } from '@/features/job-search/job-search.index';
+import { LoadingPulse } from '@/shared/shared.index';
 import { BoardColumnContainer } from './BoardColumn.container';
 import {
   BoardColumns,
@@ -47,6 +48,7 @@ export function SearchBoardContainer() {
       />
       {mutation.isLoading && (
         <p role="status" className="mb-3">
+          <LoadingPulse />
           Saving stage…
         </p>
       )}

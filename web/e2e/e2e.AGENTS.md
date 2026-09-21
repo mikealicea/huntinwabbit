@@ -2,7 +2,9 @@
 
 [playwright.config.ts](../playwright.config.ts) owns the browser project, viewport, local server and
 artifact policy. [job-search.spec.ts](job-search.spec.ts) verifies routing, capture, application
-edits, real drag geometry, persistence across reload and mobile theme behavior. Tests use only fictional data and
+edits, refresh/failure/retry, deletion confirmation and URL reuse, real drag geometry, persistence
+across reload and mobile theme behavior. Deletion tests verify keyboard focus and capture dialogs in
+desktop/mobile layouts and both themes. Tests use only fictional data and
 the local application. They do not visit captured URLs or depend on the hosted backend.
 [Public-page tests](public-pages.spec.ts) exercise real blog loading, generated MDX, metadata and
 breadcrumb navigation without a session. Account and workspace suites save desktop/mobile screenshots

@@ -305,3 +305,299 @@ it('accepts the frontend fixture against the actual public response contract', a
   for (const item of data)
     expect(savedPostingSchema.safeParse(item).success).toBe(true);
 });
+
+it('refreshes completed facts while preserving the last good result and tracking', async () => {
+  const s = setup();
+  const { item } = await s.save();
+  const worker = createExtractionWorker('test', s.send, async () =>
+    parsedPostingFixture(),
+  );
+  await worker.run('USER#alice', `JOB#${item.extraction.generation}`);
+  const current = await s.service.get('alice', item.id, signal());
+  const refreshed = await s.service.extract(
+    'alice',
+    item.id,
+    current.extraction.generation,
+    signal(),
+  );
+  expect(refreshed.extraction.status).toBe('queued');
+  expect(refreshed.parsedPosting).toEqual(current.parsedPosting);
+  expect(refreshed.application).toEqual(current.application);
+});
+
+it('keeps old facts on failed refresh and replaces them after a retry, without replacing edits', async () => {
+  const s = setup();
+  const { item } = await s.save();
+  await createExtractionWorker('test', s.send, async () =>
+    parsedPostingFixture(),
+  ).run('USER#alice', `JOB#${item.extraction.generation}`);
+  const refresh = await s.service.extract(
+    'alice',
+    item.id,
+    item.extraction.generation,
+    signal(),
+  );
+  await createExtractionWorker('test', s.send, async () => {
+    throw new Error('failed');
+  }).run('USER#alice', `JOB#${refresh.extraction.generation}`);
+  expect(
+    (await s.service.get('alice', item.id, signal())).parsedPosting,
+  ).toEqual(parsedPostingFixture());
+  await expect(
+    s.service.extract('alice', item.id, item.extraction.generation, signal()),
+  ).rejects.toMatchObject({ code: 'CONFLICT' });
+  const retry = await s.service.extract(
+    'alice',
+    item.id,
+    refresh.extraction.generation,
+    signal(),
+  );
+  const replacement = parsedPostingFixture();
+  replacement.job.title = 'Updated title';
+  await createExtractionWorker('test', s.send, async () => {
+    await s.service.update(
+      'alice',
+      item.id,
+      {
+        expectedApplicationVersion: 0,
+        changes: { notes: 'Keep', stage: 'offer' },
+      },
+      signal(),
+    );
+    return replacement;
+  }).run('USER#alice', `JOB#${retry.extraction.generation}`);
+  const result = await s.service.get('alice', item.id, signal());
+  expect(result.parsedPosting).toEqual(replacement);
+  expect(result.application).toMatchObject({ notes: 'Keep', stage: 'offer' });
+});
+
+it('deletes atomically, guards tracking versions, is ownership-safe and releases the URL', async () => {
+  const s = setup();
+  const { item } = await s.save();
+  await s.service.delete('bob', item.id, 0, signal());
+  expect(await s.service.get('alice', item.id, signal())).toEqual(item);
+  await s.service.update(
+    'alice',
+    item.id,
+    { expectedApplicationVersion: 0, changes: { notes: 'New note' } },
+    signal(),
+  );
+  await expect(
+    s.service.delete('alice', item.id, 0, signal()),
+  ).rejects.toMatchObject({ code: 'CONFLICT' });
+  await s.service.delete('alice', item.id, 1, signal());
+  expect([...s.rows.values()].map((row) => row.sk)).toEqual([
+    `DELETE#${item.id}`,
+  ]);
+  await s.service.delete('alice', item.id, 1, signal());
+  await expect(s.service.get('alice', item.id, signal())).rejects.toMatchObject(
+    { code: 'NOT_FOUND' },
+  );
+  expect(
+    (await s.service.list('alice', { limit: 20 }, signal())).items,
+  ).toEqual([]);
+  const again = await s.save();
+  expect(again.created).toBe(true);
+  expect(again.item.id).not.toBe(item.id);
+  await createExtractionWorker('test', s.send, undefined).recover();
+  expect(await s.service.get('alice', again.item.id, signal())).toEqual(
+    again.item,
+  );
+});
+
+it.each([false, true])(
+  'does not resurrect a posting deleted during extraction (provider failure: %s)',
+  async (fail) => {
+    const s = setup();
+    const { item } = await s.save();
+    const parse = vi.fn(async () => {
+      await s.service.delete('alice', item.id, 0, signal());
+      if (fail) throw new Error('Provider failed after deletion');
+      return parsedPostingFixture();
+    });
+    const worker = createExtractionWorker('test', s.send, parse);
+    await worker.run('USER#alice', `JOB#${item.extraction.generation}`);
+    await worker.run('USER#alice', `JOB#${item.extraction.generation}`);
+    await worker.recover();
+    expect(parse).toHaveBeenCalledTimes(1);
+    expect(s.rows.size).toBe(0);
+  },
+);
+
+it('skips queued work deleted before delivery', async () => {
+  const s = setup();
+  const { item } = await s.save();
+  await s.service.delete('alice', item.id, 0, signal());
+  const parse = vi.fn();
+  await createExtractionWorker('test', s.send, parse).run(
+    'USER#alice',
+    `JOB#${item.extraction.generation}`,
+  );
+  expect(parse).not.toHaveBeenCalled();
+});
+
+it('recovers a lost deletion acknowledgement and rebases over concurrent extraction', async () => {
+  let intercept: (() => Promise<void>) | undefined;
+  let lose = false;
+  const s = setup(true, (send) => async (command, abort) => {
+    if (
+      command instanceof TransactWriteCommand &&
+      command.input.TransactItems?.some((entry) => entry.Delete)
+    ) {
+      const action = intercept;
+      intercept = undefined;
+      if (action) await action();
+      const result = await send(command, abort);
+      if (lose) {
+        lose = false;
+        throw new Error('Lost reply');
+      }
+      return result;
+    }
+    return send(command, abort);
+  });
+  const { item } = await s.save();
+  intercept = () =>
+    createExtractionWorker('test', s.send, async () =>
+      parsedPostingFixture(),
+    ).run('USER#alice', `JOB#${item.extraction.generation}`);
+  lose = true;
+  await s.service.delete('alice', item.id, 0, signal());
+  expect([...s.rows.values()].map((row) => row.sk)).toEqual([
+    `DELETE#${item.id}`,
+  ]);
+});
+
+it('cleans historical job pages durably and leaves other postings intact', async () => {
+  const s = setup();
+  const { item } = await s.save();
+  const originalJob = s.rows.get(
+    `USER#alice|JOB#${item.extraction.generation}`,
+  );
+  for (let i = 0; i < 105; i++) {
+    const generation = `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`;
+    s.rows.set(`USER#alice|JOB#${generation}`, {
+      ...originalJob,
+      sk: `JOB#${generation}`,
+      generation,
+      status: 'complete',
+      dueGroup: undefined,
+    });
+  }
+  await s.service.delete('alice', item.id, 0, signal());
+  const again = await s.save();
+  const now = Date.now();
+  const worker = createExtractionWorker('test', s.send, undefined, () => now);
+  await Promise.all([worker.recover(), worker.recover()]);
+  const marker = s.rows.get(`USER#alice|DELETE#${item.id}`);
+  expect(marker).toMatchObject({ revision: 1 });
+  expect(marker?.cursor).toBeDefined();
+  for (let tick = 1; tick <= 3; tick++)
+    await createExtractionWorker(
+      'test',
+      s.send,
+      undefined,
+      () => now + tick * 60_000,
+    ).recover();
+  expect(s.rows.has(`USER#alice|DELETE#${item.id}`)).toBe(false);
+  expect(
+    [...s.rows.values()].filter((row) => String(row.sk).startsWith('JOB#')),
+  ).toHaveLength(1);
+  expect(await s.service.get('alice', again.item.id, signal())).toEqual(
+    again.item,
+  );
+});
+
+it('validates deletion HTTP input and handles empty success responses', async () => {
+  const s = setup();
+  const { item } = await s.save(false);
+  const url = `/job-postings/${item.id}`;
+  expect(
+    (await request(s.app).delete(url).send({ expectedApplicationVersion: 0 }))
+      .status,
+  ).toBe(401);
+  expect(
+    (
+      await request(s.app)
+        .delete(url)
+        .auth('alice', { type: 'bearer' })
+        .send({})
+    ).status,
+  ).toBe(400);
+  expect(
+    (
+      await request(s.app)
+        .delete(url)
+        .auth('alice', { type: 'bearer' })
+        .send({ expectedApplicationVersion: 1 })
+    ).status,
+  ).toBe(409);
+  const result = await request(s.app)
+    .delete(url)
+    .auth('alice', { type: 'bearer' })
+    .send({ expectedApplicationVersion: 0 });
+  expect(result.status).toBe(204);
+  expect(result.text).toBe('');
+});
+
+it('retries interrupted cleanup without losing its cursor or unrelated records', async () => {
+  let fail = false;
+  const s = setup(true, (send) => async (command, abort) => {
+    if (
+      fail &&
+      command instanceof TransactWriteCommand &&
+      command.input.TransactItems?.some((entry) =>
+        String(entry.Delete?.Key?.sk).startsWith('DELETE#'),
+      )
+    ) {
+      fail = false;
+      throw new Error('Storage unavailable');
+    }
+    return send(command, abort);
+  });
+  const { item } = await s.save();
+  const worker = createExtractionWorker('test', s.send, async () =>
+    parsedPostingFixture(),
+  );
+  await worker.run('USER#alice', `JOB#${item.extraction.generation}`);
+  await s.service.extract(
+    'alice',
+    item.id,
+    item.extraction.generation,
+    signal(),
+  );
+  await s.service.delete('alice', item.id, 0, signal());
+  fail = true;
+  await expect(worker.recover()).rejects.toThrow('Storage unavailable');
+  expect(s.rows.has(`USER#alice|JOB#${item.extraction.generation}`)).toBe(true);
+  expect(s.rows.get(`USER#alice|DELETE#${item.id}`)).toMatchObject({
+    revision: 0,
+  });
+  await worker.recover();
+  expect(s.rows.size).toBe(0);
+});
+
+it('does not spend when deletion wins a claim transaction', async () => {
+  let beforeClaim: (() => Promise<void>) | undefined;
+  const s = setup(true, (send) => async (command, abort) => {
+    if (
+      command instanceof TransactWriteCommand &&
+      command.input.TransactItems?.some(
+        (entry) => entry.Put?.Item?.status === 'processing',
+      )
+    ) {
+      const action = beforeClaim;
+      beforeClaim = undefined;
+      if (action) await action();
+    }
+    return send(command, abort);
+  });
+  const { item } = await s.save();
+  beforeClaim = () => s.service.delete('alice', item.id, 0, signal());
+  const parse = vi.fn();
+  await createExtractionWorker('test', s.send, parse).run(
+    'USER#alice',
+    `JOB#${item.extraction.generation}`,
+  );
+  expect(parse).not.toHaveBeenCalled();
+});

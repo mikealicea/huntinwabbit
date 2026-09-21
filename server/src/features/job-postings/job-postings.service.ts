@@ -52,6 +52,8 @@ export function createJobPostings(
         throw postingError('POSTING_TOO_LARGE');
       return { schemaVersion: 1, ...(await store.save(userId, item, signal)) };
     },
+    delete: (userId, id, version, signal) =>
+      store.delete(userId, id, version, signal),
     get: (userId, id, signal) => store.get(userId, id, signal),
     update: (userId, id, input, signal) =>
       store.update(userId, id, input, signal),

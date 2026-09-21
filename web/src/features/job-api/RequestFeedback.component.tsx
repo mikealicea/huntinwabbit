@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { LoadingPulse } from '@/shared/shared.index';
 export function RequestFeedback({
   loading,
   error,
@@ -16,7 +17,12 @@ export function RequestFeedback({
       : undefined;
   return (
     <div className="mb-4 space-y-2">
-      {loading && <p role="status">Loading your saved roles…</p>}
+      {loading && (
+        <p role="status">
+          <LoadingPulse />
+          Loading your saved roles…
+        </p>
+      )}
       {Boolean(error) && (
         <div role="alert" className="alert border-base-300 bg-base-100">
           <p>

@@ -21,30 +21,74 @@ export function memoryPostings() {
             : row.pk === values?.[':owner'] &&
               String(row.sk).startsWith(String(values?.[':prefix'])),
         )
-        .sort((a, b) => String(b.sk).localeCompare(String(a.sk)));
-      return { Items: structuredClone(all) };
+        .sort(
+          (a, b) =>
+            (command.input.ScanIndexForward === false ? -1 : 1) *
+            String(a.sk).localeCompare(String(b.sk)),
+        );
+      const after = command.input.ExclusiveStartKey;
+      const remaining = after
+        ? all.filter((row) =>
+            command.input.ScanIndexForward === false
+              ? String(row.sk) < String(after.sk)
+              : String(row.sk) > String(after.sk),
+          )
+        : all;
+      const page = remaining.slice(0, command.input.Limit ?? remaining.length);
+      const last = page.at(-1);
+      return {
+        Items: structuredClone(page),
+        ...(last && page.length < remaining.length
+          ? { LastEvaluatedKey: { pk: last.pk, sk: last.sk } }
+          : {}),
+      };
     }
-    const puts = command.input.TransactItems?.map((entry) => entry.Put) ?? [];
-    for (const put of puts) {
-      if (!put?.Item) throw new Error('Expected put');
-      const existing = rows.get(key(put.Item.pk, put.Item.sk));
-      const condition = put.ConditionExpression;
+    const entries = command.input.TransactItems ?? [];
+    for (const entry of entries) {
+      const operation = entry.Put ?? entry.Delete;
+      const address = entry.Put?.Item ?? entry.Delete?.Key;
+      if (!operation || !address) throw new Error('Expected put or delete');
+      const existing = rows.get(key(address.pk, address.sk));
+      const condition = operation.ConditionExpression;
+      const values = operation.ExpressionAttributeValues;
       if (condition === 'attribute_not_exists(pk)' && existing)
         throw new Error('Conditional conflict');
       if (
         condition === '#data = :previous' &&
-        existing?.data !== put.ExpressionAttributeValues?.[':previous']
+        existing?.data !== values?.[':previous']
       )
         throw new Error('Conditional conflict');
       if (
         condition === '#status = :status' &&
-        existing?.status !== put.ExpressionAttributeValues?.[':status']
+        existing?.status !== values?.[':status']
+      )
+        throw new Error('Conditional conflict');
+      if (
+        condition === 'recordKey = :key' &&
+        existing?.recordKey !== values?.[':key']
+      )
+        throw new Error('Conditional conflict');
+      if (
+        condition === 'attribute_not_exists(pk) OR recordKey = :key' &&
+        existing &&
+        existing.recordKey !== values?.[':key']
+      )
+        throw new Error('Conditional conflict');
+      if (
+        condition === 'revision = :revision' &&
+        existing?.revision !== values?.[':revision']
       )
         throw new Error('Conditional conflict');
     }
-    for (const put of puts)
-      if (put?.Item)
-        rows.set(key(put.Item.pk, put.Item.sk), structuredClone(put.Item));
+    for (const entry of entries) {
+      if (entry.Put?.Item)
+        rows.set(
+          key(entry.Put.Item.pk, entry.Put.Item.sk),
+          structuredClone(entry.Put.Item),
+        );
+      if (entry.Delete?.Key)
+        rows.delete(key(entry.Delete.Key.pk, entry.Delete.Key.sk));
+    }
     return {};
   };
   return { rows, send };

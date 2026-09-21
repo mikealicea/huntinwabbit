@@ -1,6 +1,7 @@
 import 'server-only';
 import { z } from 'zod';
 import {
+  deleteRequestSchema,
   extractionRequestSchema,
   itemResponseSchema,
   listRequestSchema,
@@ -86,7 +87,9 @@ export function createApiBridge(deps: {
                 ? 'update'
                 : request.method === 'POST' && match?.[2]
                   ? 'extract'
-                  : undefined;
+                  : request.method === 'DELETE' && match && !match[2]
+                    ? 'delete'
+                    : undefined;
       if (!action) return failure(405, 'METHOD_NOT_ALLOWED');
       let query = '';
       let body: string | undefined;
@@ -101,7 +104,7 @@ export function createApiBridge(deps: {
           listRequestSchema.parse(Object.fromEntries(url.searchParams));
           query = url.search;
         } else if (url.search) return failure(400, 'INVALID_REQUEST');
-        if (['save', 'update', 'extract'].includes(action)) {
+        if (['save', 'update', 'extract', 'delete'].includes(action)) {
           if (
             !request.headers.get('content-type')?.startsWith('application/json')
           )
@@ -112,7 +115,9 @@ export function createApiBridge(deps: {
               ? saveRequestSchema
               : action === 'update'
                 ? updateRequestSchema
-                : extractionRequestSchema;
+                : action === 'delete'
+                  ? deleteRequestSchema
+                  : extractionRequestSchema;
           body = JSON.stringify(schema.parse(value));
         }
       } catch {
@@ -140,6 +145,10 @@ export function createApiBridge(deps: {
           : 502;
         return failure(status, status === 409 ? 'CONFLICT' : 'API_UNAVAILABLE');
       }
+      if (action === 'delete')
+        return response.status === 204
+          ? new Response(null, { status: 204, headers })
+          : failure(502, 'INVALID_RESPONSE');
       const schema =
         action === 'list'
           ? listResponseSchema

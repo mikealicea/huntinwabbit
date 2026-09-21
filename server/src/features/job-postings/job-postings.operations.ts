@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { GetCommand, TransactWriteCommand } from '@aws-sdk/lib-dynamodb';
 import { z } from 'zod';
 import {
@@ -81,12 +81,107 @@ export function createPostingOperations(
     )
       throw postingError('INVALID_STORED_POSTING');
     const row = await readRow(table, send, pk, pointer.recordKey, signal);
+    if (!row) throw postingError('NOT_FOUND');
     const item = readRecord(row, pk, pointer.recordKey);
     if (item.id !== id || typeof row?.data !== 'string')
       throw postingError('INVALID_STORED_POSTING');
     return { pk, item, previous: row.data };
   }
   return {
+    delete: (user, id, expectedApplicationVersion, signal) =>
+      storageOperation(signal, async () => {
+        for (let attempt = 0; attempt < 3; attempt++) {
+          // Missing IDs (including another owner's IDs) are idempotent success.
+          if (!(await readRow(table, send, `USER#${user}`, `ID#${id}`, signal)))
+            return;
+          let found: Awaited<ReturnType<typeof lookup>>;
+          try {
+            found = await lookup(user, id, signal);
+          } catch (cause) {
+            if (
+              !(await readRow(table, send, `USER#${user}`, `ID#${id}`, signal))
+            )
+              return;
+            throw cause;
+          }
+          const { pk, item, previous } = found;
+          if (item.applicationVersion !== expectedApplicationVersion)
+            throw postingError('CONFLICT');
+          const key = recordKey(item);
+          const pointerDelete = (sk: string) => ({
+            Delete: {
+              TableName: table,
+              Key: { pk, sk },
+              ConditionExpression: 'recordKey = :key',
+              ExpressionAttributeValues: { ':key': key },
+            },
+          });
+          try {
+            await send(
+              new TransactWriteCommand({
+                TransactItems: [
+                  {
+                    Delete: {
+                      TableName: table,
+                      Key: { pk, sk: key },
+                      ConditionExpression: '#data = :previous',
+                      ExpressionAttributeNames: { '#data': 'data' },
+                      ExpressionAttributeValues: { ':previous': previous },
+                    },
+                  },
+                  pointerDelete(`ID#${id}`),
+                  pointerDelete(
+                    `URL#${createHash('sha256').update(item.sourceUrl).digest('hex')}`,
+                  ),
+                  ...(item.extraction.generation
+                    ? [
+                        {
+                          Delete: {
+                            TableName: table,
+                            Key: {
+                              pk,
+                              sk: `JOB#${item.extraction.generation}`,
+                            },
+                            ConditionExpression:
+                              'attribute_not_exists(pk) OR recordKey = :key',
+                            ExpressionAttributeValues: { ':key': key },
+                          },
+                        },
+                      ]
+                    : []),
+                  {
+                    Put: {
+                      TableName: table,
+                      Item: {
+                        pk,
+                        sk: `DELETE#${id}`,
+                        recordKey: key,
+                        dueGroup: 'PENDING',
+                        dueAt: Date.now(),
+                        revision: 0,
+                      },
+                      ConditionExpression: 'attribute_not_exists(pk)',
+                    },
+                  },
+                ],
+              }),
+              signal,
+            );
+            return;
+          } catch (cause) {
+            // A strong read also recovers a committed delete whose reply was lost.
+            if (!(await readRow(table, send, pk, `ID#${id}`, signal))) return;
+            try {
+              const current = await lookup(user, id, signal);
+              if (current.previous === previous) throw cause;
+            } catch (readCause) {
+              if (!(await readRow(table, send, pk, `ID#${id}`, signal))) return;
+              throw readCause;
+            }
+          }
+        }
+        throw postingError('CONFLICT');
+      }),
     get: (user, id, signal) =>
       storageOperation(
         signal,
@@ -133,10 +228,7 @@ export function createPostingOperations(
           const { pk, item, previous } = await lookup(user, id, signal);
           if (['queued', 'processing'].includes(item.extraction.status))
             return item;
-          if (
-            item.extraction.generation !== expectedGeneration ||
-            item.extraction.status === 'complete'
-          )
+          if (item.extraction.generation !== expectedGeneration)
             throw postingError('CONFLICT');
           const next: SavedPosting = {
             ...item,

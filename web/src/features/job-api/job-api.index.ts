@@ -1,5 +1,6 @@
 export {
   postingApi,
+  useDeletePostingMutation,
   useExtractPostingMutation,
   usePostingQuery,
   usePostingsInfiniteQuery,

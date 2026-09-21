@@ -137,6 +137,9 @@ export const updateRequestSchema = z.strictObject({
     .partial()
     .refine((value) => Object.keys(value).length > 0),
 });
+export const deleteRequestSchema = z.strictObject({
+  expectedApplicationVersion: z.number().int().nonnegative(),
+});
 export const extractionRequestSchema = z.strictObject({
   expectedGeneration: z.uuid().nullable(),
 });

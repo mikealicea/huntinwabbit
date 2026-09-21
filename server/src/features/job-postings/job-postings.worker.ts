@@ -15,6 +15,7 @@ import {
   type ParsePosting,
   type ParseResponse,
 } from '../job-parsing/job-parsing.index.ts';
+import { cleanupDeletedPosting } from './job-postings.cleanup.ts';
 import { jobPostingsTable } from './job-postings.config.ts';
 import { type DynamoTransport, readRecord } from './job-postings.dynamodb.ts';
 import { postingPut, readRow } from './job-postings.operations.ts';
@@ -45,11 +46,12 @@ export function createExtractionWorker(
   ) {
     for (let attempt = 0; attempt < 3; attempt++) {
       const signal = AbortSignal.timeout(10_000);
-      const currentJob = jobSchema.parse(
-        await readRow(table, send, job.pk, job.sk, signal),
-      );
+      const currentValue = await readRow(table, send, job.pk, job.sk, signal);
+      if (!currentValue) return false;
+      const currentJob = jobSchema.parse(currentValue);
       if (currentJob.status !== job.status) return false;
       const row = await readRow(table, send, job.pk, job.recordKey, signal);
+      if (!row) return false;
       const posting = readRecord(row, job.pk, job.recordKey);
       if (posting.extraction.generation !== job.generation) return false;
       if (typeof row?.data !== 'string')
@@ -92,9 +94,9 @@ export function createExtractionWorker(
         );
         return true;
       } catch (cause) {
-        const latest = jobSchema.parse(
-          await readRow(table, send, job.pk, job.sk, signal),
-        );
+        const latestValue = await readRow(table, send, job.pk, job.sk, signal);
+        if (!latestValue) return false;
+        const latest = jobSchema.parse(latestValue);
         // Never infer ownership of an uncertain claim: recovery will mark it failed.
         if (latest.status !== job.status) return false;
         const latestRow = await readRow(
@@ -138,7 +140,13 @@ export function createExtractionWorker(
           job.recordKey,
           AbortSignal.timeout(10_000),
         );
+        if (!row) return;
         const posting = readRecord(row, pk, job.recordKey);
+        if (
+          posting.extraction.generation !== job.generation ||
+          posting.extraction.status !== 'processing'
+        )
+          return;
         result = await parse(posting.sourceUrl, AbortSignal.timeout(60_000));
       } catch (cause) {
         await transition(
@@ -152,8 +160,8 @@ export function createExtractionWorker(
         console.log(JSON.stringify({ event: 'extraction.failed' }));
         return;
       }
-      await transition(claimed, 'complete', result);
-      console.log(JSON.stringify({ event: 'extraction.completed' }));
+      if (await transition(claimed, 'complete', result))
+        console.log(JSON.stringify({ event: 'extraction.completed' }));
     },
     async recover() {
       let cursor: Record<string, unknown> | undefined;
@@ -180,6 +188,11 @@ export function createExtractionWorker(
             ),
           );
         for (const value of page.Items) {
+          const key = z.object({ pk: z.string(), sk: z.string() }).parse(value);
+          if (key.sk.startsWith('DELETE#')) {
+            await cleanupDeletedPosting(table, send, key.pk, key.sk, now());
+            continue;
+          }
           const job = jobSchema.parse(value);
           // GSI results can be stale; transition checks the current status and generation.
           if (job.status === 'queued' || job.status === 'processing')

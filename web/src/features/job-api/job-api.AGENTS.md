@@ -24,6 +24,7 @@ fetch posting websites, run inference or own durable extraction. Those belong to
   A fresh account-keyed store isolates users. Transport failures and malformed responses become safe
   errors without serializing upstream content. No mutation or paid extraction is automatically retried.
 - [feedback](RequestFeedback.component.tsx) renders loading, session-expiry, conflict and retry states.
+  Loading feedback includes the shared motion-aware activity cue.
   Feature containers own workflow decisions; presentation components receive props.
 
 ## Lifetimes and recovery
@@ -34,7 +35,10 @@ role details stop polling after terminal extraction. Reconnect/focus refresh is 
 or reloading the browser cannot stop an accepted backend extraction job.
 
 Saving a link is idempotent by backend-normalized URL. Updates use application versions; conflicts
-retain note drafts for review. Successful writes invalidate lists and details. The browser keeps no
+retain note drafts for review. Successful writes invalidate lists and details. Extraction acknowledgements immediately update the
+detail cache so pending controls and polling start without waiting for a refetch. DELETE validates the
+expected application version and requires an empty 204 success; it removes the acknowledged ID from
+cached board pages before navigation. Failed deletions retain cached data. Deletion returns no response payload; upstream errors remain sanitized. The browser keeps no
 persistent copy of application data. Unsaved drafts and unsubmitted batch rows are not durable.
 
 ## Verification

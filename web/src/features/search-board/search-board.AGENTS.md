@@ -16,6 +16,9 @@ the server's state. The workspace stage selector remains the keyboard/control al
 returns to the moved handle after refresh. Cancellation/outside drops do not write. Card order follows
 the backend's newest-saved order; there is no within-stage sorting, filtering or deletion.
 
+Queued/processing cards show a labeled pulsing extraction indicator, including refreshes with
+existing facts. Stage saves also show the shared activity cue. Reduced motion keeps the cue static.
+
 Tests use real stores and deterministic HTTP boundaries. Browser tests exercise pointer, keyboard,
 emulated touch, cancellation, populated/empty columns, mobile reflow and both themes. Run web,
 state, architecture, browser and documentation gates. Browser automation is not a screen-reader audit.

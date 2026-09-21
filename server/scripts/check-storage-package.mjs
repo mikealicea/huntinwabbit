@@ -59,7 +59,12 @@ const dataStatements = statements.filter((statement) =>
 assert.equal(dataStatements.length, 2);
 assert.deepEqual(
   dataStatements.flatMap((statement) => statement.Action).sort(),
-  ['dynamodb:GetItem', 'dynamodb:PutItem', 'dynamodb:Query'],
+  [
+    'dynamodb:DeleteItem',
+    'dynamodb:GetItem',
+    'dynamodb:PutItem',
+    'dynamodb:Query',
+  ],
 );
 for (const statement of dataStatements) {
   assert.equal(statement.Effect, 'Allow');
@@ -85,6 +90,23 @@ for (const role of ['ExtractionRole', 'RecoveryRole']) {
           'TransactWriteItems',
     ),
   );
+  assert.equal(
+    policies.some((statement) =>
+      statement.Action.includes('dynamodb:DeleteItem'),
+    ),
+    role === 'RecoveryRole',
+  );
+  for (const statement of policies.filter((statement) =>
+    statement.Action.includes('dynamodb:DeleteItem'),
+  )) {
+    assert.deepEqual(statement.Resource, {
+      'Fn::GetAtt': ['JobPostingsTable', 'Arn'],
+    });
+    assert.equal(
+      statement.Condition.StringEquals['dynamodb:EnclosingOperation'],
+      'TransactWriteItems',
+    );
+  }
   assert(
     !policies.some((statement) => statement.Action.includes('dynamodb:Scan')),
   );

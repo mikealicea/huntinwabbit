@@ -7,6 +7,7 @@ import {
   type Opportunity,
   PRIORITY_LABELS,
 } from '@/features/job-search/job-search.index';
+import { LoadingPulse } from '@/shared/shared.index';
 
 export interface RoleCardProps {
   role: Opportunity;
@@ -92,6 +93,20 @@ export function RoleCard({
           <span className="text-base-content/75">Priority · </span>
           {PRIORITY_LABELS[role.priority]}
         </p>
+        {['queued', 'processing'].includes(
+          role.saved?.extraction.status ?? '',
+        ) && (
+          <p role="status" className="text-xs font-medium">
+            <LoadingPulse />
+            {role.saved?.extraction.status === 'queued'
+              ? role.posting
+                ? 'Refresh queued…'
+                : 'Extraction queued…'
+              : role.posting
+                ? 'Refreshing posting…'
+                : 'Extracting posting…'}
+          </p>
+        )}
         <p
           className={`mt-1 border-t border-base-300 pt-3 text-xs leading-relaxed ${next.due ? 'font-semibold' : 'text-base-content/75'}`}
         >

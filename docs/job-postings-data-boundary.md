@@ -25,15 +25,20 @@ provider errors. AWS hosting and administrator access require their own operatio
 
 ## Retention and recovery
 
-Posting records have no automatic expiry, API deletion or synchronized Supabase account deletion. Records remain
-until explicitly removed through separately authorized operational work. Deleting or signing out a
-Supabase account does not delete DynamoDB data. Outstanding valid access tokens retain the existing
+Posting records have no automatic expiry. The authenticated API supports permanent deletion of an
+individual posting after a tracking-version check; the frontend requires confirmation. The live record,
+URL pointer, ID pointer and current extraction job are removed atomically. A durable content-free
+cleanup marker removes historical job metadata through scheduled recovery. There is no trash or undo;
+the same URL can be saved again as a new record. Deleting or signing out a Supabase account does not
+delete DynamoDB data. Outstanding valid access tokens retain the existing
 [authentication limitations](auth-infrastructure.md). Do not advertise complete account erasure.
 
 The table configuration enables point-in-time recovery and retains resources on stack deletion or
 replacement. These settings are recovery aids, not an implemented restoration workflow or evidence
-of a tested backup. Any future record/account deletion must remove both chronological records and
-URL-uniqueness pointers, ID pointers and extraction jobs, and explicitly address backup retention. Table migrations and restores need
+of a tested backup. Individual deletion does not purge existing backups, provider-held data or retained
+stream/failure metadata; their configured retention still applies. Restoring a backup can restore
+previously deleted records and requires an operator to reconcile deletions before use. No account-wide
+erasure or deletion-aware restoration workflow is implemented. Table migrations and restores need
 an authorized target, ownership validation and a deliberate cutover; no migration runs at startup.
 
 Verified against AWS documentation on 2026-09-21: [transactional writes](https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_TransactWriteItems.html)
@@ -49,7 +54,11 @@ native Lambda workers; raw page content and model responses are not written to t
 Generated facts are retained in the saved posting, separately from tracking choices. Terminal job
 records receive seven-day TTL (deletion is asynchronous). The encrypted failure queue retains stream
 invocation metadata for fourteen days. Recovery exposes stalled work as failed and permits explicit
-retry; it does not automatically repeat an uncertain paid attempt.
+retry or refresh of completed postings; it does not automatically repeat an uncertain paid attempt.
+Refresh keeps the previous generated facts until successful replacement and never replaces tracking
+fields. A request in flight when deletion occurs may finish at the provider, but its result is discarded.
+Historical extraction jobs for a deleted posting are cleaned in bounded pages; the marker and cursor
+remain until cleanup completes, with recovery errors surfaced through the existing alarm.
 
 The Next.js server verifies Supabase identity before forwarding a session bearer token to the selected
 API origin. API responses prohibit caching; the browser retains only an account-isolated memory cache.

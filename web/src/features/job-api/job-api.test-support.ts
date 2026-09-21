@@ -71,6 +71,12 @@ export function mockPostingApi(initial = postingFixtures()) {
         return json({ schemaVersion: 1, item, created: true }, 201);
       }
       const item = records.get(id);
+      if (request.method === 'DELETE') {
+        if (item && item.applicationVersion !== body.expectedApplicationVersion)
+          return json({}, 409);
+        records.delete(id);
+        return new Response(null, { status: 204 });
+      }
       if (!item) return json({}, 404);
       if (request.method === 'PATCH') {
         if (item.applicationVersion !== body.expectedApplicationVersion)

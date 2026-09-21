@@ -139,13 +139,16 @@ next request's `cursor` until it is null. The [schemas](src/features/job-posting
 own exact fields, enums and defaults. A database outage returns an error, not an empty list.
 
 See the [feature barrel](src/features/job-postings/job-postings.AGENTS.md) and
-[data boundary](../docs/job-postings-data-boundary.md) for ownership and retention. There is no delete
-API or automatic cleanup after Supabase account deletion. No existing web fixtures are migrated.
+[data boundary](../docs/job-postings-data-boundary.md) for ownership and retention. There is no automatic cleanup after Supabase account deletion. No existing web fixtures are migrated.
 
 `GET /job-postings/:id` supports direct role pages. `PATCH /job-postings/:id` accepts tracking changes
 with the expected application version and returns 409 on conflicting edits. `POST
-/job-postings/:id/extraction` accepts the expected generation for explicit retry; queued/processing
-requests are idempotent. Exact bodies and statuses belong to the schemas and router.
+/job-postings/:id/extraction` accepts the expected generation for explicit retry or refresh of completed facts; queued/processing
+requests are idempotent. Refresh retains old facts until successful replacement. `DELETE /job-postings/:id`
+accepts the expected application version and returns 204 after removal (including repeated deletion),
+or 409 if tracking changed. Historical extraction metadata is cleaned by scheduled recovery. Exact
+bodies and statuses belong to the schemas and router. Deploy the updated API, worker and recovery
+configuration together before enabling these controls against a hosted target.
 
 The dev deployment includes the extraction stream worker and scheduled recovery. For an existing
 dev table, run `AWS_PROFILE=your-profile JOB_POSTINGS_TABLE=huntinwabbit-dev-job-postings mise exec --

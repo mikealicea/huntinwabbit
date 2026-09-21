@@ -4,6 +4,7 @@ import {
   INTERESTS,
   type Interest,
 } from '@/features/job-search/job-search.index';
+import { LoadingPulse } from '@/shared/shared.index';
 import type { CaptureRow } from './job-capture.validation';
 export interface JobCaptureProps {
   saving?: boolean;
@@ -137,6 +138,7 @@ export function JobCapture({
                 className="btn btn-primary min-h-11"
                 type="submit"
               >
+                {saving && <LoadingPulse />}
                 {saving ? 'Saving links…' : 'Save to Collected'}
               </button>
               <button

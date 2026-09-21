@@ -80,11 +80,20 @@ export const updateRequestSchema = z.strictObject({
     .partial()
     .refine((value) => Object.keys(value).length > 0),
 });
+export const deleteRequestSchema = z.strictObject({
+  expectedApplicationVersion: z.number().int().nonnegative(),
+});
 export const extractionRequestSchema = z.strictObject({
   expectedGeneration: z.uuid().nullable(),
 });
 export type UpdateInput = z.infer<typeof updateRequestSchema>;
 export interface PostingOperations {
+  delete(
+    userId: string,
+    id: string,
+    expectedApplicationVersion: number,
+    signal: AbortSignal,
+  ): Promise<void>;
   get(userId: string, id: string, signal: AbortSignal): Promise<SavedPosting>;
   update(
     userId: string,

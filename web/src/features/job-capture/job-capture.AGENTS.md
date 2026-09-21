@@ -15,5 +15,8 @@ The form stays available while extraction runs on the backend. Closing the form 
 while mounted. Navigation/reload can discard unsaved rows; only accepted backend saves are durable.
 A lost save response can be retried safely by normalized URL. No client-side paid parsing runs.
 
+The save button shows a pulsing activity cue while links are being saved; reduced motion keeps
+the dot static. Extraction activity is shown on each saved role after capture.
+
 Tests cover normalization, props, validation/focus, saved interests and API integration. Browser tests
 cover capture, navigation and persistence across reload. Run web gates and browser verification.

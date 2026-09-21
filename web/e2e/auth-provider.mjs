@@ -1,5 +1,5 @@
 // Test-only HTTP boundary. Never imported by application code or deployed.
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 
@@ -128,6 +128,13 @@ const server = createServer(async (request, response) => {
       return send(201, { schemaVersion: 1, item, created: true });
     }
     const item = records.get(id);
+    if (request.method === 'DELETE') {
+      if (item && item.applicationVersion !== body.expectedApplicationVersion)
+        return error(409, 'conflict');
+      records.delete(id);
+      response.writeHead(204);
+      return response.end();
+    }
     if (!item) return error(404, 'not_found');
     if (request.method === 'PATCH') {
       if (item.applicationVersion !== body.expectedApplicationVersion)
@@ -142,15 +149,45 @@ const server = createServer(async (request, response) => {
       return send(200, { schemaVersion: 1, item: next });
     }
     if (request.method === 'POST' && operation === 'extraction') {
+      if (['queued', 'processing'].includes(item.extraction.status))
+        return send(202, { schemaVersion: 1, item });
+      if (body.expectedGeneration !== item.extraction.generation)
+        return error(409, 'conflict');
+      const shouldFail = item.extraction.status !== 'failed';
+      const generation = randomUUID();
       const next = {
         ...item,
-        extraction: {
-          status: 'failed',
-          generation: '00000000-0000-4000-8000-999999999999',
-          error: 'SOURCE_BLOCKED',
-        },
+        recordVersion: item.recordVersion + 1,
+        extraction: { status: 'queued', generation, error: null },
       };
       records.set(id, next);
+      setTimeout(() => {
+        const current = records.get(id);
+        if (!current || current.extraction.generation !== generation) return;
+        records.set(id, {
+          ...current,
+          recordVersion: current.recordVersion + 1,
+          parsedPosting: shouldFail
+            ? current.parsedPosting
+            : {
+                ...(current.parsedPosting ?? initialPostings[0].parsedPosting),
+                source: {
+                  ...initialPostings[0].parsedPosting.source,
+                  normalizedUrl: current.sourceUrl,
+                },
+                job: {
+                  ...(current.parsedPosting ?? initialPostings[0].parsedPosting)
+                    .job,
+                  title: 'Refreshed Product Engineer',
+                },
+              },
+          extraction: {
+            status: shouldFail ? 'failed' : 'complete',
+            generation,
+            error: shouldFail ? 'SOURCE_BLOCKED' : null,
+          },
+        });
+      }, 200);
       return send(202, { schemaVersion: 1, item: next });
     }
     return error(405, 'method_not_allowed');
