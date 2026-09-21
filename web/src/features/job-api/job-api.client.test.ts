@@ -158,3 +158,24 @@ it('reports extraction errors without overwriting cached facts', async () => {
   ).toEqual(item.parsedPosting);
   store.dispatch(postingApi.util.resetApiState());
 });
+
+it('loads older conversation pages without dropping recent messages', async () => {
+  const boundary = mockPostingApi();
+  const id = postingFixtures()[0].id;
+  boundary.fetcher.mockResolvedValueOnce(
+    Response.json({ schemaVersion: 1, items: [], nextCursor: 'older' }),
+  );
+  boundary.fetcher.mockResolvedValueOnce(
+    Response.json({ schemaVersion: 1, items: [], nextCursor: null }),
+  );
+  const store = makeStore();
+  await store.dispatch(postingApi.endpoints.roleUpdates.initiate(id));
+  const result = await store.dispatch(
+    postingApi.endpoints.roleUpdates.initiate(id, { direction: 'forward' }),
+  );
+  expect(result.data?.pages).toHaveLength(2);
+  expect(new Request(boundary.fetcher.mock.calls[1][0]).url).toContain(
+    'cursor=older',
+  );
+  store.dispatch(postingApi.util.resetApiState());
+});

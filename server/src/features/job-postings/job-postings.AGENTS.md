@@ -43,8 +43,8 @@ with conditional rereads preserving concurrent tracking changes. A newer generat
 The native Node worker reuses the existing agent-fetch/Redpill adapters. Parsing has a 60-second budget
 inside a 90-second Lambda. Provider failures become safe saved failure codes; no automatic paid retry
 or model repair occurs. Explicit user retry or refresh of completed details creates a new generation.
-Refresh retains previous generated facts until a successful replacement; failure keeps the last good
-result and tracking fields. Active requests return the pending generation; stale terminal requests
+Refresh retains previous generated facts until a successful replacement; user overrides are applied
+separately and survive replacement. Failure keeps the last good result and tracking fields. Active requests return the pending generation; stale terminal requests
 conflict. Completing inference without
 persisting its result is an uncertain outcome, not permission to repeat the model request.
 
@@ -95,3 +95,48 @@ URL reuse and paginated cleanup. In-memory command adapters do not
 prove AWS transaction scheduling, IAM or native runtime compatibility. Run server gates/build,
 documentation gates and package inspection. Deployment/live checks require an authorized target;
 ordinary tests never write hosted records or call paid providers.
+
+## Natural-language role updates
+
+The [update router](job-postings.updates.router.ts) accepts text and returns a durable operation,
+with owner-scoped paginated history and explicit Undo. [Update schemas](job-postings.updates.schemas.ts)
+own request, history, model and stored-job contracts; [posting schemas](job-postings.schemas.ts)
+own editable fields, overrides and revision stamps. Internal metadata and unimplemented materials,
+tasks and shared company research are not editable. Company changes affect only this saved role.
+
+[Update operations](job-postings.updates.ts) atomically persist a message, idempotency pointer and
+posting pending marker before inference. History and pointers use distinct JOB prefixes so the
+existing deletion cleanup removes them. History has no TTL and survives reloads; extraction-job TTL
+is unchanged. Only one update is pending per role. Reusing an operation ID with different content
+conflicts. Accepted work survives navigation, and no client cancellation is a rollback guarantee.
+
+The extraction worker dispatches update jobs to a conditional claim, then one bounded
+[Redpill update parser](job-postings.updates.redpill.ts) call. Idempotency-pointer inserts never
+invoke a provider. Uncertain claims do not authorize inference; scheduled recovery marks overdue
+jobs failed. Explicit retries create a linked new operation; stream retries never repeat a claimed
+paid call. Completion, field edits and the change receipt commit together. Failure exposes safe
+copy, clears pending state and leaves role data unchanged. Provider billing cannot be reversed.
+
+[Pure field logic](job-postings.updates.logic.ts) resolves extracted facts with user overrides,
+including explicit clears. Missing values stay missing. Tracking remains independent; existing
+tracking writes also stamp fields to detect changes away and back. Clear changes are applied while
+invalid, ambiguous or concurrently changed fields are reported as skipped. No follow-up questions
+or external actions are performed. Model validation bounds values but does not prove interpretation
+accuracy. Input and recent history are bounded; the entire conversation is not sent on each turn.
+
+Undo needs no inference and restores the previous override presence as well as tracking values.
+It checks every changed field and refuses the whole Undo if a later edit touched any of them.
+Removing an override exposes the latest extracted fact. Other fields remain unchanged. Duplicate
+Undo requests return the existing receipt. Unsaved browser note drafts are not server data.
+
+Source URL changes atomically move URL uniqueness pointers and remove/fence the prior extraction
+job. They do not fetch automatically. The prior extracted snapshot retains its original source
+provenance until refreshed; a saved record's current URL may therefore differ from its extraction
+source. Undo cannot reclaim a URL subsequently saved as a different role. Deletion prevents late
+claims/results from resurrecting the posting; history is inaccessible immediately and removed by
+existing durable cleanup. [Processor boundary](../../../../docs/role-updates-data-boundary.md)
+describes the newly included personal text and notes.
+
+[Update tests](job-postings.updates.test.ts) cover edits, overrides, partial results, undo, conflicts,
+replay, uncertain claims, recovery, history, source identity, deletion and authenticated routes.
+Run server/build, documentation and package gates; fake storage does not prove AWS IAM or scheduling.

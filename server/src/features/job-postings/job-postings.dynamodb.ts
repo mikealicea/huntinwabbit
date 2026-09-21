@@ -80,7 +80,7 @@ export function readRecord(
       Buffer.byteLength(row.data) > MAX_RECORD_BYTES
     )
       throw new Error();
-    const item = storedPostingSchema.parse(JSON.parse(row.data));
+    const item: SavedPosting = storedPostingSchema.parse(JSON.parse(row.data));
     if (
       recordKey(item) !== row.sk ||
       normalizeJobUrl(item.sourceUrl) !== item.sourceUrl ||
@@ -89,8 +89,10 @@ export function readRecord(
       throw new Error();
     if (
       item.parsedPosting &&
-      normalizeJobUrl(item.parsedPosting.source.normalizedUrl) !==
-        item.sourceUrl
+      (normalizeJobUrl(item.parsedPosting.source.normalizedUrl) !==
+        item.parsedPosting.source.normalizedUrl ||
+        (item.parsedPosting.source.normalizedUrl !== item.sourceUrl &&
+          item.edits?.revisions.sourceUrl === undefined))
     )
       throw new Error();
     return item;
@@ -126,19 +128,7 @@ export function createDynamoPostingStore(
   tableName: string,
   transport?: DynamoTransport,
 ): PostingStore {
-  const client = transport
-    ? undefined
-    : DynamoDBDocumentClient.from(new DynamoDBClient({ maxAttempts: 3 }));
-  const send: DynamoTransport =
-    transport ??
-    ((command, signal) => {
-      if (!client) throw new Error('DynamoDB client unavailable.');
-      if (command instanceof GetCommand)
-        return client.send(command, { abortSignal: signal });
-      if (command instanceof QueryCommand)
-        return client.send(command, { abortSignal: signal });
-      return client.send(command, { abortSignal: signal });
-    });
+  const send = transport ?? createDynamoTransport();
   async function existing(
     pk: string,
     url: string,
@@ -291,5 +281,18 @@ export function createDynamoPostingStore(
         }
       });
     },
+  };
+}
+
+export function createDynamoTransport(): DynamoTransport {
+  const client = DynamoDBDocumentClient.from(
+    new DynamoDBClient({ maxAttempts: 3 }),
+  );
+  return (command, signal) => {
+    if (command instanceof GetCommand)
+      return client.send(command, { abortSignal: signal });
+    if (command instanceof QueryCommand)
+      return client.send(command, { abortSignal: signal });
+    return client.send(command, { abortSignal: signal });
   };
 }

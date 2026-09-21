@@ -88,6 +88,24 @@ export const applicationSchema = z.strictObject({
   followUpOn: z.iso.date().nullable(),
   notes: z.string().max(20_000),
 });
+export const postingFieldsSchema = jobSchema.omit({ company: true }).extend({
+  companyName: jobSchema.shape.company.shape.name,
+  companyWebsite: jobSchema.shape.company.shape.website,
+});
+export const editableFieldsSchema = postingFieldsSchema.extend({
+  ...applicationSchema.shape,
+  sourceUrl: z.url(),
+});
+export type EditableFields = z.infer<typeof editableFieldsSchema>;
+export type FieldName = keyof EditableFields;
+export const fieldNameSchema = z.enum(
+  Object.keys(editableFieldsSchema.shape) as [FieldName, ...FieldName[]],
+);
+export const roleEditsSchema = z.strictObject({
+  overrides: postingFieldsSchema.partial(),
+  revisions: z.partialRecord(fieldNameSchema, z.number().int().nonnegative()),
+  pending: z.string().nullable(),
+});
 export const saveRequestSchema = z.strictObject({
   url: z.string().trim().min(1).max(8_192),
   extract: z.boolean().default(false),
@@ -127,6 +145,7 @@ export const extractionSchema = z.strictObject({
   error: z.string().nullable(),
 });
 export const savedPostingSchema = legacyPostingSchema.extend({
+  edits: roleEditsSchema.optional(),
   applicationVersion: z.number().int().nonnegative(),
   recordVersion: z.number().int().nonnegative(),
   extraction: extractionSchema,
@@ -170,3 +189,59 @@ export const itemResponseSchema = z.strictObject({
 export type SavedPosting = z.infer<typeof savedPostingSchema>;
 export type Application = z.infer<typeof applicationSchema>;
 export type ListResponse = z.infer<typeof listResponseSchema>;
+
+export const updateMessageSchema = z.strictObject({
+  operationId: z.uuid(),
+  text: z.string().trim().min(1).max(20_000),
+  timezone: z
+    .string()
+    .max(100)
+    .refine((value) => {
+      try {
+        new Intl.DateTimeFormat('en', { timeZone: value });
+        return true;
+      } catch {
+        return false;
+      }
+    }),
+  retryOf: z.uuid().optional(),
+});
+export const changeSchema = z.strictObject({
+  field: fieldNameSchema,
+  before: z.unknown(),
+  after: z.unknown(),
+});
+export const updateEntrySchema = z.strictObject({
+  id: z.uuid(),
+  text: z.string(),
+  createdAt: z.iso.datetime(),
+  status: z.enum([
+    'queued',
+    'processing',
+    'applied',
+    'partial',
+    'unchanged',
+    'failed',
+  ]),
+  changes: z.array(changeSchema),
+  skipped: z.array(z.string()),
+  error: z.string().nullable(),
+  undoneAt: z.iso.datetime().nullable(),
+  retryOf: z.uuid().optional(),
+});
+export const updateHistorySchema = z.strictObject({
+  schemaVersion: z.literal(1),
+  items: z.array(updateEntrySchema).max(5),
+  nextCursor: z.string().nullable(),
+});
+export const updateResultSchema = z.strictObject({
+  schemaVersion: z.literal(1),
+  entry: updateEntrySchema,
+});
+export const historyQuerySchema = z.strictObject({
+  cursor: z.string().min(1).max(2048).optional(),
+});
+
+export type UpdateEntry = z.infer<typeof updateEntrySchema>;
+export type UpdateMessage = z.infer<typeof updateMessageSchema>;
+export type Job = z.infer<typeof jobSchema>;

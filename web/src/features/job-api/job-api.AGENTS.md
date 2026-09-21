@@ -49,3 +49,9 @@ mocked Redux hooks. [Browser tests](../../../e2e/e2e.AGENTS.md) exercise the rea
 isolated fake auth/API servers. Fixtures and test adapters are never imported by runtime code.
 Run web gates, auth/state coverage, architecture checks and browser tests. Live dev deployment and
 paid inference require an explicitly authorized target; offline tests never use hosted infrastructure.
+
+Role update submission, history and Undo use the same authenticated bridge, schema validation and
+origin rules. History remains in RTK Query rather than a duplicate product slice. Successful history
+reads invalidate posting caches so durable results appear on the board and role. Submission carries
+a client operation ID for acknowledgement recovery; the server owns paid work and ordering.
+The [role workspace barrel](../role-workspace/role-workspace.AGENTS.md) owns interaction details.

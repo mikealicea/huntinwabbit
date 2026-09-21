@@ -56,12 +56,17 @@ async function readBoundedJson(response: Response): Promise<unknown> {
   }
 }
 
-export function createRedpillExtractor(
+export function createRedpillCompletion(
   apiKey: string,
   options: { fetch?: typeof fetch; timeoutMs?: number } = {},
-): ExtractPosting {
-  return async (content, callerSignal) => {
-    if (content.length > MAX_SOURCE_CHARACTERS)
+) {
+  return async (
+    instructions: string,
+    content: string,
+    callerSignal: AbortSignal,
+  ): Promise<unknown> => {
+    // JSON escaping can expand the original bounded source up to sixfold.
+    if (content.length > MAX_SOURCE_CHARACTERS * 6 + 1024)
       throw parsingError('SOURCE_TOO_LARGE');
     const controller = new AbortController();
     const signal = AbortSignal.any([callerSignal, controller.signal]);
@@ -86,7 +91,7 @@ export function createRedpillExtractor(
           max_tokens: 8_192,
           messages: [
             { role: 'system', content: instructions },
-            { role: 'user', content: JSON.stringify({ postingText: content }) },
+            { role: 'user', content },
           ],
         }),
       });
@@ -105,9 +110,7 @@ export function createRedpillExtractor(
       const completion = completionSchema.safeParse(data);
       if (!completion.success) throw parsingError('INVALID_MODEL_OUTPUT');
       const raw = completion.data.choices[0]?.message.content;
-      const extraction = extractionSchema.safeParse(JSON.parse(raw ?? 'null'));
-      if (!extraction.success) throw parsingError('INVALID_MODEL_OUTPUT');
-      return extraction.data;
+      return JSON.parse(raw ?? 'null') as unknown;
     } catch (cause) {
       if (signal.aborted) throw parsingError('PARSE_TIMEOUT');
       if (cause instanceof SyntaxError)
@@ -118,5 +121,25 @@ export function createRedpillExtractor(
     } finally {
       clearTimeout(timer);
     }
+  };
+}
+
+export function createRedpillExtractor(
+  apiKey: string,
+  options: { fetch?: typeof fetch; timeoutMs?: number } = {},
+): ExtractPosting {
+  const complete = createRedpillCompletion(apiKey, options);
+  return async (content, signal) => {
+    if (content.length > MAX_SOURCE_CHARACTERS)
+      throw parsingError('SOURCE_TOO_LARGE');
+    const result = extractionSchema.safeParse(
+      await complete(
+        instructions,
+        JSON.stringify({ postingText: content }),
+        signal,
+      ),
+    );
+    if (!result.success) throw parsingError('INVALID_MODEL_OUTPUT');
+    return result.data;
   };
 }

@@ -27,3 +27,7 @@ traces, screenshots or assertions. Browser tests supplement the production build
 The automated viewport checks do not establish a screen-reader audit, physical touch-device support
 or complete contrast coverage. Record manual checks and limitations in the handoff. Keep this guide
 indexed in the [web guide](../AGENTS.md).
+
+Role chat scenarios use deterministic loopback operation responses, never live Redpill inference.
+They verify reload recovery, refresh precedence, partial summaries, explicit retry, Undo and native
+mobile-dialog focus/dismissal in both themes. Screenshots are retained in ignored test output.

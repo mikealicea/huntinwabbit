@@ -1,8 +1,13 @@
 export { jobParsingConfig } from './job-parsing.config.ts';
 export { createFetchPosting } from './job-parsing.fetch.ts';
-export { createRedpillExtractor } from './job-parsing.redpill.ts';
+export {
+  createRedpillCompletion,
+  createRedpillExtractor,
+} from './job-parsing.redpill.ts';
 export { createJobParsingRouter } from './job-parsing.router.ts';
 export {
+  jobSchema,
+  type ParsedJob,
   type ParsePosting,
   type ParseResponse,
   parseResponseSchema,

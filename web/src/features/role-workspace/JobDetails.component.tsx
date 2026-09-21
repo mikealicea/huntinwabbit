@@ -16,6 +16,7 @@ export function JobDetails({
   disabled?: boolean;
 }) {
   const posting = role.posting;
+  const details = role.jobDetails ?? role.saved?.parsedPosting?.job;
   const pending = ['queued', 'processing'].includes(
     role.saved?.extraction.status ?? '',
   );
@@ -75,7 +76,10 @@ export function JobDetails({
                     : role.saved.extraction.status === 'disabled'
                       ? 'Extraction is currently unavailable. Your link is saved.'
                       : role.saved.extraction.status === 'complete'
-                        ? 'Details extracted from the posting. Review them against the original.'
+                        ? role.saved.edits &&
+                          Object.keys(role.saved.edits.overrides).length
+                          ? 'Your corrections are preserved when posting details refresh.'
+                          : 'Details extracted from the posting. Review them against the original.'
                         : 'Posting details have not been requested.'}
             </p>
             {onExtract && (
@@ -101,12 +105,9 @@ export function JobDetails({
             )}
           </div>
         )}
-        {role.saved?.parsedPosting && (
+        {details && (
           <>
-            <p>
-              {role.saved.parsedPosting.job.workArrangement ??
-                'Work arrangement not listed'}
-            </p>
+            <p>{details.workArrangement ?? 'Work arrangement not listed'}</p>
             {(
               [
                 'responsibilities',
@@ -114,7 +115,7 @@ export function JobDetails({
                 'benefits',
               ] as const
             ).map((field) =>
-              role.saved?.parsedPosting?.job[field].length ? (
+              details[field].length ? (
                 <div key={field}>
                   <h3 className="font-semibold">
                     {field === 'preferredQualifications'
@@ -124,20 +125,53 @@ export function JobDetails({
                         : 'Benefits'}
                   </h3>
                   <ul className="list-disc pl-5">
-                    {[...new Set(role.saved.parsedPosting.job[field])].map(
-                      (text) => (
-                        <li key={text}>{text}</li>
-                      ),
-                    )}
+                    {[...new Set(details[field])].map((text) => (
+                      <li key={text}>{text}</li>
+                    ))}
                   </ul>
                 </div>
               ) : null,
             )}
-            {role.saved.parsedPosting.job.compensation.length > 0 && (
+            <dl className="space-y-2 text-sm">
+              {details.company.website && (
+                <div>
+                  <dt className="font-semibold">Company website</dt>
+                  <dd>
+                    <a
+                      className="link break-all"
+                      href={details.company.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {details.company.website}
+                    </a>
+                  </dd>
+                </div>
+              )}
+              {details.postingId && (
+                <div>
+                  <dt className="font-semibold">Posting ID</dt>
+                  <dd>{details.postingId}</dd>
+                </div>
+              )}
+              {details.publishedDate && (
+                <div>
+                  <dt className="font-semibold">Published</dt>
+                  <dd>{details.publishedDate}</dd>
+                </div>
+              )}
+              {details.closingDate && (
+                <div>
+                  <dt className="font-semibold">Closing date</dt>
+                  <dd>{details.closingDate}</dd>
+                </div>
+              )}
+            </dl>
+            {details.compensation.length > 0 && (
               <div>
                 <h3 className="font-semibold">Compensation details</h3>
                 <ul className="space-y-2">
-                  {role.saved.parsedPosting.job.compensation.map((band) => (
+                  {details.compensation.map((band) => (
                     <li key={JSON.stringify(band)}>
                       {band.originalText}
                       {band.location && ` · ${band.location}`}
@@ -149,6 +183,13 @@ export function JobDetails({
             )}
           </>
         )}
+        {role.saved?.parsedPosting &&
+          role.saved.parsedPosting.source.normalizedUrl !== role.sourceUrl && (
+            <p className="text-sm text-base-content/75">
+              These extracted details came from the previous posting link.
+              Refresh the posting to read the new link.
+            </p>
+          )}
         {role.sourceUrl && (
           <a
             href={role.sourceUrl}

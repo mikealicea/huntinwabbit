@@ -131,8 +131,8 @@ been updated. Source gate, local build, package check and live inference are dis
 
 The stage-specific table reference is passed as JOB_POSTINGS_TABLE. It has on-demand billing,
 encryption, PITR and retain policies. API, extraction and recovery roles are separate. All writes
-use conditional transactions; runtime roles cannot scan. API and recovery roles can delete within
-transactions; the extraction role cannot delete. Scheduled recovery also advances durable posting
+use conditional transactions; runtime roles cannot scan. API, recovery and extraction roles can delete within
+transactions; the extraction role moves source URL pointers and fences old jobs during role updates. Scheduled recovery also advances durable posting
 deletion cleanup markers through the pending index. The recovery role alone can query the
 sparse pending-job index. The worker consumes only INSERT job-key events from a KEYS_ONLY stream.
 Exact timeout, retention, retry, alarm and IAM settings belong to serverless.yml and the

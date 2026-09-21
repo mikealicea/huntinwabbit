@@ -7,6 +7,7 @@ const initialPostings = JSON.parse(
   readFileSync(new URL('./postings.fixture.json', import.meta.url), 'utf8'),
 );
 const postings = new Map();
+const updateHistories = new Map();
 let postingSequence = 100;
 
 const accounts = new Map();
@@ -88,6 +89,89 @@ const server = createServer(async (request, response) => {
       );
     const records = postings.get(owner);
     const [, , id, operation] = url.pathname.split('/');
+    if (operation === 'updates') {
+      const role = records.get(id);
+      if (!role) return error(404, 'not_found');
+      const key = `${owner}:${id}`;
+      const history = updateHistories.get(key) ?? [];
+      updateHistories.set(key, history);
+      if (request.method === 'GET')
+        return send(200, {
+          schemaVersion: 1,
+          items: history.slice(-5).reverse(),
+          nextCursor: null,
+        });
+      const operationId = url.pathname.split('/')[4];
+      if (operationId) {
+        const entry = history.find((entry) => entry.id === operationId);
+        if (!entry) return error(404, 'not_found');
+        if (!entry.undoneAt) {
+          for (const change of entry.changes) {
+            if (change.field === 'title')
+              role.edits.overrides.title = change.before;
+            else role.application[change.field] = change.before;
+          }
+          role.recordVersion++;
+          role.applicationVersion++;
+          entry.undoneAt = new Date().toISOString();
+        }
+        return send(200, { schemaVersion: 1, entry });
+      }
+      const prior = history.find((entry) => entry.id === body.operationId);
+      if (prior) return send(202, { schemaVersion: 1, entry: prior });
+      if (role.edits?.pending) return error(409, 'conflict');
+      const entry = {
+        id: body.operationId,
+        text: body.text,
+        createdAt: new Date().toISOString(),
+        status: 'queued',
+        changes: [],
+        skipped: [],
+        error: null,
+        undoneAt: null,
+        ...(body.retryOf ? { retryOf: body.retryOf } : {}),
+      };
+      history.push(entry);
+      role.edits = {
+        overrides: role.edits?.overrides ?? {},
+        revisions: {},
+        pending: entry.id,
+      };
+      setTimeout(() => {
+        const current = records.get(id);
+        if (!current) return;
+        if (entry.text.includes('simulate failure') && !entry.retryOf) {
+          entry.status = 'failed';
+          entry.error = 'The update could not finish.';
+        } else {
+          entry.changes = [
+            {
+              field: 'title',
+              before:
+                current.edits.overrides.title ??
+                current.parsedPosting.job.title,
+              after: 'Staff Product Engineer',
+            },
+            {
+              field: 'priority',
+              before: current.application.priority,
+              after: 'high',
+            },
+          ];
+          current.edits.overrides.title = 'Staff Product Engineer';
+          current.application.priority = 'high';
+          entry.skipped = entry.text.includes('unclear')
+            ? ['The salary is unclear.']
+            : [];
+          entry.status = entry.skipped.length ? 'partial' : 'applied';
+        }
+        current.edits.pending = null;
+        current.recordVersion++;
+        current.applicationVersion++;
+      }, 800);
+      return send(202, { schemaVersion: 1, entry });
+    }
+
     if (request.method === 'GET')
       return id
         ? records.has(id)
@@ -132,6 +216,7 @@ const server = createServer(async (request, response) => {
       if (item && item.applicationVersion !== body.expectedApplicationVersion)
         return error(409, 'conflict');
       records.delete(id);
+      updateHistories.delete(`${owner}:${id}`);
       response.writeHead(204);
       return response.end();
     }

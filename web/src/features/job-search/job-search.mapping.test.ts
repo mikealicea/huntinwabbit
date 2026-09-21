@@ -64,3 +64,45 @@ it('deduplicates pages without allowing older records to overwrite newer ones', 
   );
   expect(mergePostingPages([])).toEqual([]);
 });
+
+it('maps user corrections and explicit clears consistently even without extracted facts', () => {
+  const item = postingFixtures()[0];
+  const edits = {
+    overrides: {
+      companyName: 'Corrected company',
+      companyWebsite: 'https://example.test/',
+      locations: [],
+      title: 'Corrected title',
+      compensation: [],
+    },
+    revisions: {},
+    pending: null,
+  };
+  const corrected = toOpportunity({ ...item, edits });
+  expect(corrected.companyName).toBe('Corrected company');
+  expect(corrected.jobDetails?.company.website).toBe('https://example.test/');
+  expect(corrected.posting).toMatchObject({
+    title: 'Corrected title',
+    location: null,
+    salary: null,
+  });
+  expect(
+    toOpportunity({ ...item, parsedPosting: null, edits }).posting?.title,
+  ).toBe('Corrected title');
+  expect(
+    toOpportunity({
+      ...item,
+      parsedPosting: null,
+      edits: { ...edits, overrides: {} },
+    }).posting,
+  ).toBeNull();
+  expect(
+    toOpportunity({
+      ...item,
+      edits: {
+        ...edits,
+        overrides: { companyName: null, companyWebsite: null },
+      },
+    }).jobDetails?.company,
+  ).toEqual({ name: null, website: null });
+});

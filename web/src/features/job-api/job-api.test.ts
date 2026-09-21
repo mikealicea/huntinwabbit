@@ -252,3 +252,62 @@ it('rejects invalid and cross-origin deletion without forwarding', async () => {
       .status,
   ).toBe(502);
 });
+
+it('validates role update requests, history and undo through the authenticated bridge', async () => {
+  const id = postingFixtures()[0].id;
+  const operationId = '00000000-0000-4000-8000-123456789012';
+  const entry = {
+    id: operationId,
+    text: 'Priority high',
+    createdAt: '2026-09-21T00:00:00.000Z',
+    status: 'queued',
+    changes: [],
+    skipped: [],
+    error: null,
+    undoneAt: null,
+  };
+  const s = setup({ schemaVersion: 1, entry });
+  expect(
+    (
+      await s.bridge(
+        req(`/${id}/updates`, 'POST', {
+          operationId,
+          text: entry.text,
+          timezone: 'UTC',
+        }),
+      )
+    ).status,
+  ).toBe(200);
+  expect(
+    String(s.fetcher.mock.calls[0][0]).endsWith(`/job-postings/${id}/updates`),
+  ).toBe(true);
+  expect(
+    (
+      await s.bridge(
+        req(`/${id}/updates`, 'POST', {
+          operationId,
+          text: '',
+          timezone: 'invalid',
+        }),
+      )
+    ).status,
+  ).toBe(400);
+  expect(
+    (await s.bridge(req(`/${id}/updates/${operationId}/undo`, 'POST', {})))
+      .status,
+  ).toBe(200);
+  s.fetcher.mockResolvedValueOnce(
+    Response.json({ schemaVersion: 1, items: [entry], nextCursor: null }),
+  );
+  expect((await s.bridge(req(`/${id}/updates?cursor=abc`))).status).toBe(200);
+  expect((await s.bridge(req(`/${id}/updates?cursor=a&cursor=b`))).status).toBe(
+    400,
+  );
+  expect(
+    (
+      await s.bridge(
+        req(`/${id}/updates/${operationId}/undo`, 'POST', { unexpected: true }),
+      )
+    ).status,
+  ).toBe(400);
+});

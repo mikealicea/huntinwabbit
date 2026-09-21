@@ -14,7 +14,7 @@ can discard unsaved notes. Extraction only updates generated facts and never ove
 preferred qualifications, benefits and compensation bands. Source text renders as text, never injected
 HTML. Missing facts remain unknown. Queued/processing/failed/disabled states distinguish extraction
 from link persistence; terminal failure offers an explicit retry. Completed postings offer refresh of
-the saved URL. Existing facts remain visible during refresh and after failure; success replaces them.
+the saved URL. Existing facts remain visible during refresh and after failure; success replaces generated facts while preserving user overrides.
 Unsaved note drafts survive refresh. Pending requests cannot submit another extraction.
 
 Refresh/extraction, saves and deletion show the shared pulsing activity cue while pending.
@@ -38,3 +38,26 @@ HTTP. Browser tests exercise direct routes, follow-ups, themes and responsive la
 state, auth, architecture, browser and documentation gates. Refresh/retry and deletion browser tests
 cover draft retention, reload, keyboard focus and mobile dialogs in both themes. No upload, submission or
 company-editing capability is claimed.
+
+## Update role chat
+
+[UpdateRoleContainer](UpdateRole.container.tsx) connects durable history, submission and Undo through
+RTK Query. [UpdateRole](UpdateRole.component.tsx) renders typed props and owns only composer/dialog
+state. Desktop shows the chat above secondary sections; mobile opens a native full-screen dialog.
+Enter sends, Shift+Enter adds a newline, and closing restores focus. Processing never owns the server
+job lifetime. The composer remains editable while another update runs, but sending is disabled.
+
+Messages and change receipts persist with the role. Clear portions apply immediately; skipped or
+ambiguous portions are reported without questions. Undo cannot replace later edits. Failures preserve
+local drafts, with an explicit retry for a saved failed operation. Ambiguous submission failures reuse
+the operation ID while the text is unchanged; history refresh recovers an accepted request. Chat
+history is paginated, polls pending operations, and refreshes role/board caches on settlement.
+
+Source-derived facts resolve through saved overrides, including empty values. All persisted role
+fields are supported, including fields shown in the detailed posting section. Chat does not create
+unimplemented tasks, material records or shared company profiles. Pasted text is processed by Redpill;
+links are values, not fetching instructions. Unsaved notes remain local and survive chat updates;
+users must review their draft before saving over a newly changed server note.
+
+[Chat tests](UpdateRole.test.tsx) exercise props and a fresh real store. Browser tests cover desktop
+and mobile, both themes, persisted history, partial updates, retry, refresh precedence and Undo.

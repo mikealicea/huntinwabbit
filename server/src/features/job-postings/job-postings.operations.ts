@@ -196,6 +196,19 @@ export function createPostingOperations(
           const next = {
             ...item,
             application: { ...item.application, ...input.changes },
+            edits: {
+              overrides: item.edits?.overrides ?? {},
+              pending: item.edits?.pending ?? null,
+              revisions: {
+                ...item.edits?.revisions,
+                ...Object.fromEntries(
+                  Object.keys(input.changes).map((key) => [
+                    key,
+                    item.recordVersion + 1,
+                  ]),
+                ),
+              },
+            },
             applicationVersion: item.applicationVersion + 1,
             recordVersion: item.recordVersion + 1,
             updatedAt: new Date().toISOString(),

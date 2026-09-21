@@ -19,6 +19,7 @@ import { selectToday, useAppSelector } from '@/state/state.index';
 import { RoleNotFound } from './RoleNotFound.component';
 import { RoleWorkspace } from './RoleWorkspace.component';
 import { UnavailableSection } from './UnavailableSection.component';
+import { UpdateRoleContainer } from './UpdateRole.container';
 export function RoleWorkspaceContainer({ roleId }: { roleId: string }) {
   const router = useRouter();
   const [remove, deletion] = useDeletePostingMutation();
@@ -27,7 +28,7 @@ export function RoleWorkspaceContainer({ roleId }: { roleId: string }) {
     cached.data?.extraction.status ?? '',
   );
   const query = usePostingQuery(roleId, {
-    pollingInterval: pending ? 5000 : 0,
+    pollingInterval: pending || cached.data?.edits?.pending ? 2000 : 0,
     skipPollingIfUnfocused: true,
     refetchOnFocus: true,
   });
@@ -113,6 +114,14 @@ export function RoleWorkspaceContainer({ roleId }: { roleId: string }) {
             });
         }}
         onTaskCompletionChange={() => {}}
+        updates={
+          <UpdateRoleContainer
+            key={role.id}
+            roleId={role.id}
+            pending={!!role.saved?.edits?.pending}
+            disabled={deletion.isLoading}
+          />
+        }
         materials={
           <UnavailableSection title="Application materials">
             Resume selection and submitted materials are not connected yet.

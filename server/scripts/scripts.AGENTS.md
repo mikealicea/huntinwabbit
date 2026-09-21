@@ -23,7 +23,7 @@ provider inference, or prove safe fetching for arbitrary Internet destinations.
 
 [check-storage-package.mjs](check-storage-package.mjs), exposed as `npm run check:storage-package`,
 reads the generated CloudFormation template and archive source map to verify the saved-posting
-table, retention/recovery configuration, table reference, scoped IAM (including transactional deletes for API/recovery only) and bundled DynamoDB SDK.
+table, retention/recovery configuration, table reference, scoped IAM (including transactional deletes for API/recovery and source-link updates in the worker) and bundled DynamoDB SDK.
 It does not print rendered secrets, run Docker, contact AWS or exercise a real database. It requires
 the ordinary Serverless package artifacts and `unzip`; no temporary files are created.
 

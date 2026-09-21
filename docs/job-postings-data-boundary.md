@@ -64,3 +64,8 @@ The Next.js server verifies Supabase identity before forwarding a session bearer
 API origin. API responses prohibit caching; the browser retains only an account-isolated memory cache.
 Unsaved note drafts and unsubmitted batch rows can be lost on navigation/reload. Stage configuration
 selects developer-owned infrastructure, with no maintainer target baked into public defaults.
+
+Natural-language edits add persistent messages, change receipts, field revisions and user overrides.
+Their processor boundary and history lifecycle are described in
+[role update data boundary](role-updates-data-boundary.md). Deleting a posting also schedules cleanup
+of its update history and idempotency pointers; no history survives intentionally in active storage.

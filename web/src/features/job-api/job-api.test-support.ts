@@ -29,6 +29,10 @@ export function mockPostingApi(initial = postingFixtures()) {
       const id = url.pathname.split('/')[3];
       const json = (body: unknown, status = 200) =>
         Response.json(body, { status });
+      if (request.method === 'GET' && url.pathname.endsWith('/updates'))
+        return records.has(id)
+          ? json({ schemaVersion: 1, items: [], nextCursor: null })
+          : json({}, 404);
       if (request.method === 'GET')
         return id
           ? records.has(id)

@@ -33,7 +33,8 @@ accepts supplied parse responses and owns durable extraction jobs whose worker c
   Its program is a static string so bundlers cannot introduce unavailable closures; input never
   becomes executable source or shell arguments. All child stdout/stderr is discarded because
   upstream logs include URLs. Only the allowlisted IPC result leaves the child.
-- [Redpill adapter](job-parsing.redpill.ts) sends extracted page text with a schema-oriented prompt
+- [Redpill adapter](job-parsing.redpill.ts) exposes a bounded JSON-completion transport reused by
+  saved-role updates. The URL extractor sends extracted page text with a schema-oriented prompt
   using JSON object mode with reasoning disabled. Source text is untrusted, tools are unavailable, output is bounded, and
   the completion envelope, finish reason, JSON and job schema must all validate. Prompt isolation
   reduces instruction confusion; schema validation does not prove factual accuracy.

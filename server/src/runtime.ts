@@ -11,7 +11,9 @@ import {
 } from './features/job-parsing/job-parsing.index.ts';
 import {
   createDynamoPostingStore,
+  createDynamoTransport,
   createJobPostings,
+  createRoleUpdates,
   jobPostingsTable,
 } from './features/job-postings/job-postings.index.ts';
 
@@ -35,5 +37,13 @@ export function buildRuntimeApp(
         config.enabled,
       )
     : undefined;
-  return buildApp({ verifyAccessToken, parsePosting, jobPostings });
+  const roleUpdates = table
+    ? createRoleUpdates(table, createDynamoTransport(), config.enabled)
+    : undefined;
+  return buildApp({
+    verifyAccessToken,
+    parsePosting,
+    jobPostings,
+    roleUpdates,
+  });
 }
