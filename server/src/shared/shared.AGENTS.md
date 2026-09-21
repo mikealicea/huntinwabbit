@@ -7,15 +7,16 @@ owns architecture, and the [auth barrel](../features/auth/auth.AGENTS.md) owns a
 There is no persistence, telemetry SDK or durable worker system.
 
 [app.ts](../app.ts) constructs Express, installs request logging, adds public health, authentication,
-JSON parsing and the hello router, then installs final error middleware. [runtime.ts](../runtime.ts)
-validates auth configuration and chooses the concrete verifier. [local.ts](../local.ts) owns the
+bounded JSON parsing, the hello router and the [job parsing router](../features/job-parsing/job-parsing.router.ts),
+then installs final error middleware. [runtime.ts](../runtime.ts) validates auth and parsing configuration
+and chooses the concrete adapters. [local.ts](../local.ts) owns the
 listener; [lambda.ts](../lambda.ts) lazily constructs and caches the Lambda adapter. Invalid auth
 configuration fails construction. Public health bypasses token checks once the app is constructed;
 it is not a provider-readiness check.
 
 [shared.errors.ts](shared.errors.ts) owns AppError, its constructors and the public message envelope.
-Known application errors return their status and safe message; unauthorized responses include a
-bearer challenge at the application boundary. The deployed Function URL remaps that header, as
+Known application errors return their status and safe message, with an optional machine-readable code.
+Unauthorized responses include a bearer challenge at the application boundary. The deployed Function URL remaps that header, as
 recorded in the [deployment guide](../../docs/SERVERLESS-V4.AGENTS.md). Unknown errors return a generic response. Preserve four-argument error-middleware
 arity; Express uses it to recognize an error handler.
 
@@ -28,8 +29,9 @@ are public contracts and must not contain provider prose, secrets or personal da
 ## Limitations
 
 Authentication runs before body parsing, so unauthenticated malformed input fails authentication.
-Authenticated parser errors remain generic server errors; there is no dedicated malformed-input
-mapping. All requests passing through Express logging now receive the ordinary request log pair,
+Authenticated malformed-JSON and body-size failures return safe client errors with codes, never
+the submitted body. Unknown parser failures retain the generic server-error mapping. All requests
+passing through Express logging now receive the ordinary request log pair,
 including parser failures. No Sentry SDK or automated secret scanner enforces these boundaries.
 Hosting infrastructure has separate logging settings and must not log token-bearing requests.
 

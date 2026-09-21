@@ -7,14 +7,18 @@ frameworkVersion: '4'
 provider:
   name: aws
   runtime: nodejs24.x
+  architecture: x86_64
   region: us-east-1
   environment:
     SUPABASE_URL: ${env:SUPABASE_URL}
+    JOB_PARSING_ENABLED: ${env:JOB_PARSING_ENABLED, 'false'}
+    REDPILL_API_KEY: ${env:REDPILL_API_KEY, ''}
 
 # v4 bundles src/ with built-in esbuild — handlers point at source, not build output.
 # Reference: docs/SERVERLESS-V4.AGENTS.md
 build:
   esbuild:
+    external: ['@teng-lin/agent-fetch']
     sourcemap:
       type: linked
       setNodeOptions: true # readable TS stack traces in CloudWatch
@@ -25,6 +29,6 @@ build:
 functions:
   api:
     handler: src/lambda.handler
-    timeout: 30
-    memorySize: 512
+    timeout: 70
+    memorySize: 1024
     url: true

@@ -7,15 +7,17 @@ import type { NextFunction, Request, Response } from 'express';
  */
 export class AppError extends Error {
   readonly statusCode: number;
+  readonly code?: string;
 
   constructor(
     statusCode: number,
     message: string,
-    options?: { cause?: unknown },
+    options?: { cause?: unknown; code?: string },
   ) {
     super(message, options);
     this.name = 'AppError';
     this.statusCode = statusCode;
+    this.code = options?.code;
   }
 }
 
@@ -60,7 +62,27 @@ export function errorMiddleware(
       });
     }
     if (error.statusCode === 401) res.set('WWW-Authenticate', 'Bearer');
-    res.status(error.statusCode).json({ message: error.message });
+    res.status(error.statusCode).json({
+      message: error.message,
+      ...(error.code ? { code: error.code } : {}),
+    });
+    return;
+  }
+
+  // Express body-parser errors contain the submitted body: never serialize them.
+  if (
+    error &&
+    typeof error === 'object' &&
+    'type' in error &&
+    (error.type === 'entity.parse.failed' || error.type === 'entity.too.large')
+  ) {
+    const tooLarge = error.type === 'entity.too.large';
+    res.status(tooLarge ? 413 : 400).json({
+      message: tooLarge
+        ? 'The request body is too large.'
+        : 'Provide a valid JSON request body.',
+      code: tooLarge ? 'REQUEST_TOO_LARGE' : 'INVALID_JSON',
+    });
     return;
   }
 

@@ -102,3 +102,29 @@ The same live response inspection found that the Function URL remaps `WWW-Authen
 `x-amzn-Remapped-www-authenticate`. Local and Lambda-handler tests establish the application header,
 but clients of this deployment do not receive a standard bearer-challenge header. This is a known
 transport limitation; changing the front door is separately scoped work.
+
+## Job parser native packaging
+
+The parsing feature uses agent-fetch as an external dependency. Its native HTTP library must be
+installed for Lambda, not the packaging machine. The [esbuild config](../esbuild.config.mjs) sets
+npm's target OS/CPU/libc before Serverless installs externals; the deployment architecture is explicit
+in [serverless.yml](../serverless.yml). A macOS-default install was observed to omit the Linux
+HTTP library. Selecting Linux/glibc also includes the canvas dependency pulled in by PDF support,
+even when parsing HTML. Package inspection alone catches missing files but does not prove native loading.
+
+Package without a runtime key for offline verification:
+
+```sh
+JOB_PARSING_ENABLED=false REDPILL_API_KEY='' npx --no-install serverless package --stage dev
+npm run check:package
+```
+
+The [package check](../scripts/scripts.AGENTS.md) exercises the actual archive in the AWS Node 24
+Linux image without networking. Docker must be running. Deployment remains separate: set the
+capability flag and key intentionally for an authorized target. Serverless environment variables
+can put the key in generated templates/state; never print or commit those artifacts. The runtime
+key is not needed for packaging checks and no secret-store IAM is introduced.
+
+The Lambda timeout/memory budget now accommodates the bounded synchronous fetch and inference
+phases. These source changes are not evidence that the previously verified dev deployment has
+been updated. Source gate, local build, package check and live inference are distinct checks.

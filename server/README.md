@@ -1,8 +1,8 @@
 # huntinwabbit server
 
-The backend currently contains an HTTP API skeleton: Node 24, strict TypeScript, native ESM and
-Express 5 via Serverless Framework v4. It does not yet implement the job-search experience in
-the [product README](../README.md).
+The backend uses Node 24, strict TypeScript, native ESM and Express 5 via Serverless Framework v4.
+It provides authentication and opt-in synchronous job URL parsing. It does not yet persist the
+job-search workspace described in the [product README](../README.md).
 
 See `AGENTS.md` for architecture, conventions, and the Definition of Done.
 
@@ -11,7 +11,7 @@ See `AGENTS.md` for architecture, conventions, and the Definition of Done.
 ```sh
 mise install   # pinned Node 24 and its bundled npm
 npm ci
-cp .env.example .env  # shared Supabase URL; no API/signing secret required
+cp .env.example .env  # auth needs no API/signing secret; parsing starts disabled
 npm run dev    # local server on http://localhost:3001 with the example environment
 ```
 
@@ -86,3 +86,30 @@ The API enforces bearer authentication in Express behind the existing Function U
 
 Requires `SERVERLESS_ACCESS_KEY` (or a license key). See `docs/SERVERLESS-V4.AGENTS.md` for
 Serverless Framework v4 specifics.
+
+## Parse a job posting
+
+In ignored `server/.env`, set `JOB_PARSING_ENABLED=true` and `REDPILL_API_KEY` to a valid key.
+The capability is disabled by default; enabling it without a key fails startup. The model and
+provider URL are fixed in the [configuration](src/features/job-parsing/job-parsing.config.ts).
+
+Send an authenticated JSON request to `POST /job-postings/parse`:
+
+```sh
+printf 'Authorization: Bearer %s\n' "$ACCESS_TOKEN" | \
+  curl --request POST http://localhost:3001/job-postings/parse --header @- \
+  --header 'Content-Type: application/json' \
+  --data '{"url":"jobs.example.com/role"}'
+```
+
+Full HTTP(S), `www` and bare links are accepted. The response contains versioned source metadata,
+job facts and missing-fact warnings; see the [executable schemas](src/features/job-parsing/job-parsing.schemas.ts)
+for exact fields and [errors](src/features/job-parsing/job-parsing.errors.ts) for codes. Missing
+facts remain null/empty; blocked, expired or unusable pages produce explicit failures. Requests can
+take up to the application deadline and are independent: retries can repeat paid inference.
+No parsed results are stored, and the web app does not call this endpoint yet.
+
+See the [feature barrel](src/features/job-parsing/job-parsing.AGENTS.md) for agent-fetch limitations
+and the [processor boundary](../docs/job-parsing-data-boundary.md) for what is sent to Redpill.
+The opt-in `npm run test:job-parsing:live` suite reads `.env`, contacts the four example sites and
+can make one paid inference call per retrieved posting. See [live-test guidance](e2e/e2e.AGENTS.md).

@@ -56,3 +56,17 @@ deployed artifact at that time, not that un-deployed source changes have reached
 
 Run the offline server gate and documentation gates for changes here, then the live command when
 authorized. Neither test command deploys the service.
+
+## Opt-in live job parsing
+
+[job-parsing.live.ts](job-parsing.live.ts) is a separate vendor smoke suite selected only by
+[vitest.job-parsing.config.ts](../vitest.job-parsing.config.ts). Run `npm run test:job-parsing:live`
+with `JOB_PARSING_ENABLED=true` and a valid `REDPILL_API_KEY` in ignored `.env`. This is an explicitly
+paid external check of the four supplied public links, with no automatic model retries. It invokes
+the production service and adapters directly; it does not authenticate against Supabase, call the
+deployed API, save opportunities or deploy. Normal `npm test` and `npm run test:e2e` exclude it.
+
+Results contain only the site label, outcome code and elapsed time, never URLs, page content or raw
+errors. A valid parsed result or documented source failure passes; model/worker integration errors
+fail. Report outcomes individually because passing does not establish four successful extractions.
+Deterministic HTTP and Lambda package tests separately cover authentication and route composition.

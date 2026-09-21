@@ -27,7 +27,7 @@ shared-project setup. Do not rotate shared signing keys or change hosted auth po
   identity in typed response locals. The serverless-http adapter leaves rawHeaders empty; never
   require its presence to accept an otherwise valid Lambda request. Bearer
   tokens in query strings, cookies or request bodies are never authentication inputs.
-- [app.ts](../../app.ts) mounts public health, authentication, JSON parsing and feature routes in
+- [app.ts](../../app.ts) mounts public health, authentication, bounded JSON parsing and feature routes in
   that order. The [shared error handler](../../shared/shared.errors.ts) owns error envelopes and the
   bearer challenge. Attach future application routes after authentication.
 

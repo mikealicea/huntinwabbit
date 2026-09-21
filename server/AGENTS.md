@@ -10,9 +10,9 @@ The server uses strict TypeScript, Node 24, native ESM, Express 5, Vitest, Biome
 Framework v4. Versions and commands live in [package.json](package.json),
 [package-lock.json](package-lock.json) and [mise.toml](mise.toml).
 
-This is an authenticated walking skeleton: a protected hello route, public health route, safe error
-middleware and request logging, local listener and Lambda wrapper. Supabase JWT verification
-provides identity; there is no database, resource ownership authorization, queue or web API integration.
+The API provides protected hello and job URL parsing routes, public health, safe error
+middleware and request logging, a local listener and Lambda wrapper. Parsing is explicitly opt-in.
+Supabase JWT verification provides identity; there is no database, resource ownership authorization, queue or web API integration.
 The deployment identity lives in `serverless.yml`; the deployment guide records verified targets.
 Do not claim the starter is ready to accept private application data.
 
@@ -102,6 +102,8 @@ uses erasable syntax, so avoid enums, namespaces and constructor parameter prope
 | Area | Owner |
 |---|---|
 | API authentication | [auth.AGENTS.md](src/features/auth/auth.AGENTS.md) |
+| Job URL parsing | [job-parsing.AGENTS.md](src/features/job-parsing/job-parsing.AGENTS.md) |
+| Package verification scripts | [scripts.AGENTS.md](scripts/scripts.AGENTS.md) |
 | Protected hello endpoint | [hello.AGENTS.md](src/features/hello/hello.AGENTS.md) |
 | HTTP composition, errors and logging | [shared.AGENTS.md](src/shared/shared.AGENTS.md) |
 | Packaging, deployment configuration and IAM | [SERVERLESS-V4.AGENTS.md](docs/SERVERLESS-V4.AGENTS.md) |
@@ -140,9 +142,9 @@ build, not the Serverless deployment bundle. Packaging checks belong to the depl
 Tests are colocated. Test services through injected interfaces and routers through Express. Cover
 meaningful guards, public errors, stored-value validation and, where present, replay, ordering and
 adapter failures. Keep fixtures deterministic, avoid `.only`/`.skip`, and keep live vendor calls out
-of unit tests. Do not infer implemented coverage from these requirements: current tests cover the
-hello responses, auth verification and failures, request privacy, runtime configuration and Lambda
-composition.
+of unit tests. Do not infer implemented coverage from these requirements: current tests cover hello,
+auth, request privacy, runtime/Lambda composition, parsing contracts, model-output failures and fetch
+subprocess lifetimes.
 
 `npm run test:e2e` separately exercises an explicitly configured live target using a dedicated
 Supabase account. Follow the [E2E guide](e2e/e2e.AGENTS.md); it is not part of the offline gate.

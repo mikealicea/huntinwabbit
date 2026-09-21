@@ -40,13 +40,17 @@
     "update-all-deps": "npm outdated | awk 'NR>1 {print $1\"@\"$4}' | xargs npm install",
     "deploy:dev": "serverless deploy --stage dev",
     "deploy:prod": "serverless deploy --stage prod",
-    "check:fix": "biome check --write ."
+    "check:fix": "biome check --write .",
+    "test:job-parsing:live": "node --env-file-if-exists=.env node_modules/vitest/vitest.mjs run --config vitest.job-parsing.config.ts",
+    "check:package": "node scripts/check-package.mjs"
   },
   "dependencies": {
+    "@teng-lin/agent-fetch": "0.1.6",
     "express": "^5.2.1",
     "jose": "^6.2.12",
     "serverless-http": "^4.0.0",
-    "tslib": "~2.8"
+    "tslib": "~2.8",
+    "zod": "4.3.5"
   },
   "packageManager": "npm@11.16.0"
 }
