@@ -27,11 +27,14 @@ export function RoleCard({
   cardRef,
   dragHandleRef,
 }: RoleCardProps) {
+  const pending = ['queued', 'processing'].includes(
+    role.saved?.extraction.status ?? '',
+  );
   return (
     <article
       ref={cardRef}
       aria-label={`${title} at ${company}`}
-      className={`card min-w-0 border border-base-300 bg-base-100 shadow-sm ${isDragging ? 'opacity-50' : ''}`}
+      className={`card min-w-0 border border-base-300 bg-base-100 shadow-sm ${pending ? "after:pointer-events-none after:absolute after:-inset-px after:rounded-[inherit] after:border after:border-primary/70 after:opacity-65 after:ring-3 after:ring-primary/10 after:shadow-[0_0_24px_2px] after:shadow-primary/25 after:content-[''] motion-safe:after:animate-pulse" : ''} ${isDragging ? 'opacity-50' : ''}`}
     >
       <div className="card-body gap-3 p-4">
         <div className="flex items-start justify-between gap-1">
@@ -93,9 +96,7 @@ export function RoleCard({
           <span className="text-base-content/75">Priority · </span>
           {PRIORITY_LABELS[role.priority]}
         </p>
-        {['queued', 'processing'].includes(
-          role.saved?.extraction.status ?? '',
-        ) && (
+        {pending && (
           <p role="status" className="text-xs font-medium">
             <LoadingPulse />
             {role.saved?.extraction.status === 'queued'

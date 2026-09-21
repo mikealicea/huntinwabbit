@@ -18,6 +18,9 @@ the backend's newest-saved order; there is no within-stage sorting, filtering or
 
 Queued/processing cards show a labeled pulsing extraction indicator, including refreshes with
 existing facts. Stage saves also show the shared activity cue. Reduced motion keeps the cue static.
+Pending cards also breathe with a theme-colored border and soft glow using Tailwind pseudo-element
+utilities in card presentation. Only the decorative halo changes opacity; content, focus and drag
+geometry stay steady. Reduced motion keeps a static halo. Terminal states remove it.
 
 Tests use real stores and deterministic HTTP boundaries. Browser tests exercise pointer, keyboard,
 emulated touch, cancellation, populated/empty columns, mobile reflow and both themes. Run web,
