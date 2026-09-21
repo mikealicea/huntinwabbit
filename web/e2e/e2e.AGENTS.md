@@ -8,7 +8,9 @@ desktop/mobile layouts and both themes. Card menus also exercise refresh/retry a
 without leaving the board, with focus recovery and persistence after reload. Tests use only fictional data and
 the local application. They do not visit captured URLs or depend on the hosted backend.
 [Public-page tests](public-pages.spec.ts) exercise real blog loading, generated MDX, metadata and
-breadcrumb navigation without a session. Account and workspace suites save desktop/mobile screenshots
+breadcrumb navigation without a session. Board status tests measure stable layout through loading, errors, retry and stage saves, including
+keyboard popover dismissal and desktop/mobile status screenshots. Account and workspace suites
+save desktop/mobile screenshots
 in ignored test output for visual review; these are review artifacts, not pixel-baseline assertions.
 [auth.spec.ts](auth.spec.ts) exercises account flows, protected routes, cookie refresh, and failure
 handling through the real SDK against [auth-provider.mjs](auth-provider.mjs). The provider is a
