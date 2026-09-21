@@ -20,7 +20,11 @@ export function SearchBoard({
           <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-base-content/75">
             One step at a time
           </p>
-          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+          <h1
+            id="search-board-title"
+            tabIndex={-1}
+            className="text-3xl font-bold tracking-tight sm:text-4xl"
+          >
             Your search
           </h1>
           <p className="mt-3 text-sm text-base-content/75">
