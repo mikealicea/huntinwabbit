@@ -54,7 +54,8 @@ These are recorded limitations, not infrastructure added by this reconciliation:
 
 - Supabase Auth and DynamoDB are now selected; [auth infrastructure](auth-infrastructure.md) owns
   their boundary. Web authentication and API token verification are implemented; resource ownership authorization,
-  persistence, web API integration and retention remain unimplemented. The skeleton must gain those boundaries before handling private data.
+  saved-posting persistence and its retention boundary are implemented in the backend; web API integration
+  and account-data deletion remain separate work.
 - Server request and error logs omit paths, credentials and raw errors/causes. The
   [shared barrel](../server/src/shared/shared.AGENTS.md) records that boundary; hosting infrastructure
   logging still requires separate verification.

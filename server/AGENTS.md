@@ -12,7 +12,8 @@ Framework v4. Versions and commands live in [package.json](package.json),
 
 The API provides protected hello and job URL parsing routes, public health, safe error
 middleware and request logging, a local listener and Lambda wrapper. Parsing is explicitly opt-in.
-Supabase JWT verification provides identity; there is no database, resource ownership authorization, queue or web API integration.
+Supabase JWT verification provides identity; saved job posting routes enforce user ownership in
+DynamoDB. There is no queue or web API integration.
 The deployment identity lives in `serverless.yml`; the deployment guide records verified targets.
 Do not claim the starter is ready to accept private application data.
 
@@ -102,6 +103,7 @@ uses erasable syntax, so avoid enums, namespaces and constructor parameter prope
 | Area | Owner |
 |---|---|
 | API authentication | [auth.AGENTS.md](src/features/auth/auth.AGENTS.md) |
+| Saved job postings | [job-postings.AGENTS.md](src/features/job-postings/job-postings.AGENTS.md) |
 | Job URL parsing | [job-parsing.AGENTS.md](src/features/job-parsing/job-parsing.AGENTS.md) |
 | Package verification scripts | [scripts.AGENTS.md](scripts/scripts.AGENTS.md) |
 | Protected hello endpoint | [hello.AGENTS.md](src/features/hello/hello.AGENTS.md) |

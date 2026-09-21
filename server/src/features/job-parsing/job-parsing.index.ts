@@ -7,3 +7,4 @@ export {
   parseResponseSchema,
 } from './job-parsing.schemas.ts';
 export { createParsePosting } from './job-parsing.service.ts';
+export { normalizeJobUrl } from './job-parsing.url.ts';

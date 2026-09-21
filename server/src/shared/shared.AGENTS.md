@@ -4,11 +4,12 @@
 
 Shared infrastructure provides HTTP error mapping and request logging. The [server guide](../../AGENTS.md)
 owns architecture, and the [auth barrel](../features/auth/auth.AGENTS.md) owns authentication.
-There is no persistence, telemetry SDK or durable worker system.
+Saved job persistence belongs to the [job-postings feature](../features/job-postings/job-postings.AGENTS.md).
+There is no telemetry SDK or durable worker system.
 
 [app.ts](../app.ts) constructs Express, installs request logging, adds public health, authentication,
-bounded JSON parsing, the hello router and the [job parsing router](../features/job-parsing/job-parsing.router.ts),
-then installs final error middleware. [runtime.ts](../runtime.ts) validates auth and parsing configuration
+the saved-posting router with its own bounded JSON parser, then smaller JSON parsing, the hello router and the [job parsing router](../features/job-parsing/job-parsing.router.ts),
+then installs final error middleware. [runtime.ts](../runtime.ts) validates auth, storage and parsing configuration
 and chooses the concrete adapters. [local.ts](../local.ts) owns the
 listener; [lambda.ts](../lambda.ts) lazily constructs and caches the Lambda adapter. Invalid auth
 configuration fails construction. Public health bypasses token checks once the app is constructed;

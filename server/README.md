@@ -1,8 +1,8 @@
 # huntinwabbit server
 
 The backend uses Node 24, strict TypeScript, native ESM and Express 5 via Serverless Framework v4.
-It provides authentication and opt-in synchronous job URL parsing. It does not yet persist the
-job-search workspace described in the [product README](../README.md).
+It provides authentication, opt-in synchronous job URL parsing and user-owned saved posting APIs
+backed by DynamoDB. The web workspace still uses temporary fixtures.
 
 See `AGENTS.md` for architecture, conventions, and the Definition of Done.
 
@@ -40,8 +40,7 @@ Without the header, the hello request must return 401. Automated tests use local
 fake discovery responses; they do not establish live token compatibility. An unsupported hosted
 signing algorithm needs separately scoped provider setup, not an automatic rotation. See the
 [auth barrel](src/features/auth/auth.AGENTS.md) and [shared runbook](../docs/auth-infrastructure.md)
-for verification, failure and revocation boundaries. Web-to-API calls and data persistence remain
-future work.
+for verification, failure and revocation boundaries. Web-to-API calls remain future work.
 
 ## Available scripts
 
@@ -107,9 +106,36 @@ job facts and missing-fact warnings; see the [executable schemas](src/features/j
 for exact fields and [errors](src/features/job-parsing/job-parsing.errors.ts) for codes. Missing
 facts remain null/empty; blocked, expired or unusable pages produce explicit failures. Requests can
 take up to the application deadline and are independent: retries can repeat paid inference.
-No parsed results are stored, and the web app does not call this endpoint yet.
+Parsing does not store results; callers can explicitly save a result using the endpoint below.
+The web app does not call these endpoints yet.
 
 See the [feature barrel](src/features/job-parsing/job-parsing.AGENTS.md) for agent-fetch limitations
 and the [processor boundary](../docs/job-parsing-data-boundary.md) for what is sent to Redpill.
 The opt-in `npm run test:job-parsing:live` suite reads `.env`, contacts the four example sites and
 can make one paid inference call per retrieved posting. See [live-test guidance](e2e/e2e.AGENTS.md).
+
+## Save and list job postings
+
+For local use, set `JOB_POSTINGS_TABLE` to an existing authorized table and `AWS_REGION` to its region
+in ignored `.env`, and use the standard AWS credential chain. Omitting the table disables these
+routes with 503. There is no in-memory runtime fallback or Docker requirement. Serverless supplies
+the stage-specific table reference in Lambda; packaging does not create that table.
+
+Send JSON to `POST /job-postings`, for example:
+
+```json
+{"url":"jobs.example.com/role","application":{"interest":"interested"}}
+```
+
+Optionally include `parsedPosting` with a response from `/job-postings/parse` for the same normalized
+URL. Saving never invokes parsing. A new save returns 201; saving the same normalized URL again
+returns the existing record with 200, without overwriting facts or tracking choices. Link-only saves
+are supported; subsequent enrichment requires future update support.
+
+Authenticated `GET /job-postings?limit=20` lists full records newest first. Pass `nextCursor` as the
+next request's `cursor` until it is null. The [schemas](src/features/job-postings/job-postings.schemas.ts)
+own exact fields, enums and defaults. A database outage returns an error, not an empty list.
+
+See the [feature barrel](src/features/job-postings/job-postings.AGENTS.md) and
+[data boundary](../docs/job-postings-data-boundary.md) for ownership and retention. There is no delete
+API or automatic cleanup after Supabase account deletion. No existing web fixtures are migrated.

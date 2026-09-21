@@ -2,7 +2,8 @@
 
 The backend parses public job postings on demand. The [feature barrel](../server/src/features/job-parsing/job-parsing.AGENTS.md)
 owns current behavior and limitations; its linked schemas and adapters are the executable contracts.
-Web capture integration and opportunity persistence are not implemented.
+Web capture integration is not implemented. A separate explicit
+[saved-posting API](job-postings-data-boundary.md) can persist supplied parsing results.
 
 ## Data flow
 
@@ -16,7 +17,7 @@ Web capture integration and opportunity persistence are not implemented.
 3. The backend sends extracted posting text, including its embedded links or contact details, to
    Redpill with a fixed extraction prompt and schema. The Redpill key authenticates only that trusted
    API request. Resumes, application notes, interest, priority and Supabase credentials are not inputs.
-4. Schema-validated job facts return to the caller. The application does not persist URLs, raw pages,
+4. Schema-validated job facts return to the caller. This parsing operation does not persist URLs, raw pages,
    prompts, model output or parsed jobs. Vendor stdout/stderr is discarded; application logs contain
    operational status and timing rather than content. Process isolation does not sandbox network access.
 

@@ -7,6 +7,19 @@ import { buildRuntimeApp } from './runtime.ts';
 afterEach(() => vi.restoreAllMocks());
 
 describe('runtime configuration', () => {
+  it('constructs configured storage without contacting AWS and rejects bad table configuration', async () => {
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    const env = {
+      SUPABASE_URL: 'https://auth.example.test',
+      JOB_POSTINGS_TABLE: 'test-postings',
+    };
+    const app = buildRuntimeApp(env);
+    expect((await request(app).get('/health')).status).toBe(200);
+    expect((await request(app).get('/job-postings')).status).toBe(401);
+    expect(() =>
+      buildRuntimeApp({ ...env, JOB_POSTINGS_TABLE: 'invalid table' }),
+    ).toThrow(/JOB_POSTINGS_TABLE/);
+  });
   it('fails enabled parsing with missing credentials and constructs configured parsing without network calls', async () => {
     const env = {
       SUPABASE_URL: 'https://auth.example.test',

@@ -23,8 +23,7 @@ or assume every upstream option exists in the locked version.
 
 ## Configuration, secrets and IAM
 
-The current function uses a Lambda Function URL, not an API Gateway HTTP API. Application bearer authentication runs in Express for all routes after public health. No custom
-data resources or gateway authorizer are configured. Select intentional service, organization,
+The current function uses a Lambda Function URL, not an API Gateway HTTP API. Application bearer authentication runs in Express for all routes after public health. Saved-posting DynamoDB tables and runtime IAM are configured; no gateway authorizer is configured. Select intentional service, organization,
 stage, region and access boundaries before deploying anything that handles personal data.
 
 For new configuration, reconcile the stage value, environment parser, dependency construction,
@@ -128,3 +127,21 @@ key is not needed for packaging checks and no secret-store IAM is introduced.
 The Lambda timeout/memory budget now accommodates the bounded synchronous fetch and inference
 phases. These source changes are not evidence that the previously verified dev deployment has
 been updated. Source gate, local build, package check and live inference are distinct checks.
+
+## Saved-posting storage
+
+The stage-specific table reference is passed as JOB_POSTINGS_TABLE. The resource uses on-demand
+billing, encryption, point-in-time recovery and retention on removal/replacement. Runtime IAM
+allows GetItem and Query, plus PutItem only inside TransactWriteItems, against that table ARN.
+The [feature barrel](../src/features/job-postings/job-postings.AGENTS.md) owns the data model and
+retry behavior; the [shared boundary](../../docs/job-postings-data-boundary.md) owns retention.
+These resources are checked-in configuration, not evidence that the dev stack has been updated.
+
+The locked AWS SDK is bundled rather than relying on Lambda's installed version. Negated AWS SDK
+patterns in both external/exclude remove Serverless v4's automatic runtime-SDK defaults; empty
+lists do not override them. This was checked against installed v4.39.0 source and package output
+on 2026-09-21. After packaging,
+run `npm run check:storage-package` to inspect resource/IAM configuration and SDK inclusion without
+Docker, remote invocations or database writes. This is distinct from native parser runtime checks.
+An authorized deployment must later verify save/list persistence and isolation using dedicated
+accounts; no live storage test is part of the offline gates.

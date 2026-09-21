@@ -14,8 +14,9 @@ Authentication uses one shared Supabase project for development and production; 
 will use DynamoDB through the backend. The [auth infrastructure runbook](docs/auth-infrastructure.md)
 explains the checked-in configuration and deployment preparation. The web app implements login, signup, email confirmation, password recovery, and protected workspace
 routes. The backend verifies Supabase access tokens and provides an opt-in job URL parsing API using
-agent-fetch and Redpill. Web-to-API integration, saved opportunity ownership and DynamoDB persistence
-are not implemented yet. See the [parsing boundary](docs/job-parsing-data-boundary.md).
+agent-fetch and Redpill, plus user-owned saved job posting APIs backed by DynamoDB. Web-to-API
+integration is not implemented yet; the web board still uses fictional data. See the [parsing boundary](docs/job-parsing-data-boundary.md) and
+[saved-data boundary](docs/job-postings-data-boundary.md).
 
 The rest of this README records the intended experience and product decisions; it is not a claim
 that every feature is implemented. The app is being designed around one person's real job-search

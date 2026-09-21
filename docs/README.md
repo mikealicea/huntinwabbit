@@ -27,11 +27,13 @@ Do not maintain a second implementation in prose.
   setup, web account flows, deployment preparation and the Supabase/DynamoDB data boundary.
 
 - [Job parsing processor boundary](job-parsing-data-boundary.md) — public posting retrieval, Redpill
-  inference, observed JSON support, credentials and absence of application persistence.
+  inference, observed JSON support, credentials and stateless extraction.
+- [Saved job posting data boundary](job-postings-data-boundary.md) — user-owned DynamoDB records,
+  retained data, deployment separation and account-deletion limitations.
 
 The [API auth barrel](../server/src/features/auth/auth.AGENTS.md) owns the initial protected hello
-contract. Storage and retention contracts do not exist yet. Add them when an actual feature
-establishes the boundary, linking its schemas/configuration rather than repeating exact fields here.
+contract. The [saved-postings barrel](../server/src/features/job-postings/job-postings.AGENTS.md) owns
+implemented storage behavior and links its schemas/configuration.
 
 ## Product evidence and prototypes
 

@@ -9,6 +9,11 @@ import {
   createRedpillExtractor,
   jobParsingConfig,
 } from './features/job-parsing/job-parsing.index.ts';
+import {
+  createDynamoPostingStore,
+  createJobPostings,
+  jobPostingsTable,
+} from './features/job-postings/job-postings.index.ts';
 
 export function buildRuntimeApp(
   env: Record<string, string | undefined> = process.env,
@@ -21,5 +26,9 @@ export function buildRuntimeApp(
         extractPosting: createRedpillExtractor(config.apiKey),
       })
     : undefined;
-  return buildApp({ verifyAccessToken, parsePosting });
+  const table = jobPostingsTable(env);
+  const jobPostings = table
+    ? createJobPostings(createDynamoPostingStore(table))
+    : undefined;
+  return buildApp({ verifyAccessToken, parsePosting, jobPostings });
 }

@@ -5,20 +5,19 @@ behind the Express/Lambda backend. The [Supabase barrel](../supabase/supabase.AG
 the configuration boundary. The [web auth feature](../web/src/features/auth/auth.AGENTS.md) implements
 login, signup, email confirmation, recovery, session handling and protected workspace routes. The
 [API auth feature](../server/src/features/auth/auth.AGENTS.md) verifies bearer JWTs for the
-protected hello endpoint. Application-data ownership checks, web-to-API calls and DynamoDB tables
-remain separate work; current app data remains mock data.
+protected API endpoints. The [saved-postings feature](../server/src/features/job-postings/job-postings.AGENTS.md)
+implements user-owned DynamoDB storage. Web-to-API calls remain separate work; current web data is fictional.
 
 ## One shared project
 
 The remote target is pinned in [mise.toml](../mise.toml). Dev and prod share users, auth policies,
 email quotas and signing authority. A dev token cannot be distinguished from a production token by
-project issuer alone. Backend authentication verifies signature, issuer, audience and expiry. Future
-resource authorization must derive ownership from the verified user ID and select DynamoDB resources from
+project issuer alone. Backend authentication verifies signature, issuer, audience and expiry. Resource authorization must derive ownership from the verified user ID and select DynamoDB resources from
 trusted deployment configuration. Do not accept a client-selected table or environment.
 
 Use dedicated development accounts. A password reset, user deletion, provider change or signing-key
 rotation affects the shared project. Keep dev/prod application data separate when adding DynamoDB
-resources to [serverless.yml](../server/serverless.yml); its current skeleton has no tables.
+resources in [serverless.yml](../server/serverless.yml); saved-posting tables are stage-specific.
 
 ## Setup and configuration changes
 
@@ -91,7 +90,8 @@ does not migrate or rotate shared keys. Provider failures deny access when usabl
 The API receives user access tokens and retrieves public keys from Supabase; discovery does not
 send those tokens to Supabase. Only verified user IDs enter downstream request context. Request
 and error logs omit paths, credentials, payloads and raw provider causes. Hosted infrastructure
-logging still needs separate verification. No new data processor or application-data storage is added.
+logging still needs separate verification. Authentication adds no application-data storage; the separate
+[saved-data boundary](job-postings-data-boundary.md) describes DynamoDB processing and retention.
 
 ## Web environment and team smoke test
 
@@ -130,9 +130,9 @@ logging or token-bearing confirmation-URL logging in hosting infrastructure.
 
 Supabase processes account identifiers, password-derived authentication data, sessions, tokens and
 authentication request metadata. Application notes, resumes, company research and contacts must
-not be placed in Supabase user metadata or logs. DynamoDB is the chosen application database, not a
-claim of implemented storage or retention. Account deletion across Supabase and future application
-data needs an explicit recovery/retention contract before implementation.
+not be placed in Supabase user metadata or logs. DynamoDB stores saved postings through the backend. Account deletion across Supabase and application
+data is not implemented; the [saved-data boundary](job-postings-data-boundary.md) records retention
+and recovery limitations.
 
 Email confirmation is enabled even for local development against this shared project. Custom SMTP
 is not configured. Supabase's default sender is restricted and is not a production delivery setup;

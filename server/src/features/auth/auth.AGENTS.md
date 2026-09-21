@@ -4,8 +4,9 @@
 
 Authenticate application API requests using access tokens from the shared Supabase project. The
 public health route precedes this boundary; all remaining routes require authentication. This is
-identity verification, not resource ownership authorization. There is no persistence, web-to-API
-integration, development bypass, cookie authentication or session mutation.
+identity verification; the [saved-postings feature](../job-postings/job-postings.AGENTS.md) owns
+DynamoDB resource authorization. There is no web-to-API integration, development bypass, cookie
+authentication or session mutation.
 
 The [cross-stack runbook](../../../../docs/auth-infrastructure.md) owns the provider boundary and
 shared-project setup. Do not rotate shared signing keys or change hosted auth policies as a test.
@@ -52,7 +53,7 @@ after discovery refresh, not instantly. No token authentication results are cach
 Local JWT verification does not check current account status or remote session revocation. Logout,
 account deletion and signing-key revocation must not be described as immediate API revocation.
 Outstanding tokens can remain usable until expiry; public-key caching adds revocation delay. Dev
-and prod trust the same issuer. Future data ownership and deployment-specific storage must use
+and prod trust the same issuer. Data ownership and deployment-specific storage must use
 verified identity and trusted deployment configuration.
 
 Preserve provider causes internally, but never log them, token claims, headers, bodies or user IDs.
