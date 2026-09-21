@@ -27,7 +27,7 @@ Do not maintain a second implementation in prose.
   setup, web account flows, deployment preparation and the Supabase/DynamoDB data boundary.
 
 - [Job parsing processor boundary](job-parsing-data-boundary.md) — public posting retrieval, Redpill
-  inference, observed JSON support, credentials and stateless extraction.
+  inference, observed JSON support, credentials and the stateless parsing service used by durable extraction jobs.
 - [Saved job posting data boundary](job-postings-data-boundary.md) — user-owned DynamoDB records,
   retained data, deployment separation and account-deletion limitations.
 

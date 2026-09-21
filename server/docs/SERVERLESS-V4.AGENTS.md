@@ -42,7 +42,7 @@ delete/recovery and migration contract in the owning feature barrel.
 
 Use the official [parameters](https://www.serverless.com/framework/docs/guides/parameters) and
 [IAM](https://www.serverless.com/framework/docs/providers/aws/guide/iam) references for new infrastructure
-(reviewed 2026-09-17). No queues, schedules, secret store or permission convergers are implemented here.
+(reviewed 2026-09-17). The saved-postings worker has a stream failure queue and scheduled recovery; no secret store or permission converger is implemented.
 If queues arrive, review visibility, function/provider deadlines, retry and dead-letter policies as
 one chain rather than independent numeric settings.
 
@@ -77,8 +77,7 @@ signs out its own session. It does not deploy or prove that the running artifact
 
 On 2026-09-19, the packaged service was deployed to `huntinwabbit-dev` in AWS account
 339050855812, `us-east-1`. CloudFormation reported `CREATE_COMPLETE`, and the Node 24 Lambda
-reported `Active` with a successful update. The Function URL is
-<https://npfc4q33hhjbfn6dybjgtz7ydu0wurtw.lambda-url.us-east-1.on.aws/>.
+reported `Active` with a successful update. The actual Function URL is kept in ignored deployment environment files; obtain your own target from deployment outputs.
 
 Live checks returned public health 200 and protected-route 401 for missing credentials, malformed
 tokens, the wrong scheme, query/cookie credentials, comma-joined credentials and a forged signature
@@ -128,20 +127,36 @@ The Lambda timeout/memory budget now accommodates the bounded synchronous fetch 
 phases. These source changes are not evidence that the previously verified dev deployment has
 been updated. Source gate, local build, package check and live inference are distinct checks.
 
-## Saved-posting storage
+## Saved-posting storage and extraction
 
-The stage-specific table reference is passed as JOB_POSTINGS_TABLE. The resource uses on-demand
-billing, encryption, point-in-time recovery and retention on removal/replacement. Runtime IAM
-allows GetItem and Query, plus PutItem only inside TransactWriteItems, against that table ARN.
-The [feature barrel](../src/features/job-postings/job-postings.AGENTS.md) owns the data model and
-retry behavior; the [shared boundary](../../docs/job-postings-data-boundary.md) owns retention.
-These resources are checked-in configuration, not evidence that the dev stack has been updated.
+The stage-specific table reference is passed as JOB_POSTINGS_TABLE. It has on-demand billing,
+encryption, PITR and retain policies. API, extraction and recovery roles are separate. All writes
+use conditional transactions; runtime roles cannot scan. The recovery role alone can query the
+sparse pending-job index. The worker consumes only INSERT job-key events from a KEYS_ONLY stream.
+Exact timeout, retention, retry, alarm and IAM settings belong to serverless.yml and the
+[saved-postings barrel](../src/features/job-postings/job-postings.AGENTS.md).
 
-The locked AWS SDK is bundled rather than relying on Lambda's installed version. Negated AWS SDK
-patterns in both external/exclude remove Serverless v4's automatic runtime-SDK defaults; empty
-lists do not override them. This was checked against installed v4.39.0 source and package output
-on 2026-09-21. After packaging,
-run `npm run check:storage-package` to inspect resource/IAM configuration and SDK inclusion without
-Docker, remote invocations or database writes. This is distinct from native parser runtime checks.
-An authorized deployment must later verify save/list persistence and isolation using dedicated
-accounts; no live storage test is part of the offline gates.
+The locked AWS SDK is bundled using negated patterns in both esbuild external/exclude; empty lists
+do not override Serverless defaults (verified with installed v4.39.0 on 2026-09-21). Run
+`npm run check:storage-package` after packaging to inspect the table/index, runtime references,
+scoped IAM, worker/recovery configuration and SDK inclusion without Docker or live writes.
+
+A deployment is distinct from a package check. After authorized dev deployment, run the operator
+ID-pointer migration and dedicated-account save/detail/update/extraction checks. Do not print
+resolved environment values or actual private test data. Published setup examples must use your
+own deployment targets; no maintainer API or Supabase project is a fallback.
+
+## Live integration verification
+
+On 2026-09-21, the dev stack was updated with saved-role lookup/updates, the extraction worker and
+scheduled recovery. The ID-pointer migration found no legacy records. Dedicated-account live checks
+passed save, duplicate recovery, direct lookup, tracking updates, stale-version conflicts and private
+listing; the existing thirteen live authentication checks also passed.
+
+A Chromium session using the local frontend against dev saved a fresh link, closed and reopened its
+browser context after acceptance, edited notes during extraction, and observed successful generated
+facts and preserved notes after reload. The session was signed out. Two dedicated smoke records remain;
+there is no delete API. The initial worker entry filename was rejected by Lambda; the corrected
+`src/extraction.ts` entry is deployed and package inspection now checks both worker handler names.
+The first failed delivery made no inference call. One subsequent live extraction completed. These
+checks establish the tested dev path, not all posting sites, production, backups or screen-reader use.

@@ -1,13 +1,13 @@
 'use client';
 
 import { type FormEvent, useEffect, useId, useRef, useState } from 'react';
-import { linksCaptured } from '@/features/job-search/job-search.index';
-import { useAppDispatch } from '@/state/state.index';
+import { useSavePostingMutation } from '@/features/job-api/job-api.index';
 import { JobCapture } from './JobCapture.component';
 import { type CaptureRow, validateCapture } from './job-capture.validation';
 
 export function JobCaptureContainer() {
-  const dispatch = useAppDispatch();
+  const [savePosting] = useSavePostingMutation();
+  const [saving, setSaving] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [rows, setRows] = useState<CaptureRow[]>([
     { id: 0, url: '', interest: 'not-set' },
@@ -19,8 +19,8 @@ export function JobCaptureContainer() {
   const toggle = useRef<HTMLButtonElement>(null);
   const id = useId();
   useEffect(() => {
-    if (isOpen) inputs.current.get(0)?.focus();
-  }, [isOpen]);
+    if (isOpen && !saving) inputs.current.values().next().value?.focus();
+  }, [isOpen, saving]);
 
   function updateUrl(rowId: number, url: string) {
     setNotice('');
@@ -41,31 +41,50 @@ export function JobCaptureContainer() {
     });
   }
 
-  function saveLinks(event: FormEvent<HTMLFormElement>) {
+  async function saveLinks(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (saving) return;
     const result = validateCapture(rows);
     setErrors(result.errors);
     const firstInvalid = rows.find((row) => result.errors[row.id]);
     if (firstInvalid) {
-      setNotice('');
       inputs.current.get(firstInvalid.id)?.focus();
       return;
     }
-    dispatch(
-      linksCaptured(
-        result.links.map((link) => ({ ...link, id: crypto.randomUUID() })),
-      ),
-    );
-    setRows([{ id: 0, url: '', interest: 'not-set' }]);
+    setSaving(true);
+    let saved = 0;
+    let duplicates = 0;
+    const succeeded = new Set<number>();
+    const failures: Record<number, string> = {};
+    for (const row of rows.filter((row) => row.url.trim())) {
+      setNotice(
+        `Saving link ${saved + duplicates + Object.keys(failures).length + 1} of ${result.links.length}…`,
+      );
+      try {
+        const response = await savePosting({
+          url: row.url,
+          application: { interest: row.interest },
+          extract: true,
+        }).unwrap();
+        if (response.created) saved++;
+        else duplicates++;
+        succeeded.add(row.id);
+      } catch {
+        failures[row.id] =
+          'This link could not be saved. Try again; repeated saves do not create duplicates.';
+      }
+    }
+    setRows((current) => current.filter((row) => !succeeded.has(row.id)));
+    setErrors(failures);
     setNotice(
-      `${result.links.length} ${result.links.length === 1 ? 'link added' : 'links added'} to Collected. Posting details are unavailable in this sample.`,
+      `${saved} saved. ${duplicates} already saved.${Object.keys(failures).length ? ' Some links need another try.' : ' Posting details will appear as extraction finishes.'}`,
     );
-    // Row zero remains mounted, so focus can return without a delayed callback.
-    inputs.current.get(0)?.focus();
+    setSaving(false);
   }
 
   return (
     <JobCapture
+      saving={saving}
       isOpen={isOpen}
       rows={rows}
       errors={errors}

@@ -1,3 +1,4 @@
+import type { SavedPosting } from '@/features/job-api/job-api.index';
 export const STAGES = [
   'collected',
   'applied',
@@ -41,7 +42,14 @@ export interface SalaryRange {
   minimum: number | null;
   maximum: number | null;
   currency: string;
-  period: 'year' | 'month' | 'hour';
+  period:
+    | 'year'
+    | 'month'
+    | 'hour'
+    | 'week'
+    | 'day'
+    | 'one-time'
+    | 'period not listed';
 }
 
 // Posting facts are separate from application choices. A future parser can supply
@@ -91,6 +99,8 @@ export interface ApplicationFields {
 }
 
 export interface Opportunity extends ApplicationFields {
+  saved?: SavedPosting;
+  companyName?: string | null;
   id: string;
   sourceUrl: string | null;
   companyId: string | null;

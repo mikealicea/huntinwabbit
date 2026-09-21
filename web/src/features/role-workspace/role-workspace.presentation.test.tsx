@@ -68,6 +68,7 @@ describe('workspace presentation without providers', () => {
     fireEvent.change(screen.getByLabelText('Prep & interview notes'), {
       target: { value: 'Fictional note' },
     });
+    fireEvent.click(screen.getByRole('button', { name: 'Save notes' }));
     expect(onApplicationChange.mock.calls).toEqual([
       [{ stage: 'applied' }],
       [{ interest: 'throwaway' }],

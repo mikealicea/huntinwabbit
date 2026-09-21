@@ -1,14 +1,21 @@
 import { expect, type Page, test } from '@playwright/test';
 
-test.beforeEach(async ({ page }) => {
+test.beforeEach(async ({ page, request }, testInfo) => {
+  const email = `workspace-${testInfo.testId}-${testInfo.retry}@example.test`;
+  await request.post('http://127.0.0.1:3101/__test/account', {
+    data: { email },
+  });
   await page.clock.setFixedTime(new Date('2026-09-18T16:00:00Z'));
   await page.goto('/login');
-  await page
-    .getByLabel('Email', { exact: true })
-    .fill('workspace@example.test');
+  await page.getByLabel('Email', { exact: true }).fill(email);
   await page.getByLabel('Password', { exact: true }).fill('fictional-password');
   await page.getByRole('button', { name: 'Log in', exact: true }).click();
   await expect(page).toHaveURL('/app');
+  await expect(
+    page.getByRole('link', {
+      name: 'Open Senior Product Engineer at Northstar',
+    }),
+  ).toBeVisible();
 });
 
 async function moveProductRole(page: Page, targetStage: string) {
@@ -90,7 +97,7 @@ test('landing entry, capture, role editing, navigation, and reload recovery', as
   const temporaryRoleUrl = page.url();
   await expect(
     page.getByText(
-      /Job title, company, location, and posting details are unavailable/,
+      /Job title, company, location, and posting details have not/,
     ),
   ).toBeVisible();
   await expect(
@@ -105,7 +112,10 @@ test('landing entry, capture, role editing, navigation, and reload recovery', as
   await page
     .getByRole('textbox', { name: 'Prep & interview notes' })
     .fill('Questions for the recruiter.');
+  await page.getByRole('button', { name: 'Save notes' }).click();
+  await expect(page.getByText('Notes saved.', { exact: true })).toBeVisible();
   await page.getByLabel('Next follow-up').fill('2026-10-01');
+  await expect(page.getByLabel('Next follow-up')).toBeEnabled();
   await page.getByRole('link', { name: 'Search board', exact: true }).click();
   const moved = page
     .getByRole('region', { name: 'Applied', exact: true })
@@ -118,16 +128,12 @@ test('landing entry, capture, role editing, navigation, and reload recovery', as
   ).toHaveValue('Questions for the recruiter.');
   await page.reload();
   await expect(
-    page.getByRole('heading', { name: 'Role not found' }),
-  ).toBeVisible();
+    page.getByRole('textbox', { name: 'Prep & interview notes' }),
+  ).toHaveValue('Questions for the recruiter.');
   expect(page.url()).toBe(temporaryRoleUrl);
-  await page.getByRole('link', { name: 'Return to search board' }).click();
   await expect(
-    page.getByText('5 active roles', { exact: false }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole('link', { name: 'Open Saved opening at Company unknown' }),
-  ).toHaveCount(0);
+    page.getByRole('combobox', { name: 'Stage', exact: true }),
+  ).toHaveValue('applied');
 });
 
 test('drag moves to populated and empty columns, and Escape cancels', async ({
@@ -264,29 +270,17 @@ test.describe('touch interaction', () => {
   });
 });
 
-test('changing a planned resume preserves the submission and company context', async ({
+test('unfinished sections have no fictional materials or contacts', async ({
   page,
 }) => {
-  await page.goto('/app/roles/northstar-platform');
-  await page
-    .getByRole('combobox', { name: 'Planned resume' })
-    .selectOption('general-v5');
-  await page
-    .getByRole('combobox', { name: 'Stage', exact: true })
-    .selectOption('closed');
-  await expect(page.getByText('platform-engineering-v2.pdf')).toBeVisible();
-  await expect(page.getByText('2 saved roles at this company')).toBeVisible();
-  await page.getByRole('link', { name: 'Search board', exact: true }).click();
+  await page.goto('/app/roles/00000000-0000-4000-8000-000000000004');
   await expect(
-    page.getByText('4 active roles', { exact: false }),
-  ).toContainText('2 closed');
-  await page
-    .getByRole('link', { name: 'Open Platform Engineer at Northstar' })
-    .click();
+    page.getByText('Not available yet', { exact: true }),
+  ).toHaveCount(2);
   await expect(
     page.getByRole('combobox', { name: 'Planned resume' }),
-  ).toHaveValue('general-v5');
-  await expect(page.getByText('platform-engineering-v2.pdf')).toBeVisible();
+  ).toHaveCount(0);
+  await expect(page.getByText('platform-engineering-v2.pdf')).toHaveCount(0);
 });
 
 test('mobile capture and workspace reflow in both themes', async ({

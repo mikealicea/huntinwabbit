@@ -9,3 +9,7 @@ export {
   saveResponseSchema,
 } from './job-postings.schemas.ts';
 export { createJobPostings } from './job-postings.service.ts';
+export {
+  handler as extractionHandler,
+  recover as recoverExtractions,
+} from './job-postings.worker.ts';

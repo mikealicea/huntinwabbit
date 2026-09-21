@@ -13,7 +13,7 @@ Framework v4. Versions and commands live in [package.json](package.json),
 The API provides protected hello and job URL parsing routes, public health, safe error
 middleware and request logging, a local listener and Lambda wrapper. Parsing is explicitly opt-in.
 Supabase JWT verification provides identity; saved job posting routes enforce user ownership in
-DynamoDB. There is no queue or web API integration.
+DynamoDB. The web integration uses authenticated saved-role routes; DynamoDB Streams trigger durable extraction with scheduled recovery.
 The deployment identity lives in `serverless.yml`; the deployment guide records verified targets.
 Do not claim the starter is ready to accept private application data.
 
@@ -30,6 +30,7 @@ entry point -> app composition -> feature router -> feature service -> injected 
 | Runtime auth configuration and adapter construction | [src/runtime.ts](src/runtime.ts) |
 | HTTP composition and middleware ordering | [src/app.ts](src/app.ts) |
 | Local process and port | [src/local.ts](src/local.ts) |
+| Extraction and recovery Lambda entry | [src/extraction.ts](src/extraction.ts) |
 | Lazy Lambda handler construction | [src/lambda.ts](src/lambda.ts) |
 | Deployment entry points and AWS resources | [serverless.yml](serverless.yml) |
 | ESM bundling compatibility | [esbuild.config.mjs](esbuild.config.mjs) |
@@ -76,7 +77,7 @@ uses erasable syntax, so avoid enums, namespaces and constructor parameter prope
   Test replay, ordering and compensation, not just the successful call sequence.
 - Workers must validate messages and distinguish retryable infrastructure failure from terminal
   product failure. Keep worker budgets, provider deadlines, Lambda timeout, queue visibility and
-  dead-letter handling consistent. These are future design rules; no queue exists today.
+  dead-letter handling consistent. The saved-postings feature applies these rules to stream workers and recovery.
 - Best-effort cleanup must not revoke a successful user result. It still needs bounded retry or
   retention and an operator-visible failure path. Avoid silent catches and unowned background work.
 

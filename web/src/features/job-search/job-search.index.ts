@@ -1,3 +1,4 @@
+export { mergePostingPages, toOpportunity } from './job-search.mapping';
 export {
   formatCalendarDate,
   formatSalary,
@@ -7,20 +8,6 @@ export {
   getSourceHost,
   toLocalDate,
 } from './job-search.selectors';
-export {
-  applicationUpdated,
-  jobSearchReducer,
-  linksCaptured,
-  selectActiveRoleCount,
-  selectCompanies,
-  selectCompany,
-  selectCompanyRoleCount,
-  selectOpportunities,
-  selectOpportunity,
-  selectResumes,
-  selectRolesByStage,
-  taskCompletionSet,
-} from './job-search.slice';
 export type {
   ApplicationFields,
   CapturedLink,

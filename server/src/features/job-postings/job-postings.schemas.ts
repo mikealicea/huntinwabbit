@@ -18,6 +18,7 @@ export const applicationSchema = z.strictObject({
 });
 export const saveRequestSchema = z.strictObject({
   url: z.string().trim().min(1).max(8_192),
+  extract: z.boolean().default(false),
   parsedPosting: parseResponseSchema.nullable().default(null),
   application: applicationSchema
     .partial()
@@ -33,7 +34,7 @@ export const saveRequestSchema = z.strictObject({
 });
 const sourceUrl = z.url();
 // Persisted values require every field; input defaults must not repair corrupt data.
-export const savedPostingSchema = z.strictObject({
+export const legacyPostingSchema = z.strictObject({
   id: z.uuid(),
   sourceUrl,
   parsedPosting: parseResponseSchema.nullable(),
@@ -41,6 +42,63 @@ export const savedPostingSchema = z.strictObject({
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
 });
+export const extractionSchema = z.strictObject({
+  status: z.enum([
+    'not-requested',
+    'disabled',
+    'queued',
+    'processing',
+    'complete',
+    'failed',
+  ]),
+  generation: z.uuid().nullable(),
+  error: z.string().nullable(),
+});
+export const savedPostingSchema = legacyPostingSchema.extend({
+  applicationVersion: z.number().int().nonnegative(),
+  recordVersion: z.number().int().nonnegative(),
+  extraction: extractionSchema,
+});
+export const storedPostingSchema = z.union([
+  savedPostingSchema,
+  legacyPostingSchema.transform((item) => ({
+    ...item,
+    applicationVersion: 0,
+    recordVersion: 0,
+    extraction: {
+      status: item.parsedPosting
+        ? ('complete' as const)
+        : ('not-requested' as const),
+      generation: null,
+      error: null,
+    },
+  })),
+]);
+export const updateRequestSchema = z.strictObject({
+  expectedApplicationVersion: z.number().int().nonnegative(),
+  changes: applicationSchema
+    .partial()
+    .refine((value) => Object.keys(value).length > 0),
+});
+export const extractionRequestSchema = z.strictObject({
+  expectedGeneration: z.uuid().nullable(),
+});
+export type UpdateInput = z.infer<typeof updateRequestSchema>;
+export interface PostingOperations {
+  get(userId: string, id: string, signal: AbortSignal): Promise<SavedPosting>;
+  update(
+    userId: string,
+    id: string,
+    input: UpdateInput,
+    signal: AbortSignal,
+  ): Promise<SavedPosting>;
+  extract(
+    userId: string,
+    id: string,
+    generation: string | null,
+    signal: AbortSignal,
+  ): Promise<SavedPosting>;
+}
 export const listRequestSchema = z.strictObject({
   limit: z
     .string()
@@ -62,7 +120,7 @@ export const saveResponseSchema = z.strictObject({
 export type SavedPosting = z.infer<typeof savedPostingSchema>;
 export type SaveInput = z.infer<typeof saveRequestSchema>;
 export type ListInput = z.infer<typeof listRequestSchema>;
-export interface PostingStore {
+export interface PostingStore extends PostingOperations {
   save(
     userId: string,
     item: SavedPosting,
@@ -74,7 +132,7 @@ export interface PostingStore {
     signal: AbortSignal,
   ): Promise<z.infer<typeof listResponseSchema>>;
 }
-export interface JobPostings {
+export interface JobPostings extends PostingOperations {
   save(
     userId: string,
     input: SaveInput,

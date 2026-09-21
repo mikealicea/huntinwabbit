@@ -14,7 +14,7 @@ do not bulk-reset users or weaken production auth settings for tests.
 Supabase's internal Postgres supports Auth. Application records belong in DynamoDB behind the
 backend, with separate dev/prod resources when persistence is implemented. This setup provisions
 no DynamoDB tables or resource-ownership policies. The [web auth feature](../web/src/features/auth/auth.AGENTS.md)
-implements account flows and protects the mock workspace. The [API auth feature](../server/src/features/auth/auth.AGENTS.md)
+implements account flows and protects the live workspace. The [API auth feature](../server/src/features/auth/auth.AGENTS.md)
 protects the hello endpoint using public-key JWT verification; it does not mutate this configuration.
 
 ## Owners and operation
@@ -22,7 +22,7 @@ protects the hello endpoint using public-key JWT verification; it does not mutat
 - [config.toml](config.toml) owns the shared auth settings and redirect allowlist. It enables email
   confirmation, secure password changes and refresh-token rotation. Existing TOTP capability is
   retained; this does not implement an MFA flow in the app.
-- [Root mise.toml](../mise.toml) pins the CLI and remote project target and owns the push command.
+- [Root mise.toml](../mise.toml) pins the CLI and owns the push command. The operator must supply SUPABASE_PROJECT_REF for their own project; no maintainer project is a fallback.
   Run its task from the repository root. Do not substitute a linked project or a stage-based target.
 - The confirmation and recovery templates referenced by config send users to the caller’s allowlisted
   `/auth/confirm` endpoint. Token hashes are opaque provider values, including PKCE-prefixed hashes;

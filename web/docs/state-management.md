@@ -55,11 +55,11 @@ Auth inputs remain local and credentials/sessions stay at the existing server bo
 in Next's router. Redux does not add persistence, authorization, extraction or a backend integration.
 Production Redux DevTools are disabled; do not add payload logging or persist personal workspace data.
 
-For future client server-data caching, prefer RTK Query once an API contract exists. Use thunks for
+Live server-data caching uses RTK Query in the job-api feature. Use thunks for
 one-shot orchestration and listener middleware for workflows reacting to actions. Define cancellation,
 stale responses, retries and account reset behavior with the feature; never start durable work from
 a page effect. These choices follow [Redux's effects guidance](https://redux.js.org/usage/side-effects-approaches).
-No speculative API slice, thunk or middleware is needed for today's synchronous sample workspace.
+Do not duplicate API records in a second mutable feature slice.
 
 ## Verification policy
 

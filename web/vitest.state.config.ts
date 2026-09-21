@@ -11,6 +11,8 @@ export default defineConfig({
         'src/state/**/*.{ts,tsx}',
         'src/features/**/*.slice.ts',
         'src/features/**/*.selectors.ts',
+        'src/features/job-api/job-api.client.ts',
+        'src/features/job-search/job-search.mapping.ts',
         'src/features/theme/**/*.{ts,tsx}',
       ],
       exclude: ['src/**/*.test.{ts,tsx}', 'src/**/*.index.ts'],

@@ -6,17 +6,16 @@
 company research, referrals, and interview preparation into one place. Its home screen should answer
 one question: **Where does everything stand?**
 
-The web app now implements an initial board, batch link capture, and role workspace at `/app`, with
-fictional data and edits that reset on reload. `/` is reserved for a future landing page and currently
-links into the app. See the [web README](web/README.md) for setup and implemented boundaries.
+The web app implements a live board, batch link capture and saved-role workspace at `/app`.
+Saved links and tracking edits persist through the backend; posting details are extracted asynchronously
+with agent-fetch and Redpill. Tasks, resumes, submitted materials and shared company research remain
+unavailable. `/` currently links into the app. See the [web README](web/README.md) for setup.
 
-Authentication uses one shared Supabase project for development and production; application data
-will use DynamoDB through the backend. The [auth infrastructure runbook](docs/auth-infrastructure.md)
-explains the checked-in configuration and deployment preparation. The web app implements login, signup, email confirmation, password recovery, and protected workspace
-routes. The backend verifies Supabase access tokens and provides an opt-in job URL parsing API using
-agent-fetch and Redpill, plus user-owned saved job posting APIs backed by DynamoDB. Web-to-API
-integration is not implemented yet; the web board still uses fictional data. See the [parsing boundary](docs/job-parsing-data-boundary.md) and
-[saved-data boundary](docs/job-postings-data-boundary.md).
+This is a public, self-hostable repository. Configure your own Supabase authentication project and
+stage-specific AWS backend. Local frontend development targets the dev API selected by your ignored
+environment file; checked-in examples contain placeholders, never a maintainer API fallback.
+See [authentication setup](docs/auth-infrastructure.md), the [parsing boundary](docs/job-parsing-data-boundary.md)
+and [saved-data boundary](docs/job-postings-data-boundary.md).
 
 The rest of this README records the intended experience and product decisions; it is not a claim
 that every feature is implemented. The app is being designed around one person's real job-search
@@ -129,6 +128,6 @@ ends, a postmortem should help capture what happened and what to learn for the n
 - [Initial product notes](<docs/oneOff/Sanctum 2026-09-17 11.27.44 Job application tracking tool.combined.md>)
   — the original ramble that started the design discussion.
 
-The web app implements the initial board, role workspace, and quick-add flows with mock data.
+The web app connects the board, role workspace and quick-add flows to live backend data.
 Dedicated company and resume-library experiences, detailed interview tracking, postmortems, and
 referral discovery still need further design.

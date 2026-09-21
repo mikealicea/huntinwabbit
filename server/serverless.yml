@@ -12,21 +12,6 @@ provider:
   environment:
     JOB_POSTINGS_TABLE: !Ref JobPostingsTable
     SUPABASE_URL: ${env:SUPABASE_URL}
-    JOB_PARSING_ENABLED: ${env:JOB_PARSING_ENABLED, 'false'}
-    REDPILL_API_KEY: ${env:REDPILL_API_KEY, ''}
-
-  iam:
-    role:
-      statements:
-        - Effect: Allow
-          Action: ['dynamodb:GetItem', 'dynamodb:Query']
-          Resource: !GetAtt JobPostingsTable.Arn
-        - Effect: Allow
-          Action: ['dynamodb:PutItem']
-          Resource: !GetAtt JobPostingsTable.Arn
-          Condition:
-            StringEquals:
-              dynamodb:EnclosingOperation: TransactWriteItems
 
 # v4 bundles src/ with built-in esbuild — handlers point at source, not build output.
 # Reference: docs/SERVERLESS-V4.AGENTS.md
@@ -46,6 +31,25 @@ functions:
     timeout: 70
     memorySize: 1024
     url: true
+    role: !GetAtt ApiRole.Arn
+    environment:
+      JOB_PARSING_ENABLED: ${env:JOB_PARSING_ENABLED, 'false'}
+      REDPILL_API_KEY: ${env:REDPILL_API_KEY, ''}
+  extraction:
+    handler: src/extraction.handler
+    timeout: 90
+    memorySize: 1024
+    role: !GetAtt ExtractionRole.Arn
+    environment:
+      JOB_PARSING_ENABLED: ${env:JOB_PARSING_ENABLED, 'false'}
+      REDPILL_API_KEY: ${env:REDPILL_API_KEY, ''}
+  recovery:
+    handler: src/extraction.recover
+    timeout: 60
+    memorySize: 256
+    role: !GetAtt RecoveryRole.Arn
+    events:
+      - schedule: rate(1 minute)
 
 resources:
   Resources:
@@ -61,12 +65,186 @@ resources:
             AttributeType: S
           - AttributeName: sk
             AttributeType: S
+          - AttributeName: dueGroup
+            AttributeType: S
+          - AttributeName: dueAt
+            AttributeType: N
         KeySchema:
           - AttributeName: pk
             KeyType: HASH
           - AttributeName: sk
             KeyType: RANGE
+        StreamSpecification:
+          StreamViewType: KEYS_ONLY
+        TimeToLiveSpecification:
+          AttributeName: expiresAt
+          Enabled: true
+        GlobalSecondaryIndexes:
+          - IndexName: PendingJobs
+            KeySchema:
+              - AttributeName: dueGroup
+                KeyType: HASH
+              - AttributeName: dueAt
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
         PointInTimeRecoverySpecification:
           PointInTimeRecoveryEnabled: true
         SSESpecification:
           SSEEnabled: true
+
+    ApiRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: lambda.amazonaws.com
+              Action: sts:AssumeRole
+        ManagedPolicyArns:
+          - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        Policies:
+          - PolicyName: postings
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: Allow
+                  Action: ['dynamodb:GetItem', 'dynamodb:Query']
+                  Resource: !GetAtt JobPostingsTable.Arn
+                - Effect: Allow
+                  Action: ['dynamodb:PutItem']
+                  Resource: !GetAtt JobPostingsTable.Arn
+                  Condition:
+                    StringEquals:
+                      dynamodb:EnclosingOperation: TransactWriteItems
+
+    ExtractionRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: lambda.amazonaws.com
+              Action: sts:AssumeRole
+        ManagedPolicyArns:
+          - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        Policies:
+          - PolicyName: postings
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: Allow
+                  Action: ['dynamodb:GetItem', 'dynamodb:Query']
+                  Resource: !GetAtt JobPostingsTable.Arn
+                - Effect: Allow
+                  Action: ['dynamodb:PutItem']
+                  Resource: !GetAtt JobPostingsTable.Arn
+                  Condition:
+                    StringEquals:
+                      dynamodb:EnclosingOperation: TransactWriteItems
+                - Effect: Allow
+                  Action: ['dynamodb:GetRecords', 'dynamodb:GetShardIterator', 'dynamodb:DescribeStream']
+                  Resource: !GetAtt JobPostingsTable.StreamArn
+                - Effect: Allow
+                  Action: ['dynamodb:ListStreams']
+                  Resource: '*'
+                - Effect: Allow
+                  Action: ['sqs:SendMessage']
+                  Resource: !GetAtt ExtractionFailures.Arn
+
+    RecoveryRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: lambda.amazonaws.com
+              Action: sts:AssumeRole
+        ManagedPolicyArns:
+          - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        Policies:
+          - PolicyName: postings
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: Allow
+                  Action: ['dynamodb:GetItem', 'dynamodb:Query']
+                  Resource: !GetAtt JobPostingsTable.Arn
+                - Effect: Allow
+                  Action: ['dynamodb:PutItem']
+                  Resource: !GetAtt JobPostingsTable.Arn
+                  Condition:
+                    StringEquals:
+                      dynamodb:EnclosingOperation: TransactWriteItems
+                - Effect: Allow
+                  Action: ['dynamodb:Query']
+                  Resource: !Sub '${JobPostingsTable.Arn}/index/PendingJobs'
+
+    ExtractionFailures:
+      Type: AWS::SQS::Queue
+      Properties:
+        SqsManagedSseEnabled: true
+        MessageRetentionPeriod: 1209600
+    ExtractionMapping:
+      Type: AWS::Lambda::EventSourceMapping
+      Properties:
+        FunctionName: !Ref ExtractionLambdaFunction
+        EventSourceArn: !GetAtt JobPostingsTable.StreamArn
+        StartingPosition: TRIM_HORIZON
+        BatchSize: 1
+        MaximumRetryAttempts: 2
+        MaximumRecordAgeInSeconds: 3600
+        FilterCriteria:
+          Filters:
+            - Pattern: '{"eventName":["INSERT"],"dynamodb":{"Keys":{"sk":{"S":[{"prefix":"JOB#"}]}}}}'
+        DestinationConfig:
+          OnFailure:
+            Destination: !GetAtt ExtractionFailures.Arn
+    ExtractionFailureAlarm:
+      Type: AWS::CloudWatch::Alarm
+      Properties:
+        Namespace: AWS/SQS
+        MetricName: ApproximateNumberOfMessagesVisible
+        Dimensions:
+          - Name: QueueName
+            Value: !GetAtt ExtractionFailures.QueueName
+        Statistic: Maximum
+        Period: 60
+        EvaluationPeriods: 1
+        Threshold: 0
+        ComparisonOperator: GreaterThanThreshold
+        TreatMissingData: notBreaching
+    ExtractionBacklogAlarm:
+      Type: AWS::CloudWatch::Alarm
+      Properties:
+        Namespace: AWS/Lambda
+        MetricName: IteratorAge
+        Dimensions:
+          - Name: FunctionName
+            Value: !Ref ExtractionLambdaFunction
+        Statistic: Maximum
+        Period: 60
+        EvaluationPeriods: 2
+        Threshold: 300000
+        ComparisonOperator: GreaterThanThreshold
+        TreatMissingData: notBreaching
+    RecoveryFailureAlarm:
+      Type: AWS::CloudWatch::Alarm
+      Properties:
+        Namespace: AWS/Lambda
+        MetricName: Errors
+        Dimensions:
+          - Name: FunctionName
+            Value: !Ref RecoveryLambdaFunction
+        Statistic: Sum
+        Period: 60
+        EvaluationPeriods: 1
+        Threshold: 0
+        ComparisonOperator: GreaterThanThreshold
+        TreatMissingData: notBreaching

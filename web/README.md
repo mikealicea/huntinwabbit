@@ -1,26 +1,19 @@
 # huntinwabbit web
 
-The initial job-search frontend lives at `/app`. It uses fictional data and in-memory edits;
-reloading restores the sample dataset. Login through the shared Supabase project is required; the
-Express application-data backend is not required.
+The authenticated job-search workspace at `/app` uses your deployed backend for saved roles,
+application tracking and background posting extraction. No sample dataset is loaded at runtime.
 
 ## Available flows
 
-- `/` — reserved landing page with a top-right **Open app** link.
-- `/login`, `/signup`, `/forgot-password` — email/password account flows.
-- `/auth/confirm`, `/reset-password` — email confirmation and password recovery.
-- `/app` — six-stage board, role counts, salary, interest, priority and next actions.
-- `/app/roles/[roleId]` — posting details, application choices, tasks, follow-ups, notes and materials.
-- Batch capture with optional interest per link and immediate saving to Collected.
-- Drag handles for moving roles between stages, plus a workspace stage selector.
-- Shared company research and contacts, seeded resume choices, and separate submitted-copy metadata.
-- Responsive daisyUI components, Emerald/Forest themes, and system theme preference.
+- Email/password login, signup, confirmation and recovery through your configured Supabase project.
+- Six-stage board with saved roles, salary, interest, priority and follow-up dates.
+- Batch link capture: save immediately, then extract details in a durable backend worker.
+- Direct role workspaces with persistent stage, interest, priority, follow-up and explicit note saving.
+- Drag handles and a stage selector; responsive layouts and light/dark themes.
 
-Edits survive navigation within `/app`, but reloads and leaving the application can discard them.
-Newly captured URLs have unknown posting details; no URLs are fetched or parsed. Resume records are
-metadata only: there are no uploaded files or working document downloads. There is no persistent application storage, application-data API integration, company editor or
-resume-library manager yet.
-The [product README](../README.md) records the broader intended experience.
+Tasks, resumes, submitted materials and shared company research are visibly unavailable. Unsaved drafts
+are temporary; accepted backend saves survive navigation and reload. There is no deletion feature yet.
+The [product README](../README.md) records broader intended behavior.
 
 The inherited MDX blog remains available at `/blog` outside application navigation.
 
@@ -32,12 +25,16 @@ Run from `web/` with mise activated, or prefix npm commands with `mise exec --`:
 mise install
 npm ci
 cp .env.example .env.local
-# Fill SUPABASE_PUBLISHABLE_KEY in .env.local before starting.
+# Configure your own Supabase project, APP_ORIGIN, APP_STAGE=dev and API_BASE_URL_DEV.
 npm run dev
 ```
 
-The [auth runbook](../docs/auth-infrastructure.md) explains the shared project, email restrictions,
-local environment values, and confirmation/recovery verification.
+Deploy your own backend using the [server guide](../server/README.md), then put its dev Function URL
+in `API_BASE_URL_DEV` in ignored `.env.local`. `APP_STAGE=dev|prod` selects `API_BASE_URL_DEV` or
+`API_BASE_URL_PROD` at runtime. Local `next dev` defaults to dev; production-mode servers require an
+explicit stage. Production builds can target dev. No hosted endpoint is built into the source or
+used as a fallback. Keep actual deployment targets and credentials out of checked-in examples.
+The [auth runbook](../docs/auth-infrastructure.md) describes authentication configuration.
 
 Open [the app](http://localhost:3000/app). Node and npm versions come from
 [mise.toml](mise.toml) and [package.json](package.json). This is an independent npm package;
@@ -47,10 +44,10 @@ there is no root workspace. Commit the lockfile when changing dependencies.
 
 App Router files compose flat feature slices under `src/features/`. Each slice exports a public
 `<feature>.index.ts`, colocates tests and maintains a feature guide. The application layout owns the
-mock-state provider so route changes do not discard edits. Posting facts are separate from application
-choices; [job-search.types.ts](src/features/job-search/job-search.types.ts) owns the frontend contracts.
-These types are not yet a server API contract. Shared behavior lives in `src/shared/` only when it
-has a reusable contract.
+account-keyed Redux provider. [The API feature](src/features/job-api/job-api.AGENTS.md) owns validated
+server data in RTK Query. Next.js Route Handlers forward verified tokens server-side; browsers only
+call same-origin routes. Posting facts stay separate from application tracking. Feature presentation
+components receive props, while containers coordinate networking and navigation.
 
 ## Verification
 
@@ -65,7 +62,7 @@ npm run test:auth
 ```
 
 The build includes the blog's Pagefind index. Browser tests start an isolated development server on
-separate `.next-e2e/` build output and ports 3100 (Next.js) and 3101 (fake Supabase); both ports must be free. Chromium installation is required once per browser version.
+separate `.next-e2e/` build output and ports 3100 (Next.js) and 3101 (fake Supabase and posting API); both ports must be free. Chromium installation is required once per browser version.
 See the [browser test guide](e2e/e2e.AGENTS.md) for coverage and limitations. Test results and traces
 are ignored. Root documentation changes also require both checks in the [root guide](../AGENTS.md).
 

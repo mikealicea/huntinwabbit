@@ -4,6 +4,7 @@ export { createRedpillExtractor } from './job-parsing.redpill.ts';
 export { createJobParsingRouter } from './job-parsing.router.ts';
 export {
   type ParsePosting,
+  type ParseResponse,
   parseResponseSchema,
 } from './job-parsing.schemas.ts';
 export { createParsePosting } from './job-parsing.service.ts';

@@ -21,6 +21,7 @@ import { createAuthClient } from './auth.client';
 import { authConfig, authCookieName } from './auth.config';
 import { refreshAuth } from './auth.proxy';
 import {
+  backendSession,
   clearAuthCookies,
   requireUser,
   serverAuthClient,
@@ -313,5 +314,51 @@ describe('Server Action boundary', () => {
     await expect(
       submitAuth('login', { status: 'idle', message: '' }, new FormData()),
     ).rejects.toThrow('REDIRECT:/app');
+  });
+});
+
+describe('backend token boundary', () => {
+  it('returns a token only after remote verification of the same user', async () => {
+    const getSession = vi.fn(async () => ({
+      data: {
+        session: { user: { id: 'fictional' }, access_token: 'synthetic-token' },
+      },
+      error: null,
+    }));
+    mocks.create.mockReturnValue({
+      auth: { getUser: mocks.getUser, getSession },
+    });
+    expect(await backendSession()).toEqual({
+      status: 'authenticated',
+      accessToken: 'synthetic-token',
+    });
+    expect(mocks.getUser.mock.invocationCallOrder[0]).toBeLessThan(
+      getSession.mock.invocationCallOrder[0],
+    );
+    mocks.getUser.mockResolvedValue({ data: { user: null }, error: null });
+    expect(await backendSession()).toEqual({ status: 'anonymous' });
+    expect(getSession).toHaveBeenCalledTimes(1);
+  });
+  it.each([
+    { data: { session: null }, error: null },
+    {
+      data: { session: { user: { id: 'another' }, access_token: 'synthetic' } },
+      error: null,
+    },
+    { data: { session: null }, error: { message: 'private' } },
+  ])('rejects unavailable or mismatched sessions', async (value) => {
+    mocks.create.mockReturnValue({
+      auth: {
+        getUser: mocks.getUser,
+        getSession: vi.fn().mockResolvedValue(value),
+      },
+    });
+    expect(await backendSession()).toEqual({ status: 'anonymous' });
+  });
+  it('maps provider exceptions to unavailable without exposing them', async () => {
+    mocks.create.mockImplementation(() => {
+      throw new Error('private');
+    });
+    expect(await backendSession()).toEqual({ status: 'unavailable' });
   });
 });

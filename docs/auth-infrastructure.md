@@ -6,11 +6,11 @@ the configuration boundary. The [web auth feature](../web/src/features/auth/auth
 login, signup, email confirmation, recovery, session handling and protected workspace routes. The
 [API auth feature](../server/src/features/auth/auth.AGENTS.md) verifies bearer JWTs for the
 protected API endpoints. The [saved-postings feature](../server/src/features/job-postings/job-postings.AGENTS.md)
-implements user-owned DynamoDB storage. Web-to-API calls remain separate work; current web data is fictional.
+implements user-owned DynamoDB storage. The web API bridge verifies the session and forwards tokens server-side to the selected backend stage.
 
 ## One shared project
 
-The remote target is pinned in [mise.toml](../mise.toml). Dev and prod share users, auth policies,
+The remote target is explicitly supplied as SUPABASE_PROJECT_REF to the task in [mise.toml](../mise.toml). Dev and prod share users, auth policies,
 email quotas and signing authority. A dev token cannot be distinguished from a production token by
 project issuer alone. Backend authentication verifies signature, issuer, audience and expiry. Resource authorization must derive ownership from the verified user ID and select DynamoDB resources from
 trusted deployment configuration. Do not accept a client-selected table or environment.
@@ -27,7 +27,7 @@ From the repository root:
 mise trust
 mise install
 mise exec -- supabase login
-mise run auth:push
+SUPABASE_PROJECT_REF=your-project-ref mise run auth:push
 ```
 
 The existing CLI login can be reused. Automation may supply `SUPABASE_ACCESS_TOKEN` from a secret
@@ -53,7 +53,7 @@ The web app implements `/auth/confirm` for both confirmation and recovery emails
 4. Set each web deployment’s APP_ORIGIN to its own HTTPS origin. The app explicitly requests
    APP_ORIGIN plus `/auth/confirm`; templates use RedirectTo rather than the shared Site URL.
 
-The app integration uses `https://zjwbikkvzexdplwudzqy.supabase.co` and a publishable API key.
+The app integration uses `https://your-project.supabase.co` and a publishable API key.
 The hosted issuer is that URL plus `/auth/v1`, and its public JWKS endpoint is the issuer plus
 `/.well-known/jwks.json`. The Express API verifies asymmetric access tokens against these public keys;
 web route protection uses Supabase’s verified user lookup. Public discovery advertised an ES256 key when
@@ -74,12 +74,11 @@ The opt-in [API E2E suite](../server/e2e/e2e.AGENTS.md) uses this account, or ex
 credentials, to sign in and verify the configured live API. It signs out its own session afterward;
 it neither provisions accounts nor changes provider settings.
 
-[The server environment example](../server/.env.example) supplies the shared hosted URL. The API
+[The server environment example](../server/.env.example) uses a placeholder for your hosted URL. The API
 needs no publishable key, management token, signing secret or service-role credential. Local and
 Lambda composition use the same verifier; [serverless.yml](../server/serverless.yml) supplies the
 runtime URL from deployment configuration. The [server README](../server/README.md) describes
-local startup and bearer-token smoke testing. There is no browser API integration yet; web session
-credentials remain in HTTP-only cookies, and future calls should preserve that boundary.
+local startup and bearer-token smoke testing. The web API bridge keeps session credentials in HTTP-only cookies and forwards verified bearer tokens server-side.
 
 The API verifies each request locally with discovered public keys. It does not query current user
 or session state, so logout and account deletion do not promise immediate access-token revocation.

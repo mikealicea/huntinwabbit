@@ -3,8 +3,7 @@
 ## Purpose and boundaries
 
 Email/password account flows use the existing shared Supabase project. Login is required for the
-sample workspace and role routes. Supabase owns identities, credentials and sessions; application
-data remains fictional and in memory. This feature adds neither Express API authorization nor
+workspace and role routes. Supabase owns identities, credentials and sessions; application data is stored through the authenticated backend. This feature adds neither Express API authorization nor
 DynamoDB persistence, account deletion, profile editing, social login or MFA enrollment/challenges.
 The root [auth runbook](../../../../docs/auth-infrastructure.md) owns provider configuration and
 the processor boundary. Do not relax the shared project's policies for tests.
@@ -66,8 +65,7 @@ its local session on remote logout errors; ordinary sign out therefore reports b
 separately from provider revocation. Only the current session is targeted; do not promise immediate
 invalidation of all outstanding access tokens or other devices.
 
-Session refresh happens on requests, not a background browser timer. Leaving or reloading the sample
-workspace discards its edits. Its [Redux provider](../../state/state.AGENTS.md) is keyed by verified
+Session refresh happens on requests, not a background browser timer. Saved application data persists through the backend. Its [Redux provider](../../state/state.AGENTS.md) is keyed by verified
 user ID. Auth inputs and Server Action feedback stay local; credentials and tokens never enter Redux. A server response lost after
 a provider mutation can leave its outcome uncertain; this feature has no durable operation ledger.
 Do not silently repeat password updates to resolve that uncertainty.
@@ -88,3 +86,10 @@ cookies, sign-out failure, mobile themes and enlarged text. Existing workspace t
 through the real form. Do not add a runtime auth bypass. Hosted template readback and email delivery
 are separate checks; record them explicitly and do not claim fake-provider tests establish delivery.
 Screen-reader and physical-device checks require separate manual evidence.
+
+## Backend forwarding
+
+The server-only session helper verifies identity with getUser before retrieving a token for that same
+user with getSession. Route Handlers can persist refreshed cookies. The token remains server-side;
+the [API bridge](../job-api/job-api.AGENTS.md) validates Origin on mutations and sends bearer credentials
+to the configured stage only. Failed verification does not call the application-data backend.

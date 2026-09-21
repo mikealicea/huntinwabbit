@@ -246,6 +246,12 @@ payloads in logs, fixtures or committed sample data.
 
 ## Cross-cutting repository rules
 
+- This is a public, self-hostable repository. Contributors must deploy and configure their own
+  infrastructure. Never hard-code the maintainer's deployed API endpoints or Supabase project IDs
+  in source, examples, tests or setup documentation. Use placeholders in checked-in examples and ignored local environment
+  files or deployment configuration for actual targets. Stage selection must not fall back to the
+  maintainer's infrastructure.
+
 - Script directories carry their own barrel when introduced.
 - Published campaigns are operational records. Verify external status before treating a checked-in
   artifact as published; once confirmed sent/published, preserve the exact artifact.

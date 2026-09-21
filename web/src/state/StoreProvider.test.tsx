@@ -5,10 +5,8 @@ import { StrictMode } from 'react';
 import { hydrateRoot } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import {
-  applicationUpdated,
-  selectOpportunity,
-} from '@/features/job-search/job-search.index';
+import { postingApi } from '@/features/job-api/job-api.index';
+import { postingFixtures } from '@/features/job-api/job-api.test-support';
 import { StoreProvider } from './StoreProvider.provider';
 import { selectToday } from './state.clock';
 import { useAppDispatch, useAppSelector } from './state.hooks';
@@ -16,7 +14,9 @@ import { useAppDispatch, useAppSelector } from './state.hooks';
 function WorkspaceProbe() {
   const today = useAppSelector(selectToday);
   const notes = useAppSelector(
-    (state) => selectOpportunity(state, 'northstar-product')?.notes,
+    (state) =>
+      postingApi.endpoints.posting.select(postingFixtures()[0].id)(state).data
+        ?.application.notes,
   );
   const dispatch = useAppDispatch();
   return (
@@ -27,10 +27,19 @@ function WorkspaceProbe() {
         type="button"
         onClick={() =>
           dispatch(
-            applicationUpdated({
-              id: 'northstar-product',
-              changes: { notes: 'Edited' },
-            }),
+            postingApi.util.upsertQueryEntries([
+              {
+                endpointName: 'posting',
+                arg: postingFixtures()[0].id,
+                value: {
+                  ...postingFixtures()[0],
+                  application: {
+                    ...postingFixtures()[0].application,
+                    notes: 'Edited',
+                  },
+                },
+              },
+            ]),
           )
         }
       >
@@ -67,7 +76,7 @@ describe('workspace provider lifecycle', () => {
     expect(screen.getByText('Notes:')).toBeInTheDocument();
   });
 
-  it('does not share state between simultaneous providers', () => {
+  it('does not share state between simultaneous providers', async () => {
     render(
       <>
         <section aria-label="First">
@@ -85,7 +94,7 @@ describe('workspace provider lifecycle', () => {
     const first = within(screen.getByRole('region', { name: 'First' }));
     const second = within(screen.getByRole('region', { name: 'Second' }));
     fireEvent.click(first.getByRole('button', { name: 'Edit' }));
-    expect(first.getByText('Notes: Edited')).toBeInTheDocument();
+    expect(await first.findByText('Notes: Edited')).toBeInTheDocument();
     expect(second.getByText('Notes:')).toBeInTheDocument();
   });
 

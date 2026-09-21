@@ -12,6 +12,7 @@ export function createJobPostings(
   store: PostingStore,
   now = () => new Date().toISOString(),
   id = randomUUID,
+  extractionEnabled = false,
 ): JobPostings {
   return {
     async save(userId, input, signal) {
@@ -28,12 +29,35 @@ export function createJobPostings(
         sourceUrl,
         parsedPosting: input.parsedPosting,
         application: input.application,
+        applicationVersion: 0,
+        recordVersion: 0,
+        extraction: {
+          status: input.parsedPosting
+            ? 'complete'
+            : input.extract
+              ? extractionEnabled
+                ? 'queued'
+                : 'disabled'
+              : 'not-requested',
+          generation:
+            input.extract && extractionEnabled && !input.parsedPosting
+              ? randomUUID()
+              : null,
+          error: null,
+        },
         createdAt: timestamp,
         updatedAt: timestamp,
       });
       if (Buffer.byteLength(JSON.stringify(item), 'utf8') > MAX_RECORD_BYTES)
         throw postingError('POSTING_TOO_LARGE');
       return { schemaVersion: 1, ...(await store.save(userId, item, signal)) };
+    },
+    get: (userId, id, signal) => store.get(userId, id, signal),
+    update: (userId, id, input, signal) =>
+      store.update(userId, id, input, signal),
+    extract: async (userId, id, generation, signal) => {
+      if (!extractionEnabled) throw postingError('PARSING_DISABLED');
+      return store.extract(userId, id, generation, signal);
     },
     list: (userId, input, signal) => store.list(userId, input, signal),
   };

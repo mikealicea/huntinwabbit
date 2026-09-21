@@ -1,6 +1,13 @@
 // Test-only HTTP boundary. Never imported by application code or deployed.
 import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
+
+const initialPostings = JSON.parse(
+  readFileSync(new URL('./postings.fixture.json', import.meta.url), 'utf8'),
+);
+const postings = new Map();
+let postingSequence = 100;
 
 const accounts = new Map();
 const sessions = new Map();
@@ -69,6 +76,86 @@ const server = createServer(async (request, response) => {
   const token = request.headers.authorization?.replace('Bearer ', '');
   const active = sessions.get(token);
   if (url.pathname === '/health') return send(200, { ready: true });
+  if (url.pathname.startsWith('/job-postings')) {
+    if (!active) return error(401, 'unauthorized');
+    const owner = active.account.id;
+    if (!postings.has(owner))
+      postings.set(
+        owner,
+        new Map(
+          structuredClone(initialPostings).map((item) => [item.id, item]),
+        ),
+      );
+    const records = postings.get(owner);
+    const [, , id, operation] = url.pathname.split('/');
+    if (request.method === 'GET')
+      return id
+        ? records.has(id)
+          ? send(200, { schemaVersion: 1, item: records.get(id) })
+          : error(404, 'not_found')
+        : send(200, {
+            schemaVersion: 1,
+            items: [...records.values()],
+            nextCursor: null,
+          });
+    if (request.method === 'POST' && !id) {
+      const sourceUrl = new URL(
+        body.url.startsWith('http') ? body.url : `https://${body.url}`,
+      ).href;
+      const prior = [...records.values()].find(
+        (item) => item.sourceUrl === sourceUrl,
+      );
+      if (prior)
+        return send(200, { schemaVersion: 1, item: prior, created: false });
+      const item = {
+        id: `00000000-0000-4000-8000-${String(postingSequence++).padStart(12, '0')}`,
+        sourceUrl,
+        parsedPosting: null,
+        application: {
+          stage: 'collected',
+          interest: body.application.interest,
+          priority: 'not-set',
+          followUpOn: null,
+          notes: '',
+        },
+        applicationVersion: 0,
+        recordVersion: 0,
+        createdAt: '2026-09-21T00:00:00.000Z',
+        updatedAt: '2026-09-21T00:00:00.000Z',
+        extraction: { status: 'disabled', generation: null, error: null },
+      };
+      records.set(item.id, item);
+      return send(201, { schemaVersion: 1, item, created: true });
+    }
+    const item = records.get(id);
+    if (!item) return error(404, 'not_found');
+    if (request.method === 'PATCH') {
+      if (item.applicationVersion !== body.expectedApplicationVersion)
+        return error(409, 'conflict');
+      const next = {
+        ...item,
+        application: { ...item.application, ...body.changes },
+        applicationVersion: item.applicationVersion + 1,
+        recordVersion: item.recordVersion + 1,
+      };
+      records.set(id, next);
+      return send(200, { schemaVersion: 1, item: next });
+    }
+    if (request.method === 'POST' && operation === 'extraction') {
+      const next = {
+        ...item,
+        extraction: {
+          status: 'failed',
+          generation: '00000000-0000-4000-8000-999999999999',
+          error: 'SOURCE_BLOCKED',
+        },
+      };
+      records.set(id, next);
+      return send(202, { schemaVersion: 1, item: next });
+    }
+    return error(405, 'method_not_allowed');
+  }
+
   if (url.pathname === '/__test/account')
     return send(200, user(account(body.email, body)));
   if (url.pathname === '/__test/message') {

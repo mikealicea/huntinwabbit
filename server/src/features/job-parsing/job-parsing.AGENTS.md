@@ -10,9 +10,8 @@ facts remain missing; extraction is not verification of an employer's claims.
 The [router](job-parsing.router.ts) owns the route and HTTP lifecycle. The executable request,
 response, compensation and model-output contracts live in [schemas](job-parsing.schemas.ts);
 do not maintain a second field inventory here. The response's version allows future clients to
-distinguish incompatible contracts. It is intentionally richer than the web's current mock types;
-web integration and mapping are separate work. The [saved-postings feature](../job-postings/job-postings.AGENTS.md)
-can accept this response in a separate explicit save; parsing never saves automatically.
+distinguish incompatible contracts. The web maps this richer contract into board summaries while preserving full details. The [saved-postings feature](../job-postings/job-postings.AGENTS.md)
+accepts supplied parse responses and owns durable extraction jobs whose worker calls this service. The synchronous parse endpoint itself never saves automatically.
 
 ## Owners and flow
 

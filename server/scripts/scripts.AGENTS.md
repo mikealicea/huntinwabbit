@@ -26,3 +26,9 @@ reads the generated CloudFormation template and archive source map to verify the
 table, retention/recovery configuration, table reference, scoped IAM and bundled DynamoDB SDK.
 It does not print rendered secrets, run Docker, contact AWS or exercise a real database. It requires
 the ordinary Serverless package artifacts and `unzip`; no temporary files are created.
+
+[migrate-posting-ids.ts](migrate-posting-ids.ts) is an explicit operator migration for the dev table.
+It scans legacy posting rows and conditionally backfills ID pointers without modifying posting data.
+Run with operator credentials and `JOB_POSTINGS_TABLE` set to the explicit dev table only. It reports
+only a count. Runtime roles have no Scan permission. Repeating the migration is safe; conflicting
+pointers fail rather than overwrite another target.

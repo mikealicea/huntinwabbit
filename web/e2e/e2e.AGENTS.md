@@ -2,8 +2,8 @@
 
 [playwright.config.ts](../playwright.config.ts) owns the browser project, viewport, local server and
 artifact policy. [job-search.spec.ts](job-search.spec.ts) verifies routing, capture, application
-edits, real drag geometry, session reset and mobile theme behavior. Tests use only fictional data and
-the local application. They do not visit captured URLs or depend on the Express backend.
+edits, real drag geometry, persistence across reload and mobile theme behavior. Tests use only fictional data and
+the local application. They do not visit captured URLs or depend on the hosted backend.
 [Public-page tests](public-pages.spec.ts) exercise real blog loading, generated MDX, metadata and
 breadcrumb navigation without a session. Account and workspace suites save desktop/mobile screenshots
 in ignored test output for visual review; these are review artifacts, not pixel-baseline assertions.
@@ -18,7 +18,7 @@ Install Chromium with `npx playwright install chromium`, then run `npm run test:
 under its mise runtime. The suite starts and stops its own Next development server on port 3100.
 The Next test server uses ignored `.next-e2e/` output so it can coexist with a developer’s server.
 The configuration’s NEXT_DIST_DIR setting is for development/test builds; the production Pagefind
-script expects the ordinary `.next/` build output. A fake auth server runs on port 3101. An occupied port is an error rather than permission to test an unknown server. Browser projects use
+script expects the ordinary `.next/` build output. A fake auth and posting API server runs on port 3101. Each workspace browser test uses its own fictional account and record set. The Next test process explicitly selects its loopback dev API target. An occupied port is an error rather than permission to test an unknown server. Browser projects use
 isolated contexts; failed traces and reports are ignored by Git. Do not use real personal data in
 traces, screenshots or assertions. Browser tests supplement the production build and unit gates.
 

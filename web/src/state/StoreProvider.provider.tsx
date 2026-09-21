@@ -1,5 +1,6 @@
 'use client';
 
+import { setupListeners } from '@reduxjs/toolkit/query';
 import { type ReactNode, useEffect, useState } from 'react';
 import { Provider } from 'react-redux';
 import { toLocalDate } from '@/features/job-search/job-search.index';
@@ -19,10 +20,12 @@ export function StoreProvider({
     function updateDate() {
       store.dispatch(dateChanged(toLocalDate(new Date())));
     }
+    const cleanupListeners = setupListeners(store.dispatch);
     updateDate();
     const timer = window.setInterval(updateDate, 60000);
     document.addEventListener('visibilitychange', updateDate);
     return () => {
+      cleanupListeners();
       window.clearInterval(timer);
       document.removeEventListener('visibilitychange', updateDate);
     };

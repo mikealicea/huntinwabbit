@@ -1,10 +1,10 @@
 import { combineReducers, configureStore } from '@reduxjs/toolkit';
-import { jobSearchReducer } from '@/features/job-search/job-search.index';
+import { postingApi } from '@/features/job-api/job-api.index';
 import { clockReducer } from './state.clock';
 
 const rootReducer = combineReducers({
-  jobSearch: jobSearchReducer,
   clock: clockReducer,
+  [postingApi.reducerPath]: postingApi.reducer,
 });
 export type RootState = ReturnType<typeof rootReducer>;
 
@@ -12,6 +12,7 @@ export function makeStore(preloadedState?: Partial<RootState>) {
   return configureStore({
     reducer: rootReducer,
     preloadedState,
+    middleware: (defaults) => defaults().concat(postingApi.middleware),
     devTools: process.env.NODE_ENV !== 'production',
   });
 }

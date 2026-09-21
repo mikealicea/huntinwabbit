@@ -33,8 +33,7 @@ wiki link or full Markdown syntax.
 
 ## Deliberate differences
 
-- `web/` is the application, not a marketing site for an iOS app. The job-search frontend uses mock
-  data; the blog remains inherited scaffolding. No Sanctum routes, purchase flows or marketing claims
+- `web/` is the application, not a marketing site for an iOS app. The job-search frontend uses the authenticated backend; the blog remains inherited scaffolding. No Sanctum routes, purchase flows or marketing claims
   were adopted.
 - Web and server are independent npm packages using mise and Biome. Read-only `check` and writing
   `check:fix` remain separate. No root npm workspace, pnpm, Prettier or Xcode workflow is introduced.

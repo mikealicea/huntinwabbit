@@ -33,6 +33,8 @@ export default defineConfig({
       timeout: 120000,
       env: {
         NEXT_DIST_DIR: '.next-e2e',
+        APP_STAGE: 'dev',
+        API_BASE_URL_DEV: 'http://127.0.0.1:3101',
         SUPABASE_URL: 'http://127.0.0.1:3101',
         SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_fictional',
         APP_ORIGIN: 'http://127.0.0.1:3100',

@@ -2,7 +2,12 @@
 
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { mockPostingApi } from '@/features/job-api/job-api.test-support';
+
+beforeEach(() => mockPostingApi([]));
+afterEach(() => vi.unstubAllGlobals());
+
 import { SearchBoardContainer } from '@/features/search-board/search-board.index';
 import { StoreProvider } from '@/state/state.index';
 
@@ -35,7 +40,7 @@ describe('job capture on the board', () => {
     await user.clear(second);
     await user.type(second, 'https://example.net/two');
     await user.click(screen.getByRole('button', { name: 'Save to Collected' }));
-    const cards = screen.getAllByRole('article', {
+    const cards = await screen.findAllByRole('article', {
       name: 'Saved opening at Company unknown',
     });
     expect(cards).toHaveLength(2);
@@ -44,11 +49,10 @@ describe('job capture on the board', () => {
     expect(within(cards[1]).getByText('Salary not listed')).toBeInTheDocument();
     expect(
       screen.getByText(
-        '2 links added to Collected. Posting details are unavailable in this sample.',
+        '2 saved. 0 already saved. Posting details will appear as extraction finishes.',
       ),
     ).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Job link 1' })).toHaveValue('');
-    expect(screen.getByRole('textbox', { name: 'Job link 1' })).toHaveFocus();
   });
 
   it('keeps a draft when capture is closed and reopened', async () => {
@@ -70,4 +74,41 @@ describe('job capture on the board', () => {
       'https://example.org/draft',
     );
   });
+});
+
+it('retains failed rows and does not duplicate successful rows on retry', async () => {
+  const user = userEvent.setup();
+  const api = mockPostingApi([]);
+  render(
+    <StoreProvider>
+      <SearchBoardContainer />
+    </StoreProvider>,
+  );
+  await user.click(screen.getByRole('button', { name: 'Add job links' }));
+  await user.type(
+    screen.getByRole('textbox', { name: 'Job link 1' }),
+    'www.example.org/saved',
+  );
+  await user.type(
+    screen.getByRole('textbox', { name: 'Job link 2' }),
+    'fail.example/role',
+  );
+  await user.click(screen.getByRole('button', { name: 'Save to Collected' }));
+  expect(
+    await screen.findByText(/Some links need another try/),
+  ).toBeInTheDocument();
+  expect(api.records.size).toBe(1);
+  expect(screen.getByRole('textbox', { name: 'Job link 1' })).toHaveValue(
+    'fail.example/role',
+  );
+  await user.clear(screen.getByRole('textbox', { name: 'Job link 1' }));
+  await user.type(
+    screen.getByRole('textbox', { name: 'Job link 1' }),
+    'www.example.org/saved',
+  );
+  await user.click(screen.getByRole('button', { name: 'Save to Collected' }));
+  expect(
+    await screen.findByText(/0 saved. 1 already saved/),
+  ).toBeInTheDocument();
+  expect(api.records.size).toBe(1);
 });

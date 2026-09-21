@@ -1,79 +1,70 @@
-# Saved job postings
+# Saved job postings and extraction jobs
 
-## Purpose and boundary
+## Purpose and contracts
 
-Save a job link independently of extraction and list the authenticated user's saved jobs for a future
-board integration. Posting facts remain separate from application choices. This feature persists
-URLs, optional supplied parsing results and tracking choices; it does not fetch URLs or call an LLM.
-There is no frontend integration, edit/delete endpoint, company research, task or resume storage.
-A link-only save is valid. Enriching it later requires future update support: saving the same link
-again returns its existing data without replacing facts or choices.
+Persist a user's saved roles, tracking choices and generated posting facts. [Schemas](job-postings.schemas.ts)
+own save/list/detail/update/extraction contracts; [router](job-postings.router.ts) validates HTTP input
+after authentication. Every record key is scoped to the verified subject. Missing and other-owner IDs
+return the same 404. Lists paginate newest first using owner-bound opaque cursors; failures never
+return a successful empty collection. Cursors are encoded, not signed or encrypted.
 
-[schemas](job-postings.schemas.ts) owns the public contracts, defaults and bounds;
-[router](job-postings.router.ts) owns routes, statuses and HTTP body limits. The feature sits after
-authentication and before the smaller parser JSON middleware in [app composition](../../app.ts).
-All protected responses prohibit caching. Missing storage is an explicit unavailable capability,
-never a fictional or empty collection. [Errors](job-postings.errors.ts) owns safe error mappings.
+[Service](job-postings.service.ts) normalizes URLs using the parser's public normalizer and bounds
+serialized records. Exact normalized URLs determine duplicate identity; queries are preserved and
+HTTP/HTTPS remain distinct. A duplicate returns existing choices/facts without restarting extraction.
+A disabled parser does not prevent link capture. Supplied parsed facts remain accepted for compatibility
+and are schema-validated, not independently verified.
 
-## Owners and data flow
+## Storage and concurrency
 
-- [index](job-postings.index.ts) exposes the feature boundary; [runtime](../../runtime.ts) selects the
-  real adapter using [configuration](job-postings.config.ts). No network requests run at construction.
-  The optional table name is trusted configuration; malformed values fail startup.
-- [service](job-postings.service.ts) reuses the parser's public URL normalizer, requires supplied
-  extraction source to match, allocates IDs/timestamps and bounds serialized record bytes. Schemas
-  validate supplied facts, not their truth or provenance. Missing data stays null or empty.
-- [DynamoDB adapter](job-postings.dynamodb.ts) owns all storage commands and pagination. Its transport
-  is injectable. Records live under a partition derived only from the verified subject. Table names
-  come from runtime configuration; client owners, tables and arbitrary query fields are rejected.
-- Each record has a chronological sort key and a bounded JSON payload. A separate URL-hash pointer
-  in the same partition enforces uniqueness. A conditional transaction creates both or neither.
-  JSON avoids unbounded DynamoDB map/list overhead; storage envelopes and payloads validate on read.
-  Returned record keys, owner and source URLs are checked before returning public data.
+[DynamoDB adapter](job-postings.dynamodb.ts) creates a chronological record, URL pointer, ID pointer
+and optional extraction job in one conditional transaction. [Operations](job-postings.operations.ts)
+resolve IDs with strong reads and perform bounded compare-and-swap transactions. JSON payloads stay
+below the record byte limit. Every read validates the envelope, owner, source URL and stored contract.
 
-Lists use strongly consistent descending queries over the record prefix, excluding uniqueness
-pointers. Cursors contain a version, owner digest and last record key; they are encoded, not encrypted
-or signed. They are validated and bound to the current owner, and database partition keys are rebuilt
-from authentication. Cursor tampering cannot select another user's partition. Clients must treat
-cursors as opaque. DynamoDB may stop before the requested count at its byte limit; follow the cursor
-until null. There is no total count or snapshot guarantee across pages. Concurrent new records can
-appear only after restarting pagination.
+Application versions protect tracking updates; record versions include extraction changes. Concurrent
+fact changes can be reread/rebased without replacing tracking. Stale application edits return conflict.
+A lost update acknowledgement can be recovered by a strong read of the exact resulting version and
+values. Otherwise the caller refreshes and deliberately retries. API storage operations have a bounded
+deadline; SDK commands make at most three attempts. Disconnect does not revoke an accepted write.
 
-## Duplicates, failures and recovery
+Legacy records are explicitly decoded as version zero without extraction jobs. The operator-only
+[migration](../../../scripts/migrate-posting-ids.ts) backfills ID pointers idempotently for the explicit
+dev table. Runtime roles have no Scan permission. Existing posting data and IDs are preserved; legacy
+links do not silently trigger paid extraction.
 
-URL identity is the existing normalizer's exact output. Query parameters are preserved; tracking
-variants or HTTP versus HTTPS can therefore be distinct records. No ATS-specific canonicalization
-or cross-user deduplication is performed. Repeated saves return the original timestamps and data.
-A hash match must also match the stored URL; a mismatched or orphaned pointer fails safely.
+## Durable extraction
 
-The transaction request token remains stable across SDK retries of that operation. After a failed
-write, a strongly consistent read can recover an existing winner or a committed write whose response
-was lost. Unresolved contention and outages return temporary unavailability, allowing a caller retry
-without duplicate creation. A database failure is never a successful empty list. Invalid stored data
-fails the request rather than silently omitting records or repairing missing fields with input defaults.
+[Dot-free Lambda entry](../../extraction.ts) exports the [worker](job-postings.worker.ts), which consumes INSERT events for job keys from a KEYS_ONLY DynamoDB stream.
+The job and posting already exist atomically before any provider request. A conditional transition
+claims each generation, preventing duplicate stream events from repeating inference. An uncertain
+claim is never treated as permission to spend again. Results and terminal job state commit together,
+with conditional rereads preserving concurrent tracking changes. A newer generation fences old workers.
 
-The request owns a bounded database operation, including credential resolution and SDK retries.
-The SDK makes at most three attempts per command; there is no application transaction retry loop.
-A timeout can occur after a transaction commits. Retrying the same normalized URL recovers that record.
-Client disconnection does not cancel an accepted save: it continues within its operation deadline,
-independently of browser lifetime. No background worker or durable job ledger exists.
+The native Node worker reuses the existing agent-fetch/Redpill adapters. Parsing has a 60-second budget
+inside a 90-second Lambda. Provider failures become safe saved failure codes; no automatic paid retry
+or model repair occurs. Explicit user retry creates a new generation. Completing inference without
+persisting its result is an uncertain outcome, not permission to repeat the model request.
 
-## Retention, deployment and verification
+The sparse pending-job index supports a minute-based recovery task: unclaimed jobs older than fifteen
+minutes and claimed jobs older than three minutes become failed/retryable. Terminal jobs lose their
+index attributes and receive seven-day TTL; DynamoDB expiry is asynchronous. Posting records do not
+expire. Stream delivery retries twice with a one-hour maximum age; the encrypted failure queue retains
+invocation metadata for fourteen days. Alarms expose stream lag, discarded invocations and recovery
+errors; no notification recipients are configured. See [AWS stream delivery](https://docs.aws.amazon.com/lambda/latest/dg/with-ddb.html)
+and [failure destinations](https://docs.aws.amazon.com/lambda/latest/dg/services-dynamodb-errors.html),
+reviewed 2026-09-21. At-least-once delivery is why conditional claims are required.
 
-[Serverless configuration](../../../serverless.yml) owns stage-specific tables, on-demand billing,
-encryption, point-in-time recovery, retention on stack removal/replacement and least-privilege IAM.
-Only reads, queries and transactional puts are granted to the runtime. No scans, indexes or local
-Docker database are required. The AWS SDK is bundled from the lockfile. Local operation uses the
-standard AWS credential chain and an explicitly configured table/region; tests use an injected fake.
+## Privacy, operations and verification
 
-The [shared data boundary](../../../../docs/job-postings-data-boundary.md) owns retained data,
-account-deletion limitations and recovery constraints. Never log owners, URLs, cursors, notes,
-stored records, authorization or raw SDK errors. Shared logs expose only request outcome and timing.
+Never log owners, URLs, notes, cursors, stored records, stream payloads or raw SDK/provider errors.
+Worker logs contain only outcome categories; uncaught boundary errors are replaced with safe messages.
+[Infrastructure](../../../serverless.yml) owns separate API/worker/recovery roles, retained encrypted
+storage, PITR, stream/index configuration, schedules and alarms. [Shared data boundary](../../../../docs/job-postings-data-boundary.md)
+owns retention and deletion limitations. The parser's external data boundary remains separate.
 
-[Tests](job-postings.test.ts) cover public API behavior, ownership, normalization, tracking, rich facts,
-route body budgets, duplicate/concurrent saves, uncertain-write recovery, bounded operations and
-corrupt storage. The in-memory transport exercises actual SDK command construction but is not a
-DynamoDB emulator and does not prove AWS transaction scheduling, IAM or deployed compatibility.
-Fixtures are fictional. Run server gates/build, documentation checks and package storage inspection
-(`npm run check:storage-package`). Deployment and live persistence checks require a separately
-authorized target; ordinary tests never write to AWS or call the parser's providers.
+[Existing tests](job-postings.test.ts) cover save/list, normalization, corruption and uncertain writes;
+[lifecycle tests](job-postings.lifecycle.test.ts) cover ownership, version conflicts, duplicate delivery,
+concurrent edits, failure/retry, uncertain claims and stale workers. In-memory command adapters do not
+prove AWS transaction scheduling, IAM or native runtime compatibility. Run server gates/build,
+documentation gates and package inspection. Deployment/live checks require an authorized target;
+ordinary tests never write hosted records or call paid providers.

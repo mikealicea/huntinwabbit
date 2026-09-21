@@ -2,7 +2,7 @@
 
 Read the [root guide](../AGENTS.md) first for branch workflow, documentation ownership, product
 boundaries and handoff. This package is huntinwabbit's primary user interface. It currently contains
-a mock-data job-search application under `/app`, a minimal landing entry at `/`, and an inherited
+an authenticated live job-search application under `/app`, a minimal landing entry at `/`, and an inherited
 MDX blog. [The product README](../README.md) distinguishes implemented flows from longer-term intent.
 
 ## Executable owners
@@ -38,7 +38,7 @@ MDX blog. [The product README](../README.md) distinguishes implemented flows fro
 - Isolate vendor integration in the feature or adapter that owns it. UI components should not
   choose provider credentials or duplicate backend business rules. Define the web/server contract
   before introducing a real integration. The auth feature integrates directly with Supabase from
-  the Next.js server; the application-data backend has no API client integration yet.
+  the Next.js server; the application-data backend is accessed through the server-only API bridge.
 
 ## Container/component architecture
 
@@ -118,7 +118,8 @@ changes. Exact shapes remain in executable owners; barrels explain intent and im
 | Shared presentation | [shared.AGENTS.md](src/shared/shared.AGENTS.md) |
 | Authentication | [auth.AGENTS.md](src/features/auth/auth.AGENTS.md) |
 | Landing entry | [home.AGENTS.md](src/features/home/home.AGENTS.md) |
-| Job-search state and contracts | [job-search.AGENTS.md](src/features/job-search/job-search.AGENTS.md) |
+| Live API and stage configuration | [job-api.AGENTS.md](src/features/job-api/job-api.AGENTS.md) |
+| Job-search presentation contracts | [job-search.AGENTS.md](src/features/job-search/job-search.AGENTS.md) |
 | Search board and dragging | [search-board.AGENTS.md](src/features/search-board/search-board.AGENTS.md) |
 | Batch link capture | [job-capture.AGENTS.md](src/features/job-capture/job-capture.AGENTS.md) |
 | Role workspace | [role-workspace.AGENTS.md](src/features/role-workspace/role-workspace.AGENTS.md) |

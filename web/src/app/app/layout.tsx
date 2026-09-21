@@ -23,12 +23,6 @@ export default async function ApplicationLayout({
           id="app-content"
           className="mx-auto max-w-[1600px] px-4 py-8 sm:px-8 sm:py-10"
         >
-          <p className="mb-8 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-base-content/75">
-            <span className="badge badge-outline badge-sm font-medium">
-              Sample workspace
-            </span>{' '}
-            Fictional data. Edits reset when you reload or leave the app.
-          </p>
           {children}
         </main>
       </div>

@@ -34,7 +34,7 @@ function database() {
     }
     if (command instanceof TransactWriteCommand) {
       const puts = command.input.TransactItems?.map((entry) => entry.Put) ?? [];
-      expect(puts).toHaveLength(2);
+      expect(puts.length).toBeGreaterThanOrEqual(3);
       expect(command.input.ClientRequestToken).toBeTruthy();
       for (const put of puts) {
         expect(put?.ConditionExpression).toBe('attribute_not_exists(pk)');
@@ -360,7 +360,7 @@ describe('DynamoDB failure and concurrency boundaries', () => {
     ]);
     expect(responses.map((r) => r.status).sort()).toEqual([200, 201]);
     expect(responses[0]?.body.item).toEqual(responses[1]?.body.item);
-    expect(rows.size).toBe(2);
+    expect(rows.size).toBe(3);
   });
   it('recovers a committed write with a lost acknowledgement', async () => {
     const db = database();
@@ -379,7 +379,7 @@ describe('DynamoDB failure and concurrency boundaries', () => {
       new AbortController().signal,
     );
     expect(result.created).toBe(false);
-    expect(db.rows.size).toBe(2);
+    expect(db.rows.size).toBe(3);
   });
   it('bounds hung storage and rejects work started after cancellation', async () => {
     vi.useFakeTimers();
@@ -491,7 +491,7 @@ describe('DynamoDB failure and concurrency boundaries', () => {
       new AbortController().signal,
     );
     expect(retry.created).toBe(false);
-    expect(db.rows.size).toBe(2);
+    expect(db.rows.size).toBe(3);
   });
   it.each([
     {

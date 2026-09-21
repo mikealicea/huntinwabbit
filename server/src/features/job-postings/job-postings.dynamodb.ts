@@ -10,11 +10,12 @@ import { z } from 'zod';
 import { AppError } from '../../shared/shared.errors.ts';
 import { normalizeJobUrl } from '../job-parsing/job-parsing.index.ts';
 import { postingError } from './job-postings.errors.ts';
+import { createPostingOperations, jobRow } from './job-postings.operations.ts';
 import {
   MAX_RECORD_BYTES,
   type PostingStore,
   type SavedPosting,
-  savedPostingSchema,
+  storedPostingSchema,
 } from './job-postings.schemas.ts';
 
 export type DynamoTransport = (
@@ -42,7 +43,7 @@ const cursorSchema = z.strictObject({
 function hash(value: string): string {
   return createHash('sha256').update(value).digest('hex');
 }
-function recordKey(item: SavedPosting): string {
+export function recordKey(item: SavedPosting): string {
   return `POSTING#${item.createdAt}#${item.id}`;
 }
 function decodeCursor(
@@ -66,7 +67,7 @@ function encodeCursor(after: string, userId: string): string {
     JSON.stringify({ version: 1, owner: hash(userId), after }),
   ).toString('base64url');
 }
-function readRecord(
+export function readRecord(
   value: unknown,
   pk: string,
   expectedKey?: string,
@@ -79,7 +80,7 @@ function readRecord(
       Buffer.byteLength(row.data) > MAX_RECORD_BYTES
     )
       throw new Error();
-    const item = savedPostingSchema.parse(JSON.parse(row.data));
+    const item = storedPostingSchema.parse(JSON.parse(row.data));
     if (
       recordKey(item) !== row.sk ||
       normalizeJobUrl(item.sourceUrl) !== item.sourceUrl ||
@@ -98,7 +99,7 @@ function readRecord(
   }
 }
 // Bound credential resolution as well as HTTP/retries. A timed-out write may have committed.
-async function storageOperation<T>(
+export async function storageOperation<T>(
   signal: AbortSignal,
   work: () => Promise<T>,
 ): Promise<T> {
@@ -177,6 +178,7 @@ export function createDynamoPostingStore(
     return item;
   }
   return {
+    ...createPostingOperations(tableName, send),
     save(userId, item, signal) {
       return storageOperation(signal, async () => {
         const pk = `USER#${userId}`;
@@ -190,6 +192,28 @@ export function createDynamoPostingStore(
             new TransactWriteCommand({
               ClientRequestToken: item.id,
               TransactItems: [
+                {
+                  Put: {
+                    TableName: tableName,
+                    Item: {
+                      pk,
+                      sk: `ID#${item.id}`,
+                      recordKey: recordKey(item),
+                    },
+                    ConditionExpression: 'attribute_not_exists(pk)',
+                  },
+                },
+                ...(item.extraction.status === 'queued'
+                  ? [
+                      {
+                        Put: {
+                          TableName: tableName,
+                          Item: jobRow(pk, item),
+                          ConditionExpression: 'attribute_not_exists(pk)',
+                        },
+                      },
+                    ]
+                  : []),
                 {
                   Put: {
                     TableName: tableName,

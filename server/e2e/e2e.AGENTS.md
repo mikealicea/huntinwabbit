@@ -13,10 +13,11 @@ external operation, separate from the offline server gate. Run only against an a
   configuration parser rather than reimplementing issuer construction.
 - [vitest.e2e.config.ts](../vitest.e2e.config.ts) selects only live tests, without retries or parallel
   files. [The normal configuration](../vitest.config.ts) explicitly excludes this directory.
-- [The environment example](../.env.e2e.example) owns the inputs and dev target. Copy it to ignored
-  `.env.e2e` in `server/` and fill the publishable key. Run `mise exec -- npm run test:e2e` there.
+- [The environment example](../.env.e2e.example) owns the inputs with placeholder targets. Copy it to
+  ignored `.env.e2e` in `server/` and fill your own dev API URL, Supabase URL and publishable key.
+  Run `mise exec -- npm run test:e2e` there.
 
-Use the existing dedicated account file, or supply E2E_EMAIL and E2E_PASSWORD together through a
+Configure an ignored dedicated account file, or supply E2E_EMAIL and E2E_PASSWORD together through a
 secret store/environment. File paths are relative to the server working directory. CI must supply
 its own credentials; the example contains none. The suite fails visibly when configuration or
 credentials are unavailable instead of skipping checks. It uses no admin credentials, creates no
@@ -51,7 +52,7 @@ were manually checked there; the automated suite checks their comma-joined repre
 Expiry, wrong issuer/audience/role, key rotation, discovery outage/recovery and concurrent key fetches
 remain deterministic [auth tests](../src/features/auth/auth.test.ts). The live suite does not mutate
 provider keys, wait for token expiry, simulate an outage, test resource ownership, exercise a browser,
-or prove email delivery. No browser-to-API integration exists yet. Passing a live run verifies the
+or prove email delivery. The web API bridge has its own isolated browser suite. Passing a live run verifies the
 deployed artifact at that time, not that un-deployed source changes have reached AWS.
 
 Run the offline server gate and documentation gates for changes here, then the live command when
@@ -70,3 +71,13 @@ Results contain only the site label, outcome code and elapsed time, never URLs, 
 errors. A valid parsed result or documented source failure passes; model/worker integration errors
 fail. Report outcomes individually because passing does not establish four successful extractions.
 Deterministic HTTP and Lambda package tests separately cover authentication and route composition.
+
+## Explicit saved-posting smoke
+
+[job-postings.live.ts](job-postings.live.ts) is an opt-in operator script, outside the ordinary test
+and auth E2E suites. Run `LIVE_JOB_URL=https://jobs.example.com/role mise exec -- node
+--env-file=.env.e2e e2e/job-postings.live.ts` only against an authorized target with the dedicated account.
+It saves one real link without requesting parsing, verifies duplicates, detail, updates, stale-version
+conflicts and list privacy, then revokes its own session. The saved smoke record is retained because
+there is no delete API. It never logs payloads, tokens or account identifiers. Browser extraction
+checks are separate paid operations and must name their attempt budget and target.

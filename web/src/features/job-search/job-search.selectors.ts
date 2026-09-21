@@ -9,6 +9,7 @@ export function getCompanyLabel(
   companies: Company[],
 ): string {
   return (
+    role.companyName ||
     companies.find((company) => company.id === role.companyId)?.name ||
     'Company unknown'
   );

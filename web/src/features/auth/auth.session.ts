@@ -57,3 +57,22 @@ export async function requireUser(next = '/app') {
     redirect(`/login?next=${encodeURIComponent(safeReturnPath(next))}`);
   return identity;
 }
+
+// Verify remotely before retrieving the access token; session contents alone never authorize.
+export async function backendSession() {
+  try {
+    const client = await serverAuthClient(true);
+    const identity = await readIdentity(client);
+    if (identity.status !== 'authenticated')
+      return { status: identity.status } as const;
+    const { data, error } = await client.auth.getSession();
+    if (error || !data.session || data.session.user.id !== identity.userId)
+      return { status: 'anonymous' } as const;
+    return {
+      status: 'authenticated',
+      accessToken: data.session.access_token,
+    } as const;
+  } catch {
+    return { status: 'unavailable' } as const;
+  }
+}

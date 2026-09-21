@@ -10,7 +10,9 @@ const nextConfig: NextConfig = {
   // Preserve loopback hostnames and the configured auth redirect origin.
   skipProxyUrlNormalize: true,
   logging: {
-    incomingRequests: { ignore: [/^\/auth\/confirm(?:\?|$)/] },
+    incomingRequests: {
+      ignore: [/^\/auth\/confirm(?:\?|$)/, /^\/api\/job-postings(?:\/|\?|$)/],
+    },
   },
   turbopack: {
     resolveAlias: {

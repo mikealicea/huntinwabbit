@@ -6,6 +6,7 @@ import {
 } from '@/features/job-search/job-search.index';
 import type { CaptureRow } from './job-capture.validation';
 export interface JobCaptureProps {
+  saving?: boolean;
   isOpen: boolean;
   rows: CaptureRow[];
   errors: Record<number, string>;
@@ -20,6 +21,7 @@ export interface JobCaptureProps {
   onInterestChange: (id: number, interest: Interest) => void;
 }
 export function JobCapture({
+  saving = false,
   isOpen,
   rows,
   errors,
@@ -79,7 +81,8 @@ export function JobCapture({
                     ref={(element) => registerInput(row.id, element)}
                     id={`${id}-url-${row.id}`}
                     className={`input w-full min-h-11 text-base ${errors[row.id] ? 'input-error' : ''}`}
-                    type="url"
+                    disabled={saving}
+                    type="text"
                     inputMode="url"
                     autoComplete="off"
                     placeholder="https://company.com/careers/role"
@@ -113,6 +116,7 @@ export function JobCapture({
                   <select
                     id={`${id}-interest-${row.id}`}
                     className="select w-full min-h-11 text-base"
+                    disabled={saving}
                     value={row.interest}
                     onChange={(event) =>
                       onInterestChange(row.id, event.target.value as Interest)
@@ -128,8 +132,12 @@ export function JobCapture({
               </div>
             ))}
             <div className="flex flex-wrap items-center gap-3">
-              <button className="btn btn-primary min-h-11" type="submit">
-                Save to Collected
+              <button
+                disabled={saving}
+                className="btn btn-primary min-h-11"
+                type="submit"
+              >
+                {saving ? 'Saving links…' : 'Save to Collected'}
               </button>
               <button
                 className="btn btn-ghost min-h-11"
@@ -139,7 +147,8 @@ export function JobCapture({
                 Close
               </button>
               <p className="text-sm text-base-content/75">
-                Links are saved without fetching the posting.
+                Links save first. Posting details are extracted in the
+                background.
               </p>
             </div>
           </div>

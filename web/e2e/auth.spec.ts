@@ -14,12 +14,14 @@ test('protects deep links, persists sessions, redirects authenticated visitors, 
   page,
   context,
 }) => {
-  await page.goto('/app/roles/northstar-platform');
+  await page.goto('/app/roles/00000000-0000-4000-8000-000000000004');
   await expect(page).toHaveURL(
-    '/login?next=%2Fapp%2Froles%2Fnorthstar-platform',
+    '/login?next=%2Fapp%2Froles%2F00000000-0000-4000-8000-000000000004',
   );
   await login(page);
-  await expect(page).toHaveURL('/app/roles/northstar-platform');
+  await expect(page).toHaveURL(
+    '/app/roles/00000000-0000-4000-8000-000000000004',
+  );
   await page.reload();
   await expect(
     page.getByRole('heading', { name: 'Platform Engineer' }),

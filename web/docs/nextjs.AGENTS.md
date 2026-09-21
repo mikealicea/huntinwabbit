@@ -25,8 +25,7 @@ credentials and provider integrations out of client imports and browser-exposed 
 
 For new data flows, explicitly choose freshness, caching, authorization and invalidation behavior.
 Do not share private user data through a public cache. The [auth feature](../src/features/auth/auth.AGENTS.md) owns Server Actions, session verification
-and Proxy cookie refresh. Its routes prohibit shared response caching. Application data still has
-no API integration or user-data cache. Add abstractions only for the feature being built.
+and Proxy cookie refresh. Its routes prohibit shared response caching. The job-api feature owns server-only authenticated Route Handlers and a per-account RTK Query cache.
 
 ## React architecture and rendering
 

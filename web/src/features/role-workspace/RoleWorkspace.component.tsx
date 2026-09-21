@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import type { ReactNode } from 'react';
+import { type ReactNode, useState } from 'react';
 import {
   type ApplicationFields,
   getSourceHost,
@@ -20,12 +20,18 @@ export interface RoleWorkspaceProps {
   roleName: string;
   companyLabel: string;
   nextActionLabel: string;
-  onApplicationChange: (changes: Partial<ApplicationFields>) => void;
+  onApplicationChange: (changes: Partial<ApplicationFields>) => unknown;
+  saving?: boolean;
+  extracting?: boolean;
+  onExtract?: () => void;
   onTaskCompletionChange: (taskId: string, completed: boolean) => void;
   materials: ReactNode;
   company: ReactNode;
 }
 export function RoleWorkspace({
+  saving = false,
+  extracting = false,
+  onExtract,
   role,
   roleName,
   companyLabel,
@@ -35,6 +41,8 @@ export function RoleWorkspace({
   materials,
   company,
 }: RoleWorkspaceProps) {
+  const [notes, setNotes] = useState<string | null>(null);
+  const [savedNotice, setSavedNotice] = useState(false);
   return (
     <div className="mx-auto max-w-6xl">
       <Link href="/app" className="btn btn-ghost -ml-3 mb-5 min-h-11">
@@ -64,6 +72,7 @@ export function RoleWorkspace({
             Stage
           </label>
           <select
+            disabled={saving}
             id="role-stage"
             className="select min-h-11 w-full text-base"
             value={role.stage}
@@ -83,6 +92,7 @@ export function RoleWorkspace({
             Interest
           </label>
           <select
+            disabled={saving}
             id="role-interest"
             className="select min-h-11 w-full text-base"
             value={role.interest}
@@ -102,6 +112,7 @@ export function RoleWorkspace({
             Priority
           </label>
           <select
+            disabled={saving}
             id="role-priority"
             className="select min-h-11 w-full text-base"
             value={role.priority}
@@ -119,15 +130,22 @@ export function RoleWorkspace({
       </div>
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
         <div className="min-w-0 space-y-5">
-          <JobDetails role={role} />
+          <JobDetails
+            role={role}
+            onExtract={onExtract}
+            extracting={extracting}
+          />
           <section
             className="card border border-base-300 bg-base-100 shadow-sm"
             aria-labelledby="tasks-title"
           >
             <div className="card-body gap-5 p-5 sm:p-6">
+              <p className="text-sm text-base-content/75">
+                Task management is not available yet.
+              </p>
               <div>
                 <h2 id="tasks-title" className="card-title">
-                  Tasks & follow-up
+                  Follow-up & notes
                 </h2>
                 <p className="mt-2 text-sm text-base-content/75">
                   Next: {nextActionLabel}
@@ -164,6 +182,7 @@ export function RoleWorkspace({
                   Next follow-up
                 </label>
                 <input
+                  disabled={saving}
                   id="follow-up"
                   type="date"
                   className="input min-h-11 w-full text-base"
@@ -180,16 +199,44 @@ export function RoleWorkspace({
                   Prep & interview notes
                 </label>
                 <textarea
+                  disabled={saving}
                   id="role-notes"
                   className="textarea min-h-40 w-full text-base leading-relaxed"
                   placeholder="Rounds, questions, things to prepare…"
-                  value={role.notes}
-                  onChange={(event) =>
-                    onApplicationChange({ notes: event.target.value })
-                  }
+                  maxLength={20000}
+                  value={notes ?? role.notes}
+                  onChange={(event) => {
+                    setNotes(event.target.value);
+                    setSavedNotice(false);
+                  }}
                 />
-                <p className="mt-1 text-sm text-base-content/75">
-                  Changes apply immediately to this sample session.
+                <button
+                  type="button"
+                  className="btn btn-primary mt-2"
+                  disabled={saving || notes === null}
+                  onClick={async () => {
+                    const draft = notes;
+                    const success = await onApplicationChange({
+                      notes: draft ?? role.notes,
+                    });
+                    if (success !== false) {
+                      setNotes((current) =>
+                        current === draft ? null : current,
+                      );
+                      setSavedNotice(true);
+                    }
+                  }}
+                >
+                  Save notes
+                </button>
+                <p role="status" className="mt-1 text-sm text-base-content/75">
+                  {saving
+                    ? 'Saving…'
+                    : notes !== null
+                      ? 'You have unsaved notes.'
+                      : savedNotice
+                        ? 'Notes saved.'
+                        : 'Notes are saved to this role.'}
                 </p>
               </div>
             </div>

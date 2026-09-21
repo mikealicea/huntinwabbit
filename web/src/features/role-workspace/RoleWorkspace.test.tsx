@@ -1,63 +1,97 @@
 /** @vitest-environment jsdom */
-
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import {
+  mockPostingApi,
+  postingFixtures,
+} from '@/features/job-api/job-api.test-support';
 import { StoreProvider } from '@/state/state.index';
 import { RoleWorkspaceContainer } from './RoleWorkspace.container';
 
-describe('role workspace', () => {
-  it('edits application choices independently and preserves submitted materials', async () => {
+afterEach(() => vi.unstubAllGlobals());
+describe('live role workspace', () => {
+  it('persists independent choices and notes and displays unavailable sections honestly', async () => {
+    const api = mockPostingApi();
+    const item = postingFixtures()[0];
     const user = userEvent.setup();
-    render(
+    const ui = () => (
       <StoreProvider>
-        <RoleWorkspaceContainer roleId="northstar-platform" />
-      </StoreProvider>,
+        <RoleWorkspaceContainer roleId={item.id} />
+      </StoreProvider>
     );
+    const view = render(ui());
     await user.selectOptions(
-      screen.getByRole('combobox', { name: 'Stage' }),
+      await screen.findByRole('combobox', { name: 'Stage' }),
       'offer',
+    );
+    await waitFor(() =>
+      expect(api.records.get(item.id)?.application.stage).toBe('offer'),
     );
     expect(screen.getByRole('combobox', { name: 'Interest' })).toHaveValue(
       'highly-interested',
     );
-    expect(screen.getByRole('combobox', { name: 'Priority' })).toHaveValue(
-      'high',
+    expect(
+      screen.queryByRole('combobox', { name: 'Planned resume' }),
+    ).not.toBeInTheDocument();
+    expect(screen.getAllByText('Not available yet')).toHaveLength(2);
+    await waitFor(() =>
+      expect(
+        screen.getByRole('textbox', { name: 'Prep & interview notes' }),
+      ).toBeEnabled(),
     );
-    await user.selectOptions(
-      screen.getByRole('combobox', { name: 'Planned resume' }),
-      'general-v5',
-    );
-    expect(screen.getByText('platform-engineering-v2.pdf')).toBeInTheDocument();
     await user.type(
       screen.getByRole('textbox', { name: 'Prep & interview notes' }),
-      'Practice explaining tradeoffs.',
+      'Fictional saved note',
     );
-    expect(
-      screen.getByRole('textbox', { name: 'Prep & interview notes' }),
-    ).toHaveValue('Practice explaining tradeoffs.');
-    await user.click(
-      screen.getByRole('checkbox', { name: 'Prepare for technical screen' }),
+    expect(api.records.get(item.id)?.application.notes).toBe('');
+    await user.click(screen.getByRole('button', { name: 'Save notes' }));
+    await waitFor(() =>
+      expect(api.records.get(item.id)?.application.notes).toBe(
+        'Fictional saved note',
+      ),
     );
-    expect(screen.getByText('Next: No next action set')).toBeInTheDocument();
-    const company = screen.getByRole('region', { name: 'Northstar · Company' });
+    view.unmount();
+    render(ui());
     expect(
-      within(company).getByText('2 saved roles at this company'),
-    ).toBeInTheDocument();
-    expect(within(company).getByText('Alex')).toBeInTheDocument();
+      await screen.findByRole('textbox', { name: 'Prep & interview notes' }),
+    ).toHaveValue('Fictional saved note');
   });
-
-  it('offers recovery for an unknown or expired sample role', () => {
+  it('shows 404 recovery only after the direct API lookup', async () => {
+    mockPostingApi([]);
     render(
       <StoreProvider>
-        <RoleWorkspaceContainer roleId="missing" />
+        <RoleWorkspaceContainer roleId="00000000-0000-4000-8000-999999999999" />
       </StoreProvider>,
     );
     expect(
-      screen.getByRole('heading', { name: 'Role not found' }),
+      await screen.findByRole('heading', { name: 'Role not found' }),
     ).toBeInTheDocument();
+  });
+  it('preserves a note draft on a conflicting edit', async () => {
+    const api = mockPostingApi();
+    const item = postingFixtures()[0];
+    const user = userEvent.setup();
+    render(
+      <StoreProvider>
+        <RoleWorkspaceContainer roleId={item.id} />
+      </StoreProvider>,
+    );
+    await user.type(
+      await screen.findByRole('textbox', { name: 'Prep & interview notes' }),
+      'My unsaved draft',
+    );
+    api.records.set(item.id, {
+      ...item,
+      applicationVersion: 1,
+      application: { ...item.application, notes: 'Other tab' },
+    });
+    await user.click(screen.getByRole('button', { name: 'Save notes' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'changed elsewhere',
+    );
     expect(
-      screen.getByRole('link', { name: 'Return to search board' }),
-    ).toHaveAttribute('href', '/app');
+      screen.getByRole('textbox', { name: 'Prep & interview notes' }),
+    ).toHaveValue('My unsaved draft');
   });
 });

@@ -23,15 +23,36 @@ assert.equal(
   true,
 );
 assert.equal(table.Properties.SSESpecification.SSEEnabled, true);
-assert.equal(table.Properties.GlobalSecondaryIndexes, undefined);
+assert.equal(
+  table.Properties.GlobalSecondaryIndexes[0].IndexName,
+  'PendingJobs',
+);
+assert.equal(table.Properties.StreamSpecification.StreamViewType, 'KEYS_ONLY');
+assert.equal(table.Properties.TimeToLiveSpecification.Enabled, true);
+const mapping = template.Resources.ExtractionMapping.Properties;
+assert.equal(mapping.BatchSize, 1);
+assert.equal(mapping.StartingPosition, 'TRIM_HORIZON');
+assert.equal(mapping.MaximumRetryAttempts, 2);
+assert.equal(mapping.MaximumRecordAgeInSeconds, 3600);
+assert.equal(
+  template.Resources.ExtractionLambdaFunction.Properties.Timeout,
+  90,
+);
+assert.equal(
+  template.Resources.ExtractionFailures.Properties.SqsManagedSseEnabled,
+  true,
+);
+assert.equal(
+  template.Resources.ExtractionFailures.Properties.MessageRetentionPeriod,
+  1209600,
+);
 const lambda = template.Resources.ApiLambdaFunction;
 assert.deepEqual(lambda.Properties.Environment.Variables.JOB_POSTINGS_TABLE, {
   Ref: 'JobPostingsTable',
 });
-const statements =
-  template.Resources.IamRoleLambdaExecution.Properties.Policies.flatMap(
-    (policy) => policy.PolicyDocument.Statement,
-  );
+const statements = template.Resources.ApiRole.Properties.Policies.flatMap(
+  (policy) => policy.PolicyDocument.Statement,
+);
 const dataStatements = statements.filter((statement) =>
   JSON.stringify(statement.Action).includes('dynamodb:'),
 );
@@ -52,6 +73,27 @@ const writes = dataStatements.find((statement) =>
 assert.deepEqual(writes.Condition, {
   StringEquals: { 'dynamodb:EnclosingOperation': 'TransactWriteItems' },
 });
+for (const role of ['ExtractionRole', 'RecoveryRole']) {
+  const policies = template.Resources[role].Properties.Policies.flatMap(
+    (policy) => policy.PolicyDocument.Statement,
+  );
+  assert(
+    policies.some(
+      (statement) =>
+        statement.Action.includes('dynamodb:PutItem') &&
+        statement.Condition.StringEquals['dynamodb:EnclosingOperation'] ===
+          'TransactWriteItems',
+    ),
+  );
+  assert(
+    !policies.some((statement) => statement.Action.includes('dynamodb:Scan')),
+  );
+}
+assert.equal(
+  template.Resources.RecoveryLambdaFunction.Properties.Environment.Variables
+    .REDPILL_API_KEY,
+  undefined,
+);
 const sourceMap = JSON.parse(
   execFileSync(
     'unzip',
@@ -71,6 +113,20 @@ for (const name of [
   );
 }
 assert(table.Properties.TableName.endsWith('-job-postings'));
+
+assert.equal(
+  template.Resources.ExtractionLambdaFunction.Properties.Handler,
+  'src/extraction.handler',
+);
+assert.equal(
+  template.Resources.RecoveryLambdaFunction.Properties.Handler,
+  'src/extraction.recover',
+);
+const archive = execFileSync('unzip', [
+  '-l',
+  '.serverless/huntinwabbit.zip',
+]).toString();
+assert(archive.includes('src/extraction.js'));
 console.log(
-  'Storage package: stage table, retention, recovery, runtime reference, scoped IAM and bundled SDK verified. No AWS calls or Docker.',
+  'Storage package: stage table, retention, recovery, runtime reference, scoped IAM, extraction/recovery resources and bundled SDK verified. No AWS calls or Docker.',
 );

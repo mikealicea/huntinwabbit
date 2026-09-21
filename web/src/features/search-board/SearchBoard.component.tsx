@@ -4,12 +4,14 @@ export interface SearchBoardProps {
   totalCount: number;
   capture: ReactNode;
   children: ReactNode;
+  complete?: boolean;
 }
 export function SearchBoard({
   activeCount,
   totalCount,
   capture,
   children,
+  complete = true,
 }: SearchBoardProps) {
   return (
     <>
@@ -22,6 +24,7 @@ export function SearchBoard({
             Your search
           </h1>
           <p className="mt-3 text-sm text-base-content/75">
+            {!complete && 'Loaded so far: '}
             {activeCount} active roles <span aria-hidden="true">·</span>{' '}
             {totalCount - activeCount} closed
           </p>
@@ -34,7 +37,7 @@ export function SearchBoard({
         </p>
       </div>
       {capture}
-      {totalCount === 0 && (
+      {complete && totalCount === 0 && (
         <div className="alert mb-6 border-base-300 bg-base-100">
           <p>
             Your next opportunity starts with a link. Add one above to begin

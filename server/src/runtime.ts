@@ -28,7 +28,12 @@ export function buildRuntimeApp(
     : undefined;
   const table = jobPostingsTable(env);
   const jobPostings = table
-    ? createJobPostings(createDynamoPostingStore(table))
+    ? createJobPostings(
+        createDynamoPostingStore(table),
+        undefined,
+        undefined,
+        config.enabled,
+      )
     : undefined;
   return buildApp({ verifyAccessToken, parsePosting, jobPostings });
 }
