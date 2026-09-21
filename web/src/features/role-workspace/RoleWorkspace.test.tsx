@@ -127,7 +127,9 @@ it('keeps draft notes and prior facts while refresh is pending', async () => {
     await screen.findByRole('textbox', { name: 'Prep & interview notes' }),
     'Draft stays',
   );
+  await user.click(screen.getByLabelText('Posting actions'));
   await user.click(screen.getByRole('button', { name: 'Refresh posting' }));
+  await user.click(screen.getByLabelText('Posting actions'));
   expect(
     await screen.findByRole('button', { name: 'Refreshing posting…' }),
   ).toBeDisabled();
@@ -149,13 +151,14 @@ it('cancels deletion without writing, then deletes and returns to the board', as
       <RoleWorkspaceContainer roleId={item.id} />
     </StoreProvider>,
   );
-  await user.click(
-    await screen.findByRole('button', { name: 'Delete posting' }),
-  );
+  await user.click(await screen.findByLabelText('Posting actions'));
+  await user.click(screen.getByRole('button', { name: 'Delete posting' }));
   expect(screen.getByRole('dialog')).toHaveTextContent('cannot be undone');
   expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus();
   await user.click(screen.getByRole('button', { name: 'Cancel' }));
   expect(api.records.has(item.id)).toBe(true);
+  expect(screen.getByLabelText('Posting actions')).toHaveFocus();
+  await user.click(screen.getByLabelText('Posting actions'));
   await user.click(screen.getByRole('button', { name: 'Delete posting' }));
   await user.click(screen.getByRole('button', { name: 'Delete permanently' }));
   await waitFor(() => expect(navigate).toHaveBeenCalledWith('/app'));
@@ -171,9 +174,8 @@ it('requires fresh confirmation after another tab changes tracking', async () =>
       <RoleWorkspaceContainer roleId={item.id} />
     </StoreProvider>,
   );
-  await user.click(
-    await screen.findByRole('button', { name: 'Delete posting' }),
-  );
+  await user.click(await screen.findByLabelText('Posting actions'));
+  await user.click(screen.getByRole('button', { name: 'Delete posting' }));
   api.records.set(item.id, {
     ...item,
     applicationVersion: 1,
@@ -189,6 +191,7 @@ it('requires fresh confirmation after another tab changes tracking', async () =>
   expect(navigate).not.toHaveBeenCalled();
   await user.click(screen.getByRole('button', { name: 'Review posting' }));
   expect(screen.getByRole('combobox', { name: 'Stage' })).toHaveValue('offer');
+  await user.click(screen.getByLabelText('Posting actions'));
   await user.click(screen.getByRole('button', { name: 'Delete posting' }));
   await user.click(screen.getByRole('button', { name: 'Delete permanently' }));
   await waitFor(() => expect(navigate).toHaveBeenCalledWith('/app'));
@@ -203,9 +206,8 @@ it('retains the confirmation and posting after a failed deletion', async () => {
       <RoleWorkspaceContainer roleId={item.id} />
     </StoreProvider>,
   );
-  await user.click(
-    await screen.findByRole('button', { name: 'Delete posting' }),
-  );
+  await user.click(await screen.findByLabelText('Posting actions'));
+  await user.click(screen.getByRole('button', { name: 'Delete posting' }));
   api.fetcher.mockImplementationOnce(async () =>
     Response.json({}, { status: 503 }),
   );

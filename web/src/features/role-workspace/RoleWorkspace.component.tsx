@@ -15,8 +15,9 @@ import {
   type Stage,
 } from '@/features/job-search/job-search.index';
 import { LoadingPulse } from '@/shared/shared.index';
-import { type DeleteOutcome, DeletePosting } from './DeletePosting.component';
+import type { DeleteOutcome } from './DeletePosting.component';
 import { JobDetails } from './JobDetails.component';
+import { PostingActions } from './PostingActions.component';
 export interface RoleWorkspaceProps {
   role: Opportunity;
   roleName: string;
@@ -70,16 +71,18 @@ export function RoleWorkspace({
             </p>
           )}
         </div>
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="ml-auto flex flex-wrap items-center gap-3">
           <span className="badge badge-outline h-auto py-2">
             {STAGE_LABELS[role.stage]}
           </span>
-          {onDelete && role.saved && (
-            <DeletePosting
+          {role.saved && (
+            <PostingActions
               roleName={roleName}
-              version={role.saved.applicationVersion}
-              pending={deleting}
-              disabled={deleteDisabled}
+              role={role}
+              onExtract={onExtract}
+              extracting={extracting && !deleting}
+              deleting={deleting}
+              deleteDisabled={deleteDisabled}
               onDelete={onDelete}
             />
           )}
@@ -149,12 +152,7 @@ export function RoleWorkspace({
       </div>
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
         <div className="min-w-0 space-y-5">
-          <JobDetails
-            role={role}
-            onExtract={onExtract}
-            extracting={extracting && !deleting}
-            disabled={deleting}
-          />
+          <JobDetails role={role} extracting={extracting && !deleting} />
           <section
             className="card border border-base-300 bg-base-100 shadow-sm"
             aria-labelledby="tasks-title"

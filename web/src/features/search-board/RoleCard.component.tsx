@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import type { Ref } from 'react';
+import type { ReactNode, Ref } from 'react';
 import {
   formatSalary,
   getSourceHost,
@@ -10,6 +10,9 @@ import {
 import { LoadingPulse } from '@/shared/shared.index';
 
 export interface RoleCardProps {
+  actions?: ReactNode;
+  feedback?: ReactNode;
+  busy?: boolean;
   role: Opportunity;
   title: string;
   company: string;
@@ -20,6 +23,9 @@ export interface RoleCardProps {
 }
 export function RoleCard({
   role,
+  actions,
+  feedback,
+  busy = false,
   title,
   company,
   next,
@@ -34,37 +40,42 @@ export function RoleCard({
     <article
       ref={cardRef}
       aria-label={`${title} at ${company}`}
-      className={`card min-w-0 border border-base-300 bg-base-100 shadow-sm ${pending ? "after:pointer-events-none after:absolute after:-inset-px after:rounded-[inherit] after:border after:border-primary/70 after:opacity-65 after:ring-3 after:ring-primary/10 after:shadow-[0_0_24px_2px] after:shadow-primary/25 after:content-[''] motion-safe:after:animate-pulse" : ''} ${isDragging ? 'opacity-50' : ''}`}
+      className={`card relative min-w-0 has-[details[open]]:z-10 border border-base-300 bg-base-100 shadow-sm ${pending ? "after:pointer-events-none after:absolute after:-inset-px after:rounded-[inherit] after:border after:border-primary/70 after:opacity-65 after:ring-3 after:ring-primary/10 after:shadow-[0_0_24px_2px] after:shadow-primary/25 after:content-[''] motion-safe:after:animate-pulse" : ''} ${isDragging ? 'opacity-50' : ''}`}
     >
       <div className="card-body gap-3 p-4">
-        <div className="flex items-start justify-between gap-1">
-          <p className="min-w-0 break-words pt-2 text-sm font-medium text-base-content/75">
+        <div className="flex flex-wrap items-start justify-between gap-1">
+          <p className="min-w-16 flex-1 break-words pt-2 text-sm font-medium text-base-content/75">
             {company}
           </p>
-          <button
-            id={`move-${role.id}`}
-            ref={dragHandleRef}
-            type="button"
-            className="btn btn-ghost size-11 min-h-11 shrink-0 cursor-grab touch-none p-2 active:cursor-grabbing"
-            aria-label={`Move ${title} at ${company}`}
-            aria-describedby="board-move-help"
-          >
-            <svg
-              aria-hidden="true"
-              width="20"
-              height="20"
-              viewBox="0 0 20 20"
-              fill="currentColor"
+          <div className="ml-auto flex shrink-0 items-center">
+            {actions}
+            <button
+              id={`move-${role.id}`}
+              ref={dragHandleRef}
+              type="button"
+              disabled={busy}
+              className="btn btn-ghost size-11 min-h-11 shrink-0 cursor-grab touch-none p-2 active:cursor-grabbing"
+              aria-label={`Move ${title} at ${company}`}
+              aria-describedby="board-move-help"
             >
-              <circle cx="7" cy="5" r="1.5" />
-              <circle cx="13" cy="5" r="1.5" />
-              <circle cx="7" cy="10" r="1.5" />
-              <circle cx="13" cy="10" r="1.5" />
-              <circle cx="7" cy="15" r="1.5" />
-              <circle cx="13" cy="15" r="1.5" />
-            </svg>
-          </button>
+              <svg
+                aria-hidden="true"
+                width="20"
+                height="20"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <circle cx="7" cy="5" r="1.5" />
+                <circle cx="13" cy="5" r="1.5" />
+                <circle cx="7" cy="10" r="1.5" />
+                <circle cx="13" cy="10" r="1.5" />
+                <circle cx="7" cy="15" r="1.5" />
+                <circle cx="13" cy="15" r="1.5" />
+              </svg>
+            </button>
+          </div>
         </div>
+        {feedback}
         <h3 className="text-base font-semibold leading-snug">
           <Link
             className="inline-block min-h-11 break-words hover:underline"

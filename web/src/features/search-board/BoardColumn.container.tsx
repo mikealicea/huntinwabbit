@@ -9,7 +9,9 @@ import { RoleCardContainer } from './RoleCard.container';
 export function BoardColumnContainer({
   stage,
   roles,
+  saving = false,
 }: {
+  saving?: boolean;
   stage: Stage;
   roles: Opportunity[];
 }) {
@@ -22,7 +24,7 @@ export function BoardColumnContainer({
       dropRef={ref}
     >
       {roles.map((role) => (
-        <RoleCardContainer key={role.id} role={role} />
+        <RoleCardContainer key={role.id} role={role} saving={saving} />
       ))}
     </BoardColumn>
   );

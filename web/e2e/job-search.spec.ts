@@ -331,6 +331,7 @@ test('refresh retains facts and drafts on failure, then replaces facts on explic
     .click();
   const notes = page.getByRole('textbox', { name: 'Prep & interview notes' });
   await notes.fill('Keep my unsaved preparation');
+  await page.getByLabel('Posting actions').click();
   await page
     .getByRole('button', { name: 'Refresh posting', exact: true })
     .click();
@@ -346,6 +347,7 @@ test('refresh retains facts and drafts on failure, then replaces facts on explic
     ),
   ).toBeVisible({ timeout: 10000 });
   await expect(notes).toHaveValue('Keep my unsaved preparation');
+  await page.getByLabel('Posting actions').click();
   await page.getByRole('button', { name: 'Retry extraction' }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(
     'Refreshed Product Engineer',
@@ -372,11 +374,29 @@ test('delete confirmation works by keyboard and removes the posting across reloa
   const source = await page
     .getByRole('link', { name: /Open original posting/ })
     .getAttribute('href');
-  const opener = page.getByRole('button', {
+  const opener = page.getByLabel('Posting actions');
+  const deleteAction = page.getByRole('button', {
     name: 'Delete posting',
     exact: true,
   });
   await opener.focus();
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Tab');
+  await expect(
+    page.getByRole('button', { name: 'Refresh posting', exact: true }),
+  ).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(opener).toBeFocused();
+  await expect(deleteAction).not.toBeVisible();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.dropdown-content')).toHaveCSS('opacity', '1');
+  await page.screenshot({
+    path: testInfo.outputPath('actions-desktop.png'),
+    animations: 'disabled',
+  });
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Tab');
+  await expect(deleteAction).toBeFocused();
   await page.keyboard.press('Enter');
   const dialog = page.getByRole('dialog', { name: 'Delete posting?' });
   await expect(dialog.getByRole('button', { name: 'Cancel' })).toBeFocused();
@@ -403,6 +423,20 @@ test('delete confirmation works by keyboard and removes the posting across reloa
     await page.emulateMedia({ colorScheme: scheme });
     await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
     await opener.click();
+    await expect(page.locator('.dropdown-content')).toHaveCSS('opacity', '1');
+    const menuBounds = await page.locator('.dropdown-content').boundingBox();
+    expect(menuBounds?.x).toBeGreaterThanOrEqual(0);
+    expect((menuBounds?.x ?? 0) + (menuBounds?.width ?? 0)).toBeLessThanOrEqual(
+      390,
+    );
+    await page.screenshot({
+      path: testInfo.outputPath(`actions-mobile-${scheme}.png`),
+      animations: 'disabled',
+    });
+    await page.getByRole('heading', { level: 1 }).click();
+    await expect(deleteAction).not.toBeVisible();
+    await opener.click();
+    await deleteAction.click();
     await expect(dialog).toBeVisible();
     await page.screenshot({
       path: testInfo.outputPath(`delete-mobile-${scheme}.png`),
@@ -416,6 +450,7 @@ test('delete confirmation works by keyboard and removes the posting across reloa
     await dialog.getByRole('button', { name: 'Cancel' }).click();
   }
   await opener.click();
+  await deleteAction.click();
   let failDelete = true;
   await page.route('**/api/job-postings/*', async (route) => {
     if (failDelete && route.request().method() === 'DELETE') {
@@ -453,4 +488,88 @@ test('delete confirmation works by keyboard and removes the posting across reloa
     .getByRole('link', { name: 'Open Saved opening at Company unknown' })
     .click();
   expect(page.url()).not.toBe(original);
+});
+
+test('card actions refresh and delete in place without starting a drag', async ({
+  page,
+}, testInfo) => {
+  const card = page.getByRole('article', {
+    name: 'Senior Product Engineer at Northstar',
+    exact: true,
+  });
+  const opener = card.getByLabel('Posting actions');
+  await opener.focus();
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Tab');
+  await expect(
+    card.getByRole('button', { name: 'Refresh posting', exact: true }),
+  ).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(opener).toBeFocused();
+  for (const width of [1280, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    for (const scheme of ['light', 'dark'] as const) {
+      await page.emulateMedia({ colorScheme: scheme });
+      const actionBounds = await opener.boundingBox();
+      const moveBounds = await card
+        .getByRole('button', { name: /^Move / })
+        .boundingBox();
+      expect(
+        (actionBounds?.x ?? 0) + (actionBounds?.width ?? 0),
+      ).toBeLessThanOrEqual(moveBounds?.x ?? 0);
+      await opener.click();
+      const menu = card.locator('.dropdown-content');
+      await expect(menu).toHaveCSS('opacity', '1');
+      const bounds = await menu.boundingBox();
+      expect(bounds?.x).toBeGreaterThanOrEqual(0);
+      expect((bounds?.x ?? 0) + (bounds?.width ?? 0)).toBeLessThanOrEqual(
+        width,
+      );
+      await page.screenshot({
+        path: testInfo.outputPath(`card-actions-${width}-${scheme}.png`),
+        animations: 'disabled',
+      });
+      await page.keyboard.press('Escape');
+    }
+  }
+  await opener.click();
+  await card
+    .getByRole('button', { name: 'Refresh posting', exact: true })
+    .click();
+  await expect(card.getByText('Refresh queued…')).toBeVisible();
+  await expect(page).toHaveURL('/app');
+  await expect(card.getByText('Refresh queued…')).not.toBeVisible({
+    timeout: 10000,
+  });
+  await opener.click();
+  await card.getByRole('button', { name: 'Retry extraction' }).click();
+  const refreshed = page.getByRole('article', {
+    name: 'Refreshed Product Engineer at Northstar',
+    exact: true,
+  });
+  await expect(refreshed).toBeVisible({ timeout: 10000 });
+  const refreshedOpener = refreshed.getByLabel('Posting actions');
+  await refreshedOpener.click();
+  await refreshed
+    .getByRole('button', { name: 'Delete posting', exact: true })
+    .click();
+  const dialog = page.getByRole('dialog', { name: 'Delete posting?' });
+  await expect(dialog.getByRole('button', { name: 'Cancel' })).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(refreshedOpener).toBeFocused();
+  await refreshedOpener.click();
+  await refreshed
+    .getByRole('button', { name: 'Delete posting', exact: true })
+    .click();
+  await dialog.getByRole('button', { name: 'Delete permanently' }).click();
+  await expect(refreshed).toHaveCount(0);
+  await expect(
+    page.getByRole('heading', { name: 'Your search' }),
+  ).toBeFocused();
+  await expect(page).toHaveURL('/app');
+  await page.reload();
+  await expect(refreshed).toHaveCount(0);
+  await expect(
+    page.getByText('4 active roles', { exact: false }),
+  ).toBeVisible();
 });

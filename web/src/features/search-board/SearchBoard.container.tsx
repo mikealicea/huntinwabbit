@@ -89,6 +89,7 @@ export function SearchBoardContainer() {
               <BoardColumnContainer
                 key={stage}
                 stage={stage}
+                saving={mutation.isLoading}
                 roles={opportunities.filter((role) => role.stage === stage)}
               />
             ))}

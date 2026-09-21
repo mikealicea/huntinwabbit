@@ -6,14 +6,10 @@ import { LoadingPulse } from '@/shared/shared.index';
 
 export function JobDetails({
   role,
-  onExtract,
   extracting,
-  disabled = false,
 }: {
   role: Opportunity;
-  onExtract?: () => void;
   extracting?: boolean;
-  disabled?: boolean;
 }) {
   const posting = role.posting;
   const pending = ['queued', 'processing'].includes(
@@ -60,45 +56,27 @@ export function JobDetails({
         {role.saved && (
           <div className="space-y-2">
             <p role="status">
-              {role.saved.extraction.status === 'queued'
-                ? posting
-                  ? 'Waiting to refresh posting details…'
-                  : 'Waiting to extract posting details…'
-                : role.saved.extraction.status === 'processing'
+              {(extracting || pending) && <LoadingPulse />}
+              {extracting
+                ? 'Requesting extraction…'
+                : role.saved.extraction.status === 'queued'
                   ? posting
-                    ? 'Refreshing posting details…'
-                    : 'Extracting posting details…'
-                  : role.saved.extraction.status === 'failed'
+                    ? 'Waiting to refresh posting details…'
+                    : 'Waiting to extract posting details…'
+                  : role.saved.extraction.status === 'processing'
                     ? posting
-                      ? 'Refresh could not finish. Your previous details are still shown.'
-                      : 'Extraction could not finish. Your link is saved.'
-                    : role.saved.extraction.status === 'disabled'
-                      ? 'Extraction is currently unavailable. Your link is saved.'
-                      : role.saved.extraction.status === 'complete'
-                        ? 'Details extracted from the posting. Review them against the original.'
-                        : 'Posting details have not been requested.'}
-            </p>
-            {onExtract && (
-              <button
-                type="button"
-                className="btn"
-                disabled={disabled || extracting || pending}
-                onClick={onExtract}
-              >
-                {(extracting || pending) && <LoadingPulse />}
-                {extracting
-                  ? 'Requesting extraction…'
-                  : pending
-                    ? posting
-                      ? 'Refreshing posting…'
-                      : 'Extracting posting…'
+                      ? 'Refreshing posting details…'
+                      : 'Extracting posting details…'
                     : role.saved.extraction.status === 'failed'
-                      ? 'Retry extraction'
-                      : posting
-                        ? 'Refresh posting'
-                        : 'Extract posting details'}
-              </button>
-            )}
+                      ? posting
+                        ? 'Refresh could not finish. Your previous details are still shown.'
+                        : 'Extraction could not finish. Your link is saved.'
+                      : role.saved.extraction.status === 'disabled'
+                        ? 'Extraction is currently unavailable. Your link is saved.'
+                        : role.saved.extraction.status === 'complete'
+                          ? 'Details extracted from the posting. Review them against the original.'
+                          : 'Posting details have not been requested.'}
+            </p>
           </div>
         )}
         {role.saved?.parsedPosting && (
