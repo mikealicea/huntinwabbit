@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@plugin "@tailwindcss/typography";
 @plugin "daisyui" {
   themes:
     emerald --default,
@@ -21,7 +20,7 @@
 }
 
 /* Theme defaults use faint field borders. Keep input boundaries perceptible in
-   both palettes, including an unchecked task, without changing status colors. */
+   both palettes, including unchecked controls, without changing status colors. */
 .input,
 .select,
 .textarea,

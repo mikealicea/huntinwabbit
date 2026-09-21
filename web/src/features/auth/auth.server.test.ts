@@ -362,3 +362,13 @@ describe('backend token boundary', () => {
     expect(await backendSession()).toEqual({ status: 'unavailable' });
   });
 });
+
+it('does not preserve framework RSC cache parameters in a login destination', async () => {
+  mocks.getUser.mockResolvedValue({ data: { user: null }, error: null });
+  const response = await refreshAuth(
+    new NextRequest('http://localhost:3000/app?view=hello&_rsc=internal'),
+  );
+  expect(response.headers.get('location')).toBe(
+    'http://localhost:3000/login?next=%2Fapp%3Fview%3Dhello',
+  );
+});

@@ -1,17 +1,17 @@
 ---
-title: "huntinwabbit — How We Work Together"
+title: "huntinwabbit-boilerplate — How We Work Together"
 category: "agents"
 related:
-  - "[[huntinwabbit-projects]]"
-  - "[[huntinwabbit-research]]"
+  - "[[huntinwabbit-boilerplate-projects]]"
+  - "[[huntinwabbit-boilerplate-research]]"
   - "[[RESEARCH.METHODOLOGY.AGENTS]]"
-tags: [huntinwabbit, agents, workspace]
+tags: [huntinwabbit-boilerplate, agents, workspace]
 ---
 
-# product-workspace.AGENTS.md — huntinwabbit
+# product-workspace.AGENTS.md — huntinwabbit-boilerplate
 
 This folder holds research, projects, insights, drafts, alternatives, and decisions in formation for
-huntinwabbit. The [repository README](../README.md) owns the intended product experience; executable
+huntinwabbit-boilerplate. The [repository README](../README.md) owns the intended product experience; executable
 code and tests define implemented behavior. The primary applications are `web/` and `server/`.
 
 The [root AGENTS.md](../AGENTS.md) governs branch workflow, product boundaries, verification, and
@@ -21,8 +21,8 @@ changes. These workspace rules are additive, and the root guide wins if they dis
 ## Start here
 
 - Read [[product-workspace.AGENTS-SETUP]] for environment setup.
-- Enter projects through [[huntinwabbit-projects]], research through [[huntinwabbit-research]], and
-  insights through [[huntinwabbit-insights]].
+- Enter projects through [[huntinwabbit-boilerplate-projects]], research through [[huntinwabbit-boilerplate-research]], and
+  insights through [[huntinwabbit-boilerplate-insights]].
 - Read [[RESEARCH.METHODOLOGY.AGENTS]] and [[RESEARCH_METHODOLOGY]] before starting research.
 - Read the narrowest `AGENTS.md` or `*.AGENTS.md` before changing a folder's contents.
 
@@ -48,13 +48,13 @@ Commands below run from `product-workspace/` unless stated otherwise.
 
 Use `projects/YYYY-MM-DD-project-name/`, with an index, plan, and `todo/`, `doing/`, `done/`, and
 `resources/` directories. Move task notes between state directories; completed projects get a linked
-`.summary.md`. Add each project to [[huntinwabbit-projects]].
+`.summary.md`. Add each project to [[huntinwabbit-boilerplate-projects]].
 
 ```bash
 bun ./toolbelt/packages/create-project/index.ts <project-name>
 ```
 
-The generator uses the single root `*-projects.md` file, `huntinwabbit-projects.md`, as the new
+The generator uses the single root `*-projects.md` file, `huntinwabbit-boilerplate-projects.md`, as the new
 project's parent. Add the generated index to that parent manually. See
 [[create-project.AGENTS]] for arguments and fallback behavior.
 
@@ -65,7 +65,7 @@ Use `research/YYYY-MM-DD-topic/` and the scaffold in [[examples-research-README]
 1. Define questions and scope in the plan.
 2. Capture atomic, sourced findings under `findings/`.
 3. Roll findings, recommendations, and confirmed decisions into the index, labeling their status.
-4. Add the research index to [[huntinwabbit-research]] and link related projects.
+4. Add the research index to [[huntinwabbit-boilerplate-research]] and link related projects.
 
 Attribute and date external facts; distinguish evidence from inference. Follow
 [[RESEARCH.METHODOLOGY.AGENTS]], with the local guidance in [[RESEARCH_METHODOLOGY]].
@@ -73,7 +73,7 @@ Attribute and date external facts; distinguish evidence from inference. Follow
 ## Insights
 
 Use `insights/YYYY-MM-DD-name.md`. Track hypotheses as pending, exploring, or validated in
-[[huntinwabbit-insights]], then promote validated work into a project. Read [[insights.AGENTS]].
+[[huntinwabbit-boilerplate-insights]], then promote validated work into a project. Read [[insights.AGENTS]].
 
 ## Toolbelt
 

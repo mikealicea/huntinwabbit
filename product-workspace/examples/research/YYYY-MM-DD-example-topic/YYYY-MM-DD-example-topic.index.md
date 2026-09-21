@@ -1,5 +1,5 @@
 ---
-parent: "[[huntinwabbit-research]]"
+parent: "[[huntinwabbit-boilerplate-research]]"
 date: YYYY-MM-DD
 updated: YYYY-MM-DD
 title: "{{Project Name}} — Research Index"

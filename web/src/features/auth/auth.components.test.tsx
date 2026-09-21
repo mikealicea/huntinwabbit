@@ -53,10 +53,9 @@ describe('authentication components', () => {
     expect(screen.getByRole('main')).toContainElement(
       screen.getByRole('heading', { level: 1, name: 'Log in' }),
     );
-    expect(screen.getByRole('link', { name: 'huntinwabbit' })).toHaveAttribute(
-      'href',
-      '/',
-    );
+    expect(
+      screen.getByRole('link', { name: 'huntinwabbit-boilerplate' }),
+    ).toHaveAttribute('href', '/');
     expect(
       screen.getByRole('button', { name: 'Switch to dark theme' }),
     ).toBeVisible();

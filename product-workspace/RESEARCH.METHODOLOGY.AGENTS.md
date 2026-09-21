@@ -15,7 +15,7 @@ tags:
 # Research Methodology — Canonical Vault Standard
 
 > **This is the single source of truth for how research is done anywhere in this vault.**
-> The huntinwabbit workspace uses this standard. Its `RESEARCH_METHODOLOGY.md` file only
+> The huntinwabbit-boilerplate workspace uses this standard. Its `RESEARCH_METHODOLOGY.md` file only
 > record local *deltas* on top of it. When you start any research, read this first, then the workspace
 > delta file, then copy the scaffold from [`examples/research/`](./examples/research/) (the
 > `[[examples-research-README|copyable example]]`).
@@ -149,7 +149,7 @@ sources:                                        # structured list — name + url
 
 ```yaml
 ---
-parent: "[[huntinwabbit-research]]"     # links the project into the workspace research index
+parent: "[[huntinwabbit-boilerplate-research]]"     # links the project into the workspace research index
 date: 2026-06-22
 updated: 2026-06-22            # keep current as findings are added
 title: "Project Name — Research Index"
@@ -173,7 +173,7 @@ date: 2026-06-22
 title: "Research Plan: Project Name"
 category: "research-plan"
 related:
-  - "[[huntinwabbit-research]]"
+  - "[[huntinwabbit-boilerplate-research]]"
 tags:
   - primary-topic
 sources: []
@@ -356,7 +356,7 @@ Use tables for any "X vs Y vs Z" comparison; bold the row labels; keep a Source 
    Always `cd` to the target workspace first, then invoke with Bun:
 
    ```bash
-   cd /path/to/huntinwabbit/product-workspace
+   cd /path/to/huntinwabbit-boilerplate/product-workspace
 
    # Standard web search (returns results list):
    bun ./toolbelt/packages/brave-search/index.ts web-search --count 8 "your query"

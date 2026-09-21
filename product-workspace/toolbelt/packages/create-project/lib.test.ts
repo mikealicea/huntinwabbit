@@ -119,16 +119,24 @@ describe("createProject", () => {
 
 describe("createProject workspace parent", () => {
   it("uses the *-projects.md at the workspace root over the folder name", async () => {
-    await Bun.write(join(tempDir, "huntinwabbit-projects.md"), "# projects\n");
+    await Bun.write(
+      join(tempDir, "huntinwabbit-boilerplate-projects.md"),
+      "# projects\n",
+    );
     const result = await createProject("my-project", tempDir);
     const content = await Bun.file(result.indexFile).text();
 
-    expect(content).toContain(`parent:\n  - "[[huntinwabbit-projects]]"`);
+    expect(content).toContain(
+      `parent:\n  - "[[huntinwabbit-boilerplate-projects]]"`,
+    );
     expect(content).not.toContain(toKebabCase(basename(tempDir)));
   });
 
   it("prefers an explicit workspace name over the index on disk", async () => {
-    await Bun.write(join(tempDir, "huntinwabbit-projects.md"), "# projects\n");
+    await Bun.write(
+      join(tempDir, "huntinwabbit-boilerplate-projects.md"),
+      "# projects\n",
+    );
     const result = await createProject("my-project", tempDir, "other-vault");
     const content = await Bun.file(result.indexFile).text();
 
@@ -139,11 +147,13 @@ describe("createProject workspace parent", () => {
     const result = await createProject(
       "my-project",
       tempDir,
-      "huntinwabbit-projects",
+      "huntinwabbit-boilerplate-projects",
     );
     const content = await Bun.file(result.indexFile).text();
 
-    expect(content).toContain(`parent:\n  - "[[huntinwabbit-projects]]"`);
+    expect(content).toContain(
+      `parent:\n  - "[[huntinwabbit-boilerplate-projects]]"`,
+    );
   });
 
   it("falls back to the folder name when the root index is ambiguous", async () => {
@@ -160,7 +170,7 @@ describe("createProject workspace parent", () => {
     const { mkdir } = await import("node:fs/promises");
     await mkdir(join(tempDir, "nested"), { recursive: true });
     await Bun.write(
-      join(tempDir, "nested", "huntinwabbit-projects.md"),
+      join(tempDir, "nested", "huntinwabbit-boilerplate-projects.md"),
       "# projects\n",
     );
     const result = await createProject("my-project", tempDir);
@@ -245,7 +255,7 @@ describe("CLI --workspace flag", () => {
     const { exitCode, stdout } = await runInWorkspace(
       "my project",
       "--workspace",
-      "huntinwabbit",
+      "huntinwabbit-boilerplate",
     );
 
     expect(exitCode).toBe(0);
@@ -259,14 +269,16 @@ describe("CLI --workspace flag", () => {
         `${today}-my-project.index.md`,
       ),
     ).text();
-    expect(index).toContain(`parent:\n  - "[[huntinwabbit-projects]]"`);
+    expect(index).toContain(
+      `parent:\n  - "[[huntinwabbit-boilerplate-projects]]"`,
+    );
   });
 
   it("accepts --workspace=<name>", async () => {
     const today = new Date().toISOString().slice(0, 10);
     const { exitCode } = await runInWorkspace(
       "my project",
-      "--workspace=huntinwabbit",
+      "--workspace=huntinwabbit-boilerplate",
     );
 
     expect(exitCode).toBe(0);
@@ -279,7 +291,9 @@ describe("CLI --workspace flag", () => {
         `${today}-my-project.index.md`,
       ),
     ).text();
-    expect(index).toContain(`parent:\n  - "[[huntinwabbit-projects]]"`);
+    expect(index).toContain(
+      `parent:\n  - "[[huntinwabbit-boilerplate-projects]]"`,
+    );
   });
 
   it("exits 1 when --workspace has no value", async () => {

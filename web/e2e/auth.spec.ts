@@ -14,26 +14,24 @@ test('protects deep links, persists sessions, redirects authenticated visitors, 
   page,
   context,
 }) => {
-  await page.goto('/app/roles/00000000-0000-4000-8000-000000000004');
-  await expect(page).toHaveURL(
-    '/login?next=%2Fapp%2Froles%2F00000000-0000-4000-8000-000000000004',
-  );
+  await page.goto('/app');
+  await expect(page).toHaveURL('/login?next=%2Fapp');
   await login(page);
-  await expect(page).toHaveURL(
-    '/app/roles/00000000-0000-4000-8000-000000000004',
-  );
+  await expect(page).toHaveURL('/app');
   await page.reload();
   await expect(
-    page.getByRole('heading', { name: 'Platform Engineer' }),
+    page.getByRole('heading', { name: 'Hello World' }),
   ).toBeVisible();
   const cookies = await context.cookies();
   expect(
     cookies
-      .filter((cookie) => cookie.name.startsWith('huntinwabbit-auth'))
+      .filter((cookie) =>
+        cookie.name.startsWith('huntinwabbit-boilerplate-auth'),
+      )
       .every((cookie) => cookie.httpOnly && cookie.sameSite === 'Lax'),
   ).toBe(true);
   expect(await page.evaluate(() => document.cookie)).not.toContain(
-    'huntinwabbit-auth',
+    'huntinwabbit-boilerplate-auth',
   );
   await page.goto('/signup');
   await expect(page).toHaveURL('/app');
@@ -206,7 +204,7 @@ test('retains password success after failed provider logout and removes browser 
   ).toBeVisible();
   expect(
     (await context.cookies()).filter((cookie) =>
-      cookie.name.startsWith('huntinwabbit-auth'),
+      cookie.name.startsWith('huntinwabbit-boilerplate-auth'),
     ),
   ).toHaveLength(0);
 });
@@ -225,7 +223,7 @@ test('refreshes an expired cookie through the real SDK and rejects a forged sess
     `base64-${Buffer.from(JSON.stringify(value)).toString('base64url')}`;
   await context.addCookies([
     {
-      name: 'huntinwabbit-auth',
+      name: 'huntinwabbit-boilerplate-auth',
       value: encode(session),
       domain: '127.0.0.1',
       path: '/',
@@ -237,13 +235,13 @@ test('refreshes an expired cookie through the real SDK and rejects a forged sess
   await expect(page).toHaveURL('/app');
   expect(
     (await context.cookies()).find(
-      (cookie) => cookie.name === 'huntinwabbit-auth',
+      (cookie) => cookie.name === 'huntinwabbit-boilerplate-auth',
     )?.value,
   ).not.toBe(encode(session));
   await context.clearCookies();
   await context.addCookies([
     {
-      name: 'huntinwabbit-auth',
+      name: 'huntinwabbit-boilerplate-auth',
       value: encode({
         ...session,
         expires_at: Math.floor(Date.now() / 1000) + 3600,
@@ -292,17 +290,13 @@ test('fails closed during a verification outage and recovers without a login loo
   await expect(
     page.getByRole('heading', { name: 'Unable to connect' }),
   ).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Add job links' })).toHaveCount(
-    0,
-  );
+  await expect(page.getByRole('button', { name: 'Call API' })).toHaveCount(0);
   await request.post('http://127.0.0.1:3101/__test/account', {
     data: { email, lookupFailure: false },
   });
   await page.getByRole('link', { name: 'Try again' }).click();
   await expect(page).toHaveURL('/app');
-  await expect(
-    page.getByRole('button', { name: 'Add job links' }),
-  ).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Call API' })).toBeVisible();
   await request.post('http://127.0.0.1:3101/__test/account', {
     data: { email, lookupFailure: true },
   });

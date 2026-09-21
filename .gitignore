@@ -99,7 +99,7 @@ mise.local.toml
 .vscode/
 .serverless/
 
-# Next.js / Pagefind (landing page)
+# Next.js and inherited generated search output
 .next/
 .next-e2e/
 out/
@@ -107,8 +107,7 @@ _pagefind/
 .vercel/
 next-env.d.ts
 
-# Scratch dir: `npm run clean` targets it, and the local blob store writes
-# uploaded clips here when SANCTUM_LOCAL_ADAPTERS=1.
+# Scratch directory targeted by the server clean command.
 server/tmp/
 
 tmp-example/

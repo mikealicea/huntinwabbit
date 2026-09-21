@@ -4,9 +4,9 @@
 
 Authenticate application API requests using access tokens from the shared Supabase project. The
 public health route precedes this boundary; all remaining routes require authentication. This is
-identity verification; the [saved-postings feature](../job-postings/job-postings.AGENTS.md) owns
-DynamoDB resource authorization. There is no web-to-API integration, development bypass, cookie
-authentication or session mutation.
+identity verification, with no application storage or resource ownership model. The web hello bridge
+forwards verified credentials; the API independently checks the bearer token. There is no development
+bypass, cookie authentication or session mutation in this API.
 
 The [cross-stack runbook](../../../../docs/auth-infrastructure.md) owns the provider boundary and
 shared-project setup. Do not rotate shared signing keys or change hosted auth policies as a test.
@@ -77,7 +77,5 @@ hosted-token compatibility or deployment. Use the [server README](../../../READM
 setup and a deliberate bearer-token smoke test. A published public key can be standby; its presence
 alone does not prove which algorithm signs current sessions.
 
-The [deployment guide](../../../docs/SERVERLESS-V4.AGENTS.md) records the dev deployment's live
-health, rejection and hosted-user success checks, plus AWS header normalization.
 The opt-in [live E2E suite](../../../e2e/e2e.AGENTS.md) automates dedicated-user sign-in and
 deployed endpoint success/rejection checks without changing hosted auth policy.

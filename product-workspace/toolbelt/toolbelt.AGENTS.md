@@ -95,8 +95,7 @@ Tests are written before (or alongside) implementation. The workflow is:
 ### No external dependencies
 Tools use only Bun built-ins and Node.js standard library modules. Do not add `npm` packages unless there is a compelling reason — keep the toolbelt fast and self-contained.
 
-The package manifest still includes the inherited `sweph` dependency, but there is no local
-`astro-chart` package. Do not assume that tool is available.
+The toolbelt has no runtime package dependencies.
 
 ### Strict TypeScript
 `tsconfig.json` enforces strict mode (`strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`). Write types explicitly; avoid `any`.

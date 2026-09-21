@@ -286,9 +286,7 @@ export function checkArchitecture(
       ts.forEachChild(node, findJSX);
     }
     findJSX(file);
-    const frameworkFile =
-      name.startsWith('app/') ||
-      name === 'features/blog/blog.mdx-components.tsx';
+    const frameworkFile = name.startsWith('app/');
     if (
       jsx &&
       !frameworkFile &&

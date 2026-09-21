@@ -1,7 +1,7 @@
 {
-  "name": "serverless-typescript-boilerplate",
+  "name": "huntinwabbit-boilerplate-server",
   "version": "0.1.0",
-  "description": "Boilerplate HTTP API — Express 5 on AWS Lambda via Serverless Framework v4.",
+  "description": "Boilerplate HTTP API \u2014 Express 5 on AWS Lambda via Serverless Framework v4.",
   "license": "MIT",
   "private": true,
   "type": "module",
@@ -41,19 +41,13 @@
     "deploy:dev": "serverless deploy --stage dev",
     "deploy:prod": "serverless deploy --stage prod",
     "check:fix": "biome check --write .",
-    "test:job-parsing:live": "node --env-file-if-exists=.env node_modules/vitest/vitest.mjs run --config vitest.job-parsing.config.ts",
-    "check:package": "node scripts/check-package.mjs",
-    "check:storage-package": "node scripts/check-storage-package.mjs"
+    "check:package": "node scripts/check-package.mjs"
   },
   "dependencies": {
-    "@aws-sdk/client-dynamodb": "^3.1136.0",
-    "@aws-sdk/lib-dynamodb": "^3.1136.0",
-    "@teng-lin/agent-fetch": "0.1.6",
     "express": "^5.2.1",
     "jose": "^6.2.12",
     "serverless-http": "^4.0.0",
-    "tslib": "~2.8",
-    "zod": "4.3.5"
+    "tslib": "~2.8"
   },
   "packageManager": "npm@11.16.0"
 }

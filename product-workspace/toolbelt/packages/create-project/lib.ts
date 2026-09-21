@@ -49,9 +49,9 @@ async function discoverProjectsNote(cwd: string): Promise<string | null> {
  * Resolve the projects-index note that a new project links to as its parent.
  *
  * Deriving this from the folder name alone breaks whenever the workspace is
- * nested under a differently-named folder — as it is inside the huntinwabbit repo,
+ * nested under a differently-named folder — as it is inside the huntinwabbit-boilerplate repo,
  * where the folder is `product-workspace` but the index is
- * `huntinwabbit-projects`. So prefer an explicit name, then the index actually
+ * `huntinwabbit-boilerplate-projects`. So prefer an explicit name, then the index actually
  * on disk, and only fall back to the folder name.
  */
 async function workspaceProjectsNote(

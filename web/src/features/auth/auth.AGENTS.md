@@ -3,8 +3,8 @@
 ## Purpose and boundaries
 
 Email/password account flows use the existing shared Supabase project. Login is required for the
-workspace and role routes. Supabase owns identities, credentials and sessions; application data is stored through the authenticated backend. This feature adds neither Express API authorization nor
-DynamoDB persistence, account deletion, profile editing, social login or MFA enrollment/challenges.
+application routes. Supabase owns identities, credentials and sessions; the hello request demonstrates the authenticated backend. This feature adds neither Express API authorization nor
+application persistence, account deletion, profile editing, social login or MFA enrollment/challenges.
 The root [auth runbook](../../../../docs/auth-infrastructure.md) owns provider configuration and
 the processor boundary. Do not relax the shared project's policies for tests.
 
@@ -20,11 +20,8 @@ the processor boundary. Do not relax the shared project's policies for tests.
 - [AuthPage.container.tsx](AuthPage.container.tsx) coordinates server identity and page selection;
   [AuthFrame.container.tsx](AuthFrame.container.tsx) supplies a theme-control slot to the
   [frame component](AuthFrame.component.tsx).
-  The frame centers the supplied rabbit/wordmark inside the auth card, directly above its heading,
-  and links home. CSS selects
-  the light/dark artwork through the existing theme attribute without adding client theme state.
-  Both decorative images share one accessible link label; [brand assets](../../../../assets/assets.AGENTS.md)
-  owns their source and optimized exports.
+  The frame links the text identity home without product artwork. The boilerplate cookie name
+  is distinct from the original application so their local browser sessions do not overwrite each other.
 - [AuthForm.container.tsx](AuthForm.container.tsx) owns action/pending lifecycles and the sign-out
   recovery slot. [AuthForm.component.tsx](AuthForm.component.tsx) owns transient local inputs and
   focus, renders supplied action feedback and emits form submissions. Credentials never enter Redux.
@@ -44,9 +41,10 @@ not a login loop. Retry performs a full document navigation because Next may ser
 content at the original action redirect URL. Proxy copies all refreshed cookie chunks to the request and response, including
 redirect responses. Absolute redirects use configured APP_ORIGIN so framework loopback normalization cannot change
 cookie scope. Auth and private
-responses prohibit caching. The public blog's scripts do not load in these layouts.
+responses prohibit caching.
 
-Login return destinations stay under `/app`. Email destinations come from configured APP_ORIGIN,
+Login return destinations stay under `/app`; Proxy removes the framework-only `_rsc` cache parameter
+while retaining application query parameters. Email destinations come from configured APP_ORIGIN,
 not request headers. Supabase verifies opaque token hashes; a preview GET never consumes a token.
 Confirmation POST exchanges email/recovery tokens and redirects to a clean URL. Invalid, expired
 and reused links offer another request. Token-bearing pages set no-referrer metadata/headers and
@@ -65,7 +63,7 @@ its local session on remote logout errors; ordinary sign out therefore reports b
 separately from provider revocation. Only the current session is targeted; do not promise immediate
 invalidation of all outstanding access tokens or other devices.
 
-Session refresh happens on requests, not a background browser timer. Saved application data persists through the backend. Its [Redux provider](../../state/state.AGENTS.md) is keyed by verified
+Session refresh happens on requests, not a background browser timer. The demo does not persist application data. Its [Redux provider](../../state/state.AGENTS.md) is keyed by verified
 user ID. Auth inputs and Server Action feedback stay local; credentials and tokens never enter Redux. A server response lost after
 a provider mutation can leave its outcome uncertain; this feature has no durable operation ledger.
 Do not silently repeat password updates to resolve that uncertainty.
@@ -91,5 +89,5 @@ Screen-reader and physical-device checks require separate manual evidence.
 
 The server-only session helper verifies identity with getUser before retrieving a token for that same
 user with getSession. Route Handlers can persist refreshed cookies. The token remains server-side;
-the [API bridge](../job-api/job-api.AGENTS.md) validates Origin on mutations and sends bearer credentials
+the [hello bridge](../hello/hello.AGENTS.md) exposes only a fixed GET and sends bearer credentials
 to the configured stage only. Failed verification does not call the application-data backend.

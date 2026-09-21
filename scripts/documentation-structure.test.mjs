@@ -21,7 +21,7 @@ after(() => {
 });
 
 function fixture() {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'huntinwabbit-documentation-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'huntinwabbit-boilerplate-documentation-'));
   fixtures.push(root);
   return root;
 }
@@ -45,8 +45,8 @@ function projectFixture() {
     'server/src/features/hello/hello.router.ts': '',
     'docs/README.md': '# Docs\n',
     'docs/oneOff/source.md': '[historical](old-path.md)\n',
-    'product-workspace/huntinwabbit-projects.md': '# Projects\n',
-    'product-workspace/research/huntinwabbit-research.md': '# Research\n',
+    'product-workspace/huntinwabbit-boilerplate-projects.md': '# Projects\n',
+    'product-workspace/research/huntinwabbit-boilerplate-research.md': '# Research\n',
     'temp/reference/AGENTS.md': '[ignored](missing.md)\n',
     'web/node_modules/vendor/README.md': '[ignored](missing.md)\n',
     'web/.next/README.md': '[ignored](missing.md)\n',
@@ -61,7 +61,7 @@ function projectFixture() {
   return root;
 }
 
-test('huntinwabbit policy checks new application docs without auditing ignored reference trees', () => {
+test('huntinwabbit-boilerplate policy checks new application docs without auditing ignored reference trees', () => {
   const root = projectFixture();
   const result = runDocumentationAudit(root, repositoryPolicy);
   assert.deepEqual(result.errors, []);
@@ -74,7 +74,7 @@ test('huntinwabbit policy checks new application docs without auditing ignored r
   ));
 });
 
-test('huntinwabbit policy rejects missing feature owners, aliases and unindexed adopted docs', () => {
+test('huntinwabbit-boilerplate policy rejects missing feature owners, aliases and unindexed adopted docs', () => {
   const root = projectFixture();
   fs.rmSync(path.join(root, 'web/src/features/home/home.AGENTS.md'));
   fs.rmSync(path.join(root, 'server/CLAUDE.md'));

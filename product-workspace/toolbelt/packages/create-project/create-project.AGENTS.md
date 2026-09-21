@@ -20,15 +20,15 @@ bun /path/to/toolbelt/packages/create-project/index.ts <project-name> [--workspa
 ### Examples
 
 ```bash
-# From this workspace — the parent index resolves to [[huntinwabbit-projects]]
-cd /path/to/huntinwabbit/product-workspace
+# From this workspace — the parent index resolves to [[huntinwabbit-boilerplate-projects]]
+cd /path/to/huntinwabbit-boilerplate/product-workspace
 bun ./toolbelt/packages/create-project/index.ts linkedin-outreach-campaign
 
 # Name with spaces works too — automatically converted to kebab-case
 bun ./toolbelt/packages/create-project/index.ts "Q2 Content Strategy"
 
 # Force a specific parent index, whatever the folder is called
-bun ./toolbelt/packages/create-project/index.ts my-project --workspace huntinwabbit
+bun ./toolbelt/packages/create-project/index.ts my-project --workspace huntinwabbit-boilerplate
 ```
 
 ### How the parent index is chosen
@@ -38,13 +38,13 @@ resolves that name in three steps, first match wins:
 
 1. `--workspace <name>` when given (a trailing `-projects` is not doubled).
 2. The single `*-projects.md` sitting **at the workspace root**. In this workspace that is
-   `huntinwabbit-projects.md`. A `*-projects.md` nested deeper — such as
+   `huntinwabbit-boilerplate-projects.md`. A `*-projects.md` nested deeper — such as
    `projects/example-projects.md` — is deliberately ignored.
 3. The workspace folder name, kebab-cased, plus `-projects`.
 
 Step 2 exists because step 3 alone breaks the moment the workspace is nested under a folder
-with a different name. Inside the huntinwabbit repo the folder is `product-workspace` while the
-index is `huntinwabbit-projects`, so folder-name derivation would give every new project a
+with a different name. Inside the huntinwabbit-boilerplate repo the folder is `product-workspace` while the
+index is `huntinwabbit-boilerplate-projects`, so folder-name derivation would give every new project a
 `[[product-workspace-projects]]` parent pointing at a note that does not exist. If the root
 index is ever ambiguous (two or more `*-projects.md`), the tool falls back to step 3 rather
 than guessing — pass `--workspace` in that case.

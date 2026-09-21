@@ -1,192 +1,57 @@
 # Authentication infrastructure
 
-The adopted split is Supabase Auth for identities and sessions, and DynamoDB for application data
-behind the Express/Lambda backend. The [Supabase barrel](../supabase/supabase.AGENTS.md) describes
-the configuration boundary. The [web auth feature](../web/src/features/auth/auth.AGENTS.md) implements
-login, signup, email confirmation, recovery, session handling and protected workspace routes. The
-[API auth feature](../server/src/features/auth/auth.AGENTS.md) verifies bearer JWTs for the
-protected API endpoints. The [saved-postings feature](../server/src/features/job-postings/job-postings.AGENTS.md)
-implements user-owned DynamoDB storage. The web API bridge verifies the session and forwards tokens server-side to the selected backend stage.
+Supabase owns identities and sessions. The [web auth feature](../web/src/features/auth/auth.AGENTS.md)
+implements account flows and protects `/app`; the [API auth feature](../server/src/features/auth/auth.AGENTS.md)
+independently verifies bearer JWTs. The [hello bridge](../web/src/features/hello/hello.AGENTS.md)
+verifies web identity before forwarding a token server-side. There is no application data storage.
 
-## One shared project
+## Configuration and shared project
 
-The remote target is explicitly supplied as SUPABASE_PROJECT_REF to the task in [mise.toml](../mise.toml). Dev and prod share users, auth policies,
-email quotas and signing authority. A dev token cannot be distinguished from a production token by
-project issuer alone. Backend authentication verifies signature, issuer, audience and expiry. Resource authorization must derive ownership from the verified user ID and select DynamoDB resources from
-trusted deployment configuration. Do not accept a client-selected table or environment.
+Use an existing hosted project through ignored environment files. Web needs SUPABASE_URL,
+SUPABASE_PUBLISHABLE_KEY and APP_ORIGIN; the API needs SUPABASE_URL. See the
+[web example](../web/.env.example) and [server example](../server/.env.example).
+The API accepts HTTPS provider origins; the web also permits loopback HTTP for its isolated test fixture.
+Management and service-role credentials never belong in application configuration or browser code.
 
-Use dedicated development accounts. A password reset, user deletion, provider change or signing-key
-rotation affects the shared project. Keep dev/prod application data separate when adding DynamoDB
-resources in [serverless.yml](../server/serverless.yml); saved-posting tables are stage-specific.
+Dev, production and the starter may share users, signing authority and auth policy. A separate AWS
+service name does not isolate Supabase. Use dedicated test accounts. Sign-out targets its own
+session; password changes and provider configuration can affect other applications using the project.
 
-## Setup and configuration changes
+[Supabase configuration](../supabase/supabase.AGENTS.md) owns the checked-in settings and email
+templates. Existing hosted settings are not changed by starting either app. Confirmation/recovery
+requires the app's exact `/auth/confirm` URL in the provider allowlist. APP_ORIGIN must match where
+users open the frontend. Templates use the request's RedirectTo, not a hard-coded application host.
 
-From the repository root:
+The explicit `mise run auth:push` operation reads its project reference and production URLs from
+ignored `supabase/.env` or the shell. It can change a shared live project, including email branding.
+Review the complete CLI diff and obtain authorization for that target/action before pushing.
+Do not push merely to test login. After an authorized push, repeat the comparison and require the
+up-to-date message; declining a prompt can still exit successfully. No new project is required.
 
-```sh
-mise trust
-mise install
-cp supabase/.env.example supabase/.env
-# Fill the project ref, production frontend origin and exact /auth/confirm URL in supabase/.env.
-mise exec -- supabase login
-mise run auth:push
-```
+## Data boundary and failures
 
-The existing CLI login can be reused. Automation may supply `SUPABASE_ACCESS_TOKEN` from a secret
-store instead. This is a management credential, not an application API key. The task explicitly
-targets the existing project and requires neither database credentials nor `supabase link`.
-No Terraform state, new hosted compute, local Docker stack or root npm package is needed.
+The Next.js server processes email/password forms and forwards them to Supabase. Supabase processes
+account identifiers, authentication data, sessions and request metadata. Tokens remain in HTTP-only
+cookies; credentials, sessions and tokens never enter Redux. Do not log form bodies, cookie/header
+values, provider error causes, or token-bearing confirmation URLs in app or hosting logs.
 
-Set SUPABASE_PROJECT_REF in ignored `supabase/.env` to the existing project's reference ID.
-The push task reads it before constructing the CLI arguments; an exported shell value overrides
-the file value. The task does not look for `.env.local` for the project reference. A missing or empty
-reference stops the task before the CLI runs. No separate `export` is needed for normal use.
+Web access uses provider-verified identity. Failed verification denies access or shows the independent
+retry page. Confirmation preview GETs do not consume tokens; the explicit POST exchanges them and
+redirects to a clean URL. Server-side backend requests prohibit redirects and caching.
 
-Review each CLI diff before accepting its prompt. The pinned CLI also considers API, database and
-Storage configuration; keep unrelated changes out of an auth push. Do not use `--yes` for unattended
-pushes without reviewing the complete change. Rerun `mise run auth:push` after applying and require
-the auth up-to-date message; a successful exit after declining a prompt does not verify deployment.
-Use `mise run docs:check` for local documentation validation.
+The API fetches public signing keys without sending user tokens to discovery. Local JWT verification
+does not promise immediate logout/account-deletion revocation; valid tokens and cached keys have
+finite lifetimes owned by the verifier. No account deletion, profile editing or MFA UI is implemented.
 
-## Production origin and local development
+## Verification
 
-[config.toml](../supabase/config.toml) owns the localhost redirect allowlist and references environment
-variables for the production Site URL and exact hosted callback. Supply both values through ignored
-`supabase/.env`, using [the example](../supabase/.env.example), or through the CLI process environment.
-The pinned CLI's config loader reads `supabase/.env` and `supabase/.env.local`; shell variables take
-precedence. It does not read Vercel settings or `web/.env.local` automatically. Use the same production
-origin as Vercel's APP_ORIGIN, while leaving the web app's local origin on localhost.
-`env(...)` replaces whole values, including array entries; it cannot append `/auth/confirm` to an
-origin, so the callback is a separate complete URL. Editing these files does not update the hosted
-Supabase project. The web app implements
-`/auth/confirm` for both confirmation and recovery emails. When deploying or changing the domain:
+Local auth/unit/browser tests use controlled boundaries and fictional credentials. They do not
+prove hosted email delivery, SMTP configuration, quotas or deployed logging behavior.
+The [API smoke suite](../server/e2e/e2e.AGENTS.md) can sign in an existing dedicated development
+account, exercise the chosen API and sign out that test session. It does not provision users or
+change policies. Keep actual test credentials in ignored files or environment variables.
 
-1. Set SUPABASE_AUTH_SITE_URL to the canonical HTTPS production origin.
-2. Set SUPABASE_AUTH_REDIRECT_URL to that origin plus `/auth/confirm`. Retain localhost entries
-   in `auth.additional_redirect_urls`; add any separately hosted dev callbacks explicitly.
-   Avoid broad hosted-domain wildcards.
-3. Push once to the shared project, then verify readback. There are no separate dev/prod pushes.
-4. Set each web deployment’s APP_ORIGIN to its own HTTPS origin. The app explicitly requests
-   APP_ORIGIN plus `/auth/confirm`; templates use RedirectTo rather than the shared Site URL.
-
-In Vercel, set APP_ORIGIN in the Production environment and deploy again to apply the change.
-This is the frontend origin; API_BASE_URL_PROD remains the backend Function URL and APP_STAGE
-selects prod. Keep localhost as APP_ORIGIN in the local development environment. An unauthenticated
-request to the hosted `/app` should redirect to `/login` on the same hosted origin, never localhost.
-The backend needs no frontend-origin change: the browser calls the same-origin Next.js bridge,
-which forwards bearer credentials to Lambda server-side.
-
-When moving to a custom domain, repeat the origin and callback changes together. Confirmation and
-recovery emails already sent contain the old origin, so account for those links before retiring it.
-Vercel documents environment changes as applying to subsequent deployments; Supabase recommends
-exact production redirect paths ([Vercel](https://vercel.com/docs/environment-variables),
-[Supabase](https://supabase.com/docs/guides/auth/redirect-urls), reviewed 2026-09-21).
-Environment substitution and loading were checked against the pinned
-[CLI configuration loader](https://github.com/supabase/cli/blob/v2.111.0/packages/config/docs/project-config-loading.md)
-on 2026-09-21. Use `supabase/.env` for this version rather than relying on generic documentation's
-root `.env` example.
-
-The app integration uses `https://your-project.supabase.co` and a publishable API key.
-The hosted issuer is that URL plus `/auth/v1`, and its public JWKS endpoint is the issuer plus
-`/.well-known/jwks.json`. The Express API verifies asymmetric access tokens against these public keys;
-web route protection uses Supabase’s verified user lookup. Public discovery advertised an ES256 key when
-read on 2026-09-19. A dedicated development user's password sign-in and authenticated call to the
-deployed API later passed with an ES256 token on that date; the
-[deployment guide](../server/docs/SERVERLESS-V4.AGENTS.md) records the checks and their limits.
-This setup does not rotate signing keys.
-The management token and secret/service-role keys must never enter browser configuration.
-
-## API environment and verification
-
-A dedicated Codex development account is available for deliberate live smoke tests. Its credentials
-are kept in the ignored root `.env.codex-dev.json` file with owner-only permissions, not in application
-configuration or fixtures. Only the test user's credentials are retained there; administrative keys
-and access/refresh tokens are not saved. The account was individually confirmed through the admin
-API, so its creation does not establish that signup emails work. Shared auth policies were unchanged.
-The opt-in [API E2E suite](../server/e2e/e2e.AGENTS.md) uses this account, or explicit environment
-credentials, to sign in and verify the configured live API. It signs out its own session afterward;
-it neither provisions accounts nor changes provider settings.
-
-[The server environment example](../server/.env.example) uses a placeholder for your hosted URL. The API
-needs no publishable key, management token, signing secret or service-role credential. Local and
-Lambda composition use the same verifier; [serverless.yml](../server/serverless.yml) supplies the
-runtime URL from deployment configuration. The [server README](../server/README.md) describes
-local startup and bearer-token smoke testing. The web API bridge keeps session credentials in HTTP-only cookies and forwards verified bearer tokens server-side.
-
-The API verifies each request locally with discovered public keys. It does not query current user
-or session state, so logout and account deletion do not promise immediate access-token revocation.
-Signing-key discovery is cached; rotation/revocation visibility is delayed. The auth implementation
-owns exact cache and timeout settings. Unsupported legacy tokens fail authentication; this feature
-does not migrate or rotate shared keys. Provider failures deny access when usable keys are absent.
-
-The API receives user access tokens and retrieves public keys from Supabase; discovery does not
-send those tokens to Supabase. Only verified user IDs enter downstream request context. Request
-and error logs omit paths, credentials, payloads and raw provider causes. Hosted infrastructure
-logging still needs separate verification. Authentication adds no application-data storage; the separate
-[saved-data boundary](job-postings-data-boundary.md) describes DynamoDB processing and retention.
-
-## Web environment and team smoke test
-
-Copy [the web environment example](../web/.env.example) to ignored `web/.env.local`, then fill its
-publishable key from this project's API settings. Do not use a management, secret or service-role
-key. These values are server-only; the browser uses Next.js Server Actions. APP_ORIGIN defaults to
-localhost in the example and must match the origin where the app is opened. Use the same shared
-Supabase URL/key in hosted dev and production, with different APP_ORIGIN values.
-
-The checked-in confirmation and recovery templates are applied by `mise run auth:push`. Review the
-complete diff and require an up-to-date second run. They use the per-request `/auth/confirm`
-destination and a token hash; a confirmation page button consumes the token. Opening the link in
-another browser works without copying the original browser’s session. Localhost links still require
-the app to be reachable on that device; they do not make a local server remotely accessible.
-
-For a deliberate live check with an eligible team address:
-
-1. Start the web app on the configured origin; create a dedicated development account at `/signup`.
-2. Confirm the delivered email in another browser on the same machine. Verify that `/app` opens and
-   the URL no longer contains the token. Sign out and verify protected role links return to login.
-3. Request recovery at `/forgot-password`, open the email, continue and set a new password.
-4. Verify the new password logs in and the old password fails. Avoid repeated attempts that consume
-   the shared sender quota. Never reset or delete unrelated shared-project accounts.
-
-`npm run test:auth` checks components and every auth-code branch. `npm run test:e2e` uses local fake
-provider credentials, sends no remote email, and needs neither the shared project nor the Express
-backend. These checks do not validate actual SMTP delivery. The automated fixture is not a full
-Supabase emulator; secure password-change enforcement, shared quotas and sender eligibility require
-provider verification.
-
-## Data and email boundary
-
-The Next.js server processes submitted email/password forms and forwards authentication requests
-to Supabase. Session credentials are stored in HTTP-only browser cookies. Do not enable request-body
-logging or token-bearing confirmation-URL logging in hosting infrastructure.
-
-Supabase processes account identifiers, password-derived authentication data, sessions, tokens and
-authentication request metadata. Application notes, resumes, company research and contacts must
-not be placed in Supabase user metadata or logs. DynamoDB stores saved postings through the backend. Account deletion across Supabase and application
-data is not implemented; the [saved-data boundary](job-postings-data-boundary.md) records retention
-and recovery limitations.
-
-Email confirmation is enabled even for local development against this shared project. Custom SMTP
-is not configured. Supabase's default sender is restricted and is not a production delivery setup;
-use eligible team addresses while testing. Before public signup, add a chosen SMTP provider's
-configuration and secret references to the owning config, document its processor boundary here,
-and verify confirmation, recovery and email-change delivery. Do not disable confirmation merely to
-bypass delivery configuration.
-
-## Provider references
-
-Checked 2026-09-18 against official documentation and CLI v2.111.0 source:
-
-- [CLI config push and authentication](https://supabase.com/docs/reference/cli/supabase-config-push)
-  describes hosted configuration updates and CLI login.
-- [Pinned push implementation](https://github.com/supabase/cli/blob/v2.111.0/apps/cli/src/legacy/commands/config/push/push.handler.ts)
-  establishes service ordering, prompts and comparison behavior.
-- [Redirect URLs](https://supabase.com/docs/guides/auth/redirect-urls) explains the Site URL fallback
-  and exact production destinations.
-- [Custom SMTP](https://supabase.com/docs/guides/auth/auth-smtp) describes default-sender restrictions.
-- [JWT signing keys](https://supabase.com/docs/guides/auth/signing-keys) describes hosted key discovery.
-
-- [Server-side sessions](https://supabase.com/docs/guides/auth/server-side/creating-a-client) describes
-  cookie refresh, verified identity and response-cache requirements.
-- [Email templates](https://supabase.com/docs/guides/auth/auth-email-templates) documents RedirectTo
-  and token-hash verification.
+For an explicitly authorized email-flow test, verify signup confirmation in a fresh browser,
+password recovery, and login after reset using a dedicated account. Such tests mutate account state
+and consume provider email quota. The starter makes no guarantee about an existing project's email
+sender; verify its configuration before public signup.

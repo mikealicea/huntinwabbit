@@ -4,9 +4,9 @@ date: 2026-08-06
 title: "Fresh Notes Inbox"
 category: "inbox"
 related:
-  - "[[huntinwabbit-projects]]"
-  - "[[huntinwabbit-research]]"
-tags: [huntinwabbit, inbox]
+  - "[[huntinwabbit-boilerplate-projects]]"
+  - "[[huntinwabbit-boilerplate-research]]"
+tags: [huntinwabbit-boilerplate, inbox]
 ---
 
 # Fresh Notes Inbox

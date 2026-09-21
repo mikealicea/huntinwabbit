@@ -33,7 +33,10 @@ export async function refreshAuth(request: NextRequest) {
       (path === '/app' || path.startsWith('/app/')) &&
       identity.status === 'anonymous'
     ) {
-      destination = `/login?next=${encodeURIComponent(safeReturnPath(`${path}${request.nextUrl.search}`))}`;
+      // Internal RSC cache keys are not user navigation state.
+      const returnUrl = request.nextUrl.clone();
+      returnUrl.searchParams.delete('_rsc');
+      destination = `/login?next=${encodeURIComponent(safeReturnPath(`${path}${returnUrl.search}`))}`;
     }
   } catch {
     destination = `/auth/unavailable?next=${encodeURIComponent(request.nextUrl.pathname)}`;

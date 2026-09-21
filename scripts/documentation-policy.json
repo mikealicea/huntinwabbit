@@ -74,14 +74,14 @@
       ]
     },
     {
-      "index": "product-workspace/huntinwabbit-projects.md",
+      "index": "product-workspace/huntinwabbit-boilerplate-projects.md",
       "include": [
         "product-workspace/projects/**/*.index.md"
       ],
       "allowBasename": true
     },
     {
-      "index": "product-workspace/research/huntinwabbit-research.md",
+      "index": "product-workspace/research/huntinwabbit-boilerplate-research.md",
       "include": [
         "product-workspace/research/**/*.index.md"
       ],

@@ -10,7 +10,7 @@ traversal follows named imports through re-exports to executable owners and foll
 Type-only dependencies are ignored; namespace/dynamic dependencies inspect the module's exports.
 The checker rejects coordination modules and external adapters from presentation graphs and limits
 React runtime imports to UI hooks/helpers. Next Link/Image are explicit declarative UI exceptions.
-Framework route files and the existing Nextra MDX integration have naming exceptions.
+Framework route files have naming exceptions.
 
 [architecture.test.ts](architecture.test.ts) runs the checker against the real application and
 isolated fixtures for aliases, barrels, external adapters, local hooks, dynamic imports and naming.

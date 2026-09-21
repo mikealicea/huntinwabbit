@@ -7,9 +7,7 @@ Do not treat an upstream example or another application's guide as this project'
 ## Routes and boundaries
 
 Keep route files under `src/app/` focused on framework composition. Feature UI and behavior live in
-flat feature folders and are imported through their public barrels. The existing async route example
-is [the blog page](../src/app/blog/[...mdxPath]/page.tsx); its promise-shaped params are owned by
-[blog.types.ts](../src/features/blog/blog.types.ts).
+flat feature folders and are imported through their public barrels. The [application layout](../src/app/app/layout.tsx) demonstrates async authorization before composition.
 
 Await request APIs such as `params`, `searchParams`, `cookies()` and `headers()` when using them.
 Next's route-aware `PageProps`, `LayoutProps` and `RouteContext` helpers are generated globals; do not
@@ -25,7 +23,7 @@ credentials and provider integrations out of client imports and browser-exposed 
 
 For new data flows, explicitly choose freshness, caching, authorization and invalidation behavior.
 Do not share private user data through a public cache. The [auth feature](../src/features/auth/auth.AGENTS.md) owns Server Actions, session verification
-and Proxy cookie refresh. Its routes prohibit shared response caching. The job-api feature owns server-only authenticated Route Handlers and a per-account RTK Query cache.
+and Proxy cookie refresh. Its routes prohibit shared response caching. The hello feature owns server-only authenticated Route Handlers and a per-account RTK Query cache.
 
 ## React architecture and rendering
 
@@ -50,15 +48,13 @@ extracted logic or manually awaited functions are not proof of framework renderi
 ## Metadata, generation and recovery
 
 Use framework metadata exports rather than scattering document head construction through features.
-The blog owns its static params, MDX loading and metadata. Preserve the Nextra alias and verify
-changes with the [blog barrel](../src/features/blog/blog.AGENTS.md).
+The [root layout](../src/app/layout.tsx) owns starter metadata.
 
 When adding interactive data routes, design loading, empty, missing-resource, partial failure and
 retry states. A retry must not silently duplicate a mutation. Error UI must not display private
 server details. Describe the actual behavior in the feature barrel and test meaningful transitions.
 
-Run the full web gate from the project guide. Its production build exercises static generation and
-Pagefind as well as compilation. Browser behavior, focus and navigation still need the UI checks
+Run the full web gate from the project guide. Its production build exercises static generation as well as compilation. Browser behavior, focus and navigation still need the UI checks
 appropriate to the changed flow; a successful build is not visual evidence.
 
 ## Authentication framework requirements

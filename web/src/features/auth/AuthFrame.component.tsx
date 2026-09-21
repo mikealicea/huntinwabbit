@@ -1,4 +1,3 @@
-import Image from 'next/image';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 
@@ -22,27 +21,10 @@ export function AuthFrame({
         <div className="min-w-0 rounded-2xl border border-base-300 bg-base-100 p-4 shadow-sm sm:p-8">
           <Link
             href="/"
-            aria-label="huntinwabbit"
-            className="mx-auto mb-6 block w-52 max-w-full rounded-lg"
+            aria-label="huntinwabbit-boilerplate"
+            className="mb-6 block break-words rounded-lg text-lg font-bold"
           >
-            <Image
-              src="/brand/huntinwabbit-logo-text-light.webp"
-              alt=""
-              width={640}
-              height={603}
-              className="h-auto w-full dark:hidden"
-              loading="eager"
-              unoptimized
-            />
-            <Image
-              src="/brand/huntinwabbit-logo-text-dark.webp"
-              alt=""
-              width={640}
-              height={603}
-              className="hidden h-auto w-full dark:block"
-              loading="eager"
-              unoptimized
-            />
+            huntinwabbit-boilerplate
           </Link>
           <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
           <p className="mb-7 mt-3 text-sm leading-relaxed text-base-content/75">

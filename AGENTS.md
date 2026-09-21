@@ -1,13 +1,8 @@
-# huntinwabbit — monorepo guide
+# huntinwabbit-boilerplate — monorepo guide
 
-huntinwabbit is a personal workspace for managing a job search, from discovering a role to closing
-out the process. The primary applications are the web app in `web/` and the backend in `server/`.
-There is no native iOS app in scope.
-
-Read `README.md` for the intended experience and current product decisions. The repository is being
-assembled from existing projects and boilerplates; their example features and inherited guidance
-do not establish huntinwabbit's product requirements. The README describes design intent, not a
-claim that those features are implemented.
+huntinwabbit-boilerplate is a reusable authenticated web/API starter. The primary applications are
+`web/` and `server/`; there is no native app in scope. Read `README.md` for setup and current scope.
+Executable owners and feature barrels describe implemented behavior.
 
 ## Sources of truth
 
@@ -36,16 +31,16 @@ facts that code cannot establish.
 
 | Folder | Project | Read first |
 |---|---|---|
-| `web/` | Next.js job-search frontend with mock data, a landing entry and inherited blog | `web/AGENTS.md` |
+| `web/` | Next.js frontend with authentication and a protected Hello World demo | `web/AGENTS.md` |
 | `server/` | Node 24, TypeScript ESM, Express API on Serverless/AWS Lambda | `server/AGENTS.md` |
-| `docs/` | Shared explanations, product notes and design prototypes | `docs/README.md` |
-| `assets/` | Source brand artwork and optimized web exports | [assets.AGENTS.md](assets/assets.AGENTS.md) |
+| `docs/` | Shared explanations and reusable runbooks | `docs/README.md` |
+| `assets/` | Source artwork conventions for future assets | [assets.AGENTS.md](assets/assets.AGENTS.md) |
 | `product-workspace/` | Product projects and research | `product-workspace/product-workspace.AGENTS.md` |
 | `scripts/` | Repository documentation validation | `scripts/scripts.AGENTS.md` |
 | `supabase/` | Shared hosted authentication configuration | [supabase.AGENTS.md](supabase/supabase.AGENTS.md) |
 
 Project guides own stack-specific conventions. When adapting inherited scaffolding, update affected
-guidance to describe huntinwabbit and the code that actually exists. Keep unrelated cleanup separately
+guidance to describe huntinwabbit-boilerplate and the code that actually exists. Keep unrelated cleanup separately
 scoped.
 
 This guide owns the branch and handoff process for every tree. Project and feature guides add
@@ -126,7 +121,7 @@ Use a category-prefixed subject and a useful body for both proposed commit messa
 created through the authorized branch workflow.
 
 - Format the subject as `<type>: <imperative summary>`, with an optional scope when it helps:
-  `feat(applications): add follow-up dates`.
+  `feat(auth): add account recovery`.
 - Choose the category that describes the primary change: `feat`, `fix`, `refactor`, `perf`, `docs`,
   `test`, `style`, `build`, `ci`, `chore`, or `revert`. Use `style` for formatting-only changes.
 - Keep the subject concise, preferably within 72 characters, without a trailing period.
@@ -199,24 +194,11 @@ barrels match the implementation that passed the gates.
 
 ## Product boundaries
 
-`README.md` owns the current product direction and open design questions. Feature barrels describe
-implemented behavior and its limitations; do not copy the full product specification into this guide.
-When implementing features, preserve these design principles:
-
-- Make the overall job search understandable at a glance, with opportunities and next actions easy
-  to find on desktop and mobile.
-- Keep opportunity capture lightweight; extraction and review should not block saving another role.
-- Keep application stage, interest and priority independent.
-- Preserve application history, including which materials were actually submitted. Later edits to
-  a planned resume or an external document must not silently rewrite that history.
-- Share company research and contacts across roles while keeping each application's history and
-  materials distinct.
-- Represent missing or uncertain posting details honestly rather than inventing facts.
-
-Storage, authentication, integrations and retention are not established by these principles. Define
-their contracts in executable code and the owning feature barrels as those features are implemented.
-Treat resumes, contact details and application notes as personal data; never put secrets or sensitive
-payloads in logs, fixtures or committed sample data.
+The starter implements authentication and an authenticated Hello World example. It has no application
+data persistence, paid integrations, background jobs, account deletion or profile management.
+New features must define their contracts in code and their owning barrels. Represent missing or
+uncertain information honestly, preserve user intent, and define history/retention before storing data.
+Never put credentials, personal data or sensitive payloads in logs, fixtures or committed examples.
 
 ## Shared engineering practices
 

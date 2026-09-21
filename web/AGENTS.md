@@ -1,24 +1,24 @@
-# huntinwabbit — web application
+# huntinwabbit-boilerplate — web application
 
 Read the [root guide](../AGENTS.md) first for branch workflow, documentation ownership, product
-boundaries and handoff. This package is huntinwabbit's primary user interface. It currently contains
-an authenticated live job-search application under `/app`, a minimal landing entry at `/`, and an inherited
-MDX blog. [The product README](../README.md) distinguishes implemented flows from longer-term intent.
+boundaries and handoff. This package provides public entry,
+Supabase account flows, and a protected Hello World demonstration under `/app`.
+The [README](../README.md) describes setup and scope.
 
 ## Executable owners
 
 | Concern | Owner |
 |---|---|
 | Dependencies, npm scripts and runtime requirements | [package.json](package.json), [package-lock.json](package-lock.json), [mise.toml](mise.toml) |
-| Framework composition and Nextra alias | [next.config.ts](next.config.ts) |
+| Framework configuration | [next.config.ts](next.config.ts) |
 | TypeScript and import alias | [tsconfig.json](tsconfig.json) |
 | Lint, formatting and exclusions | [biome.json](biome.json) |
 | Root layout, provider lifetime and fonts | [src/app/layout.tsx](src/app/layout.tsx) |
-| Brand artwork, icons and social previews | [brand asset guide](../assets/assets.AGENTS.md) |
+| Future artwork conventions | [brand asset guide](../assets/assets.AGENTS.md) |
 | Tailwind and daisyUI themes | [src/app/globals.css](src/app/globals.css) |
 | Test environment and cleanup | [vitest.config.ts](vitest.config.ts), [vitest.setup.ts](vitest.setup.ts) |
 | Browser verification | [playwright.config.ts](playwright.config.ts), [browser test guide](e2e/e2e.AGENTS.md) |
-| Application shell and state lifetime | [application layout](src/app/app/layout.tsx), [job-search barrel](src/features/job-search/job-search.AGENTS.md) |
+| Application shell and state lifetime | [application layout](src/app/app/layout.tsx), [hello barrel](src/features/hello/hello.AGENTS.md) |
 
 ## Architecture
 
@@ -38,7 +38,7 @@ MDX blog. [The product README](../README.md) distinguishes implemented flows fro
 - Isolate vendor integration in the feature or adapter that owns it. UI components should not
   choose provider credentials or duplicate backend business rules. Define the web/server contract
   before introducing a real integration. The auth feature integrates directly with Supabase from
-  the Next.js server; the application-data backend is accessed through the server-only API bridge.
+  the Next.js server; the hello backend is accessed through the server-only API bridge.
 
 ## Container/component architecture
 
@@ -60,7 +60,7 @@ These conventions apply across workspace, authentication, theme, navigation, pub
 - Keep Server/Client Component boundaries separate from the container/component distinction.
   Preserve server composition and small client boundaries; filenames do not establish rendering mode.
   Providers and adapters use explicit `.provider.tsx`/`.adapter.tsx` roles. Next.js route filenames
-  and the existing MDX integration retain their required names.
+  retain their required names.
 - Test components with props and observable callbacks. Test connected containers using fresh real
   stores with deterministic initial data and real actions; mock external boundaries rather than Redux.
   The [architecture checks](src/architecture/architecture.AGENTS.md) enforce naming and dependency
@@ -74,7 +74,7 @@ and RTK slices for mutable feature state requiring broader ownership or lifetime
 context/reducer providers are deprecated; use the typed Redux
 hooks and generated slice actions. Keep effects outside reducers and selectors, and test every
 handwritten branch in providers, actions, reducers and selectors with real stores.
-The [state barrel](src/state/state.AGENTS.md) owns composition, account isolation and clock lifetime.
+The [state barrel](src/state/state.AGENTS.md) owns composition and account isolation.
 Run `npm run test:state` when changing state or its adapters, in addition to the gates below.
 
 ## Product, copy and data boundaries
@@ -89,8 +89,7 @@ application data out of URLs, logs, analytics and browser-exposed configuration.
 surfaces are introduced, review script loading separately from public pages; do not inherit a
 marketing script into a private layout by default.
 
-Show truthful empty, loading, error, disabled and partial-success states. Keep missing salary or
-posting details visibly unknown. Do not turn a failed operation into apparent success or discard
+Show truthful empty, loading, error, disabled and partial-success states. Keep missing information visibly unknown. Do not turn a failed operation into apparent success or discard
 unrelated saved work. These are requirements for new product features, not claims of current support.
 
 ## Design and accessibility
@@ -117,15 +116,10 @@ changes. Exact shapes remain in executable owners; barrels explain intent and im
 |---|---|
 | Shared presentation | [shared.AGENTS.md](src/shared/shared.AGENTS.md) |
 | Authentication | [auth.AGENTS.md](src/features/auth/auth.AGENTS.md) |
+| Protected API demo | [hello.AGENTS.md](src/features/hello/hello.AGENTS.md) |
 | Landing entry | [home.AGENTS.md](src/features/home/home.AGENTS.md) |
-| Live API and stage configuration | [job-api.AGENTS.md](src/features/job-api/job-api.AGENTS.md) |
-| Job-search presentation contracts | [job-search.AGENTS.md](src/features/job-search/job-search.AGENTS.md) |
-| Search board and dragging | [search-board.AGENTS.md](src/features/search-board/search-board.AGENTS.md) |
-| Batch link capture | [job-capture.AGENTS.md](src/features/job-capture/job-capture.AGENTS.md) |
-| Role workspace | [role-workspace.AGENTS.md](src/features/role-workspace/role-workspace.AGENTS.md) |
 | Navigation | [header.AGENTS.md](src/features/header/header.AGENTS.md) |
 | Light/dark theme and hydration | [theme.AGENTS.md](src/features/theme/theme.AGENTS.md) |
-| MDX blog, metadata and Pagefind | [blog.AGENTS.md](src/features/blog/blog.AGENTS.md) |
 
 ## Local development and verification
 
@@ -151,9 +145,8 @@ npm run check-types && npm run check && npm test && npm run build
 `check:fix` applies safe fixes, `format` writes formatting, and `lint` only lints. Review written
 diffs. Markdown/MDX are reviewed manually and Tailwind utility sorting is not enabled.
 
-The build includes Pagefind via `postbuild`; it verifies route, MDX and static-generation integration.
-Unit tests do not replace it. Generated `.next/`, `next-env.d.ts`, TypeScript caches and Pagefind
-output are local artifacts, not source to commit.
+The build verifies routes, server/client boundaries and static generation.
+Unit tests do not replace it. Generated `.next/`, `next-env.d.ts`, TypeScript caches are local artifacts, not source to commit.
 
 For application interaction changes, also run `npm run test:e2e`. Install its browser once with
 `npx playwright install chromium`. The [browser test guide](e2e/e2e.AGENTS.md) explains the isolated

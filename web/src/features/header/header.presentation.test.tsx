@@ -10,10 +10,9 @@ it('renders supplied controls without theme or auth providers', () => {
       actions={<button type="button">Sign-out slot</button>}
     />,
   );
-  expect(screen.getByRole('link', { name: 'huntinwabbit' })).toHaveAttribute(
-    'href',
-    '/app',
-  );
+  expect(
+    screen.getByRole('link', { name: 'huntinwabbit-boilerplate' }),
+  ).toHaveAttribute('href', '/app');
   expect(screen.getByRole('button', { name: 'Theme slot' })).toBeVisible();
   expect(screen.getByRole('button', { name: 'Sign-out slot' })).toBeVisible();
 });

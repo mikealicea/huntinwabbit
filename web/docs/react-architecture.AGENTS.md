@@ -26,7 +26,7 @@ into synchronized local state. Keep state updaters pure.
 
 Providers use `.provider.tsx`; external-state wrappers that are not view coordinators use
 `.adapter.tsx`. These are explicit roles, not escape hatches for presentation code. Next.js route
-files and the Nextra MDX convention retain framework names. Existing flat feature folders, named
+files  retain framework names. Existing flat feature folders, named
 function exports and public feature barrels remain the organization rules. Do not create empty
 container wrappers or a custom hook for every component; extract a hook for a cohesive stateful
 responsibility when it makes ownership or reuse clearer.
@@ -36,7 +36,7 @@ responsibility when it makes ownership or reuse clearer.
 Containers pass typed values and intent callbacks, not stores, Redux dispatch functions or service clients.
 They assemble nested containers and pass the resulting elements through `children` or named slots.
 For example, a header component receives theme/sign-out slots; its container creates those connected
-controls. A board column receives cards as children and drag state/refs as props.
+controls. A page can receive connected children through a presentation slot.
 
 Keep public contracts small enough to explain the component's responsibility. Pure formatting may
 stay in a component; domain decisions and shared derivations belong in pure helpers/selectors.
@@ -58,8 +58,8 @@ supported Server Action references across them. Credentials remain at their exis
   real selectors, reducers and actions; assert user-visible behavior rather than mocking Redux hooks.
   Mock network/framework boundaries where needed and keep fixtures fictional.
 - Test load-bearing pure rules directly and preserve the existing auth/state coverage gates. Browser
-  tests cover actual routes, drag geometry, focus, hydration and end-to-end user intent; production
-  builds cover server/static rendering and MDX integration.
+  tests cover actual routes, focus, hydration and end-to-end user intent; production
+  builds cover server/static rendering.
 - Run `npm run test:architecture` while changing boundaries and the full web gates before handoff.
   [The checker barrel](../src/architecture/architecture.AGENTS.md) describes executable checks and
   limitations. Review still decides whether component boundaries and logic placement are sensible.

@@ -4,12 +4,10 @@
 
 Shared infrastructure provides HTTP error mapping and request logging. The [server guide](../../AGENTS.md)
 owns architecture, and the [auth barrel](../features/auth/auth.AGENTS.md) owns authentication.
-Saved job persistence belongs to the [job-postings feature](../features/job-postings/job-postings.AGENTS.md).
 There is no telemetry SDK or durable worker system.
 
-[app.ts](../app.ts) constructs Express, installs request logging, adds public health, authentication,
-the saved-posting router with its own bounded JSON parser, then smaller JSON parsing, the hello router and the [job parsing router](../features/job-parsing/job-parsing.router.ts),
-then installs final error middleware. [runtime.ts](../runtime.ts) validates auth, storage and parsing configuration
+[app.ts](../app.ts) constructs Express, installs request logging, public health, authentication,
+bounded JSON parsing, hello and final error middleware. [runtime.ts](../runtime.ts) validates auth configuration
 and chooses the concrete adapters. [local.ts](../local.ts) owns the
 listener; [lambda.ts](../lambda.ts) lazily constructs and caches the Lambda adapter. Invalid auth
 configuration fails construction. Public health bypasses token checks once the app is constructed;
@@ -17,8 +15,7 @@ it is not a provider-readiness check.
 
 [shared.errors.ts](shared.errors.ts) owns AppError, its constructors and the public message envelope.
 Known application errors return their status and safe message, with an optional machine-readable code.
-Unauthorized responses include a bearer challenge at the application boundary. The deployed Function URL remaps that header, as
-recorded in the [deployment guide](../../docs/SERVERLESS-V4.AGENTS.md). Unknown errors return a generic response. Preserve four-argument error-middleware
+Unauthorized responses include a bearer challenge at the application boundary. Verify deployed header behavior separately using the [deployment guide](../../docs/SERVERLESS-V4.AGENTS.md). Unknown errors return a generic response. Preserve four-argument error-middleware
 arity; Express uses it to recognize an error handler.
 
 [shared.middleware.ts](shared.middleware.ts) emits request-in and request-done JSON lines containing

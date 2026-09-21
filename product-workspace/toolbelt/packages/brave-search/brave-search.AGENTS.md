@@ -28,7 +28,7 @@ The tool also respects an already-exported `BRAVE_SEARCH_API_KEY`, but the defau
 Always run from the target workspace root:
 
 ```bash
-cd /path/to/huntinwabbit/product-workspace
+cd /path/to/huntinwabbit-boilerplate/product-workspace
 bun ./toolbelt/packages/brave-search/index.ts web-search [options] <query>
 bun ./toolbelt/packages/brave-search/index.ts llm-context [options] <query>
 ```
@@ -36,7 +36,7 @@ bun ./toolbelt/packages/brave-search/index.ts llm-context [options] <query>
 ### Examples
 
 ```bash
-cd /path/to/huntinwabbit/product-workspace
+cd /path/to/huntinwabbit-boilerplate/product-workspace
 
 # Discover promising URLs to inspect further
 bun ./toolbelt/packages/brave-search/index.ts web-search --count 5 "best Bun TypeScript testing patterns"
@@ -96,7 +96,7 @@ The tool prints JSON to stdout.
 ## Running validation
 
 ```bash
-cd /path/to/huntinwabbit/product-workspace/toolbelt
+cd /path/to/huntinwabbit-boilerplate/product-workspace/toolbelt
 bun test packages/brave-search/lib.test.ts
 bun run signoff
 ```

@@ -1,17 +1,16 @@
-# Workspace Redux store
+# Application Redux store
 
-This folder composes the authenticated workspace's RTK Query cache and presentation clock.
-[makeStore](state.store.ts) creates a fresh store per provider; no singleton, logger or browser
-persistence exists. [Provider](StoreProvider.provider.tsx) retains the store across client navigation,
-installs query focus/reconnect listeners and updates the local date each minute/on visibility changes.
-Cleanup removes timers and listeners. [Clock](state.clock.ts) starts empty for deterministic hydration.
+[makeStore](state.store.ts) creates a fresh RTK Query cache per [provider](StoreProvider.provider.tsx).
+The protected layout keys the provider by verified user ID. Rerenders preserve results; account
+changes, unmounts and reloads start fresh. There is no singleton, browser persistence, clock or logger.
+No credential, cookie or access token enters Redux.
 
-The application layout keys the provider by verified user ID. Account changes, unmounts and reloads
-clear the client cache; durable records remain in the backend. Auth cookies and tokens never enter
-Redux. The [API feature](../features/job-api/job-api.AGENTS.md) owns server data and mutations; there
-is no separate mutable copy of application records. Local form drafts remain in their UI owners.
+The [hello feature](../features/hello/hello.AGENTS.md) owns requests; state composition does not
+duplicate results in another slice. The demo uses explicit requests without polling or automatic
+focus/reconnect refresh. Auth form inputs and action feedback stay local; next-themes owns themes.
+[Hooks](state.hooks.ts) and [public exports](state.index.ts) provide typed access. Production
+DevTools are disabled. Server and client initial state agree for hydration.
 
-[Hooks](state.hooks.ts) and [index](state.index.ts) expose typed composition. DevTools are disabled in
-production. Follow the [state conventions](../../docs/state-management.md) and container/component
-boundaries. Tests use fresh real stores, including account-key replacement, simultaneous providers,
-cache reset and deterministic hydration. Run state coverage, web gates and browser tests.
+Tests use fresh real stores and cover serialization, preloaded state, reset, simultaneous providers,
+account-key replacement and hydration. Follow [state conventions](../../docs/state-management.md)
+and run `npm run test:state`, web gates and browser tests when changing ownership.

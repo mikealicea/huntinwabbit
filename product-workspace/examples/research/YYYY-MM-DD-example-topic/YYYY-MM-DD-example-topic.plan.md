@@ -4,7 +4,7 @@ date: YYYY-MM-DD
 title: "Research Plan: {{Project Name}}"
 category: "research-plan"
 related:
-  - "[[huntinwabbit-research]]"
+  - "[[huntinwabbit-boilerplate-research]]"
 tags:
   - {{primary-topic}}
 sources: []

@@ -1,10 +1,7 @@
 'use client';
 
-import { setupListeners } from '@reduxjs/toolkit/query';
-import { type ReactNode, useEffect, useState } from 'react';
+import { type ReactNode, useState } from 'react';
 import { Provider } from 'react-redux';
-import { toLocalDate } from '@/features/job-search/job-search.index';
-import { dateChanged } from './state.clock';
 import { makeStore, type RootState } from './state.store';
 
 export function StoreProvider({
@@ -14,21 +11,7 @@ export function StoreProvider({
   children: ReactNode;
   preloadedState?: Partial<RootState>;
 }) {
-  // One store per mounted workspace, retained on rerender and replaced by an account key change.
+  // The application layout's verified account key controls the store lifetime.
   const [store] = useState(() => makeStore(preloadedState));
-  useEffect(() => {
-    function updateDate() {
-      store.dispatch(dateChanged(toLocalDate(new Date())));
-    }
-    const cleanupListeners = setupListeners(store.dispatch);
-    updateDate();
-    const timer = window.setInterval(updateDate, 60000);
-    document.addEventListener('visibilitychange', updateDate);
-    return () => {
-      cleanupListeners();
-      window.clearInterval(timer);
-      document.removeEventListener('visibilitychange', updateDate);
-    };
-  }, [store]);
   return <Provider store={store}>{children}</Provider>;
 }

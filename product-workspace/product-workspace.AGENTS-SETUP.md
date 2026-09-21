@@ -1,4 +1,4 @@
-# product-workspace.AGENTS-SETUP.md — huntinwabbit Environment Setup
+# product-workspace.AGENTS-SETUP.md — huntinwabbit-boilerplate Environment Setup
 
 Read [[product-workspace.AGENTS]] and the [root guide](../AGENTS.md) before substantial work.
 Application setup and checks belong to [`web/AGENTS.md`](../web/AGENTS.md) and

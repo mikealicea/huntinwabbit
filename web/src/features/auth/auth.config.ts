@@ -32,4 +32,4 @@ export function authConfig(
   };
 }
 
-export const authCookieName = 'huntinwabbit-auth';
+export const authCookieName = 'huntinwabbit-boilerplate-auth';

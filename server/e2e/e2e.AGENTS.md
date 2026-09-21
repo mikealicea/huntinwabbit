@@ -1,8 +1,9 @@
 # Live API end-to-end tests
 
-This suite checks the complete hosted path: dedicated-user password sign-in with Supabase, HTTPS
-requests through the deployed API's front door, Lambda composition, public-key verification and
-the hello response. It does not use a fake provider or bypass authentication. It is an explicit
+This suite signs in a dedicated user with hosted Supabase and checks the configured API's hello
+response and token rejection behavior. E2E_API_URL accepts an explicit HTTPS deployment or loopback
+HTTP server. A deployed target exercises Lambda and its front door; a local target exercises the
+current Express runtime without deploying. It does not use a fake provider or bypass authentication. It is an explicit
 external operation, separate from the offline server gate. Run only against an authorized target.
 
 ## Owners and setup
@@ -58,32 +59,8 @@ were manually checked there; the automated suite checks their comma-joined repre
 Expiry, wrong issuer/audience/role, key rotation, discovery outage/recovery and concurrent key fetches
 remain deterministic [auth tests](../src/features/auth/auth.test.ts). The live suite does not mutate
 provider keys, wait for token expiry, simulate an outage, test resource ownership, exercise a browser,
-or prove email delivery. The web API bridge has its own isolated browser suite. Passing a live run verifies the
-deployed artifact at that time, not that un-deployed source changes have reached AWS.
+or prove email delivery. The web API bridge has its own isolated browser suite. A local run does not verify Lambda deployment. A deployed-target run verifies that artifact at
+that time, not that unpublished source changes have reached AWS.
 
 Run the offline server gate and documentation gates for changes here, then the live command when
 authorized. Neither test command deploys the service.
-
-## Opt-in live job parsing
-
-[job-parsing.live.ts](job-parsing.live.ts) is a separate vendor smoke suite selected only by
-[vitest.job-parsing.config.ts](../vitest.job-parsing.config.ts). Run `npm run test:job-parsing:live`
-with `JOB_PARSING_ENABLED=true` and a valid `REDPILL_API_KEY` in ignored `.env`. This is an explicitly
-paid external check of the four supplied public links, with no automatic model retries. It invokes
-the production service and adapters directly; it does not authenticate against Supabase, call the
-deployed API, save opportunities or deploy. Normal `npm test` and `npm run test:e2e` exclude it.
-
-Results contain only the site label, outcome code and elapsed time, never URLs, page content or raw
-errors. A valid parsed result or documented source failure passes; model/worker integration errors
-fail. Report outcomes individually because passing does not establish four successful extractions.
-Deterministic HTTP and Lambda package tests separately cover authentication and route composition.
-
-## Explicit saved-posting smoke
-
-[job-postings.live.ts](job-postings.live.ts) is an opt-in operator script, outside the ordinary test
-and auth E2E suites. Run `LIVE_JOB_URL=https://jobs.example.com/role mise exec -- node
---env-file=.env.e2e e2e/job-postings.live.ts` only against an authorized target with the dedicated account.
-It saves one real link without requesting parsing, verifies duplicates, detail, updates, stale-version
-conflicts and list privacy, then revokes its own session. The saved smoke record is retained because
-there is no delete API. It never logs payloads, tokens or account identifiers. Browser extraction
-checks are separate paid operations and must name their attempt budget and target.

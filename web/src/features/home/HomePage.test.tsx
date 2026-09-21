@@ -9,7 +9,10 @@ describe('home page', () => {
     render(<Home />);
 
     expect(
-      screen.getByRole('heading', { level: 1, name: 'huntinwabbit' }),
+      screen.getByRole('heading', {
+        level: 1,
+        name: 'huntinwabbit-boilerplate',
+      }),
     ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Open app' })).toHaveAttribute(
       'href',
@@ -18,10 +21,9 @@ describe('home page', () => {
     expect(
       screen.getByRole('navigation', { name: 'Primary navigation' }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'huntinwabbit' })).toHaveAttribute(
-      'href',
-      '/app',
-    );
+    expect(
+      screen.getByRole('link', { name: 'huntinwabbit-boilerplate' }),
+    ).toHaveAttribute('href', '/app');
     expect(screen.queryByRole('button', { name: 'Sign out' })).toBeNull();
   });
 });

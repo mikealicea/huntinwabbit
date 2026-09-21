@@ -2,7 +2,7 @@
 parent: "[[product-workspace.AGENTS]]"
 date: 2026-03-16
 updated: 2026-06-22
-title: "Research Methodology — huntinwabbit (defers to root standard)"
+title: "Research Methodology — huntinwabbit-boilerplate (defers to root standard)"
 category: "methodology"
 tags:
   - methodology
@@ -10,14 +10,14 @@ tags:
   - pointer
 ---
 
-# Research Methodology — huntinwabbit Workspace
+# Research Methodology — huntinwabbit-boilerplate Workspace
 
 > **The canonical research standard now lives at the vault root: [[RESEARCH.METHODOLOGY.AGENTS]].**
 > Read it first. It covers project structure, file roles, frontmatter, sourcing, Obsidian linking, the
 > quality checklist, and all advanced variants. Copy a new project from [[examples-research-README|the
-> root scaffold]]. This file records only the **huntinwabbit deltas** on top of that standard.
+> root scaffold]]. This file records only the **huntinwabbit-boilerplate deltas** on top of that standard.
 
-## huntinwabbit deltas
+## huntinwabbit-boilerplate deltas
 
 - **Decision-first research.** Product and engineering research exists to drive a decision, so the index leads with an
   **Executive Summary that distinguishes findings, recommendations, and confirmed decisions** and an **Action Plan** with checkboxes (standard

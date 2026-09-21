@@ -11,11 +11,12 @@ Never create a second project or a Supabase preview branch as part of routine de
 Auth changes and account deletion affect both environments. Use dedicated development accounts;
 do not bulk-reset users or weaken production auth settings for tests.
 
-Supabase's internal Postgres supports Auth. Application records belong in DynamoDB behind the
-backend, with separate dev/prod resources when persistence is implemented. This setup provisions
-no DynamoDB tables or resource-ownership policies. The [web auth feature](../web/src/features/auth/auth.AGENTS.md)
-implements account flows and protects the live workspace. The [API auth feature](../server/src/features/auth/auth.AGENTS.md)
-protects the hello endpoint using public-key JWT verification; it does not mutate this configuration.
+Supabase's internal Postgres supports Auth. The starter stores no application records.
+The [web auth feature](../web/src/features/auth/auth.AGENTS.md) implements account flows;
+the [API auth feature](../server/src/features/auth/auth.AGENTS.md) protects hello using JWT verification.
+Runtime authentication never pushes this configuration. Existing projects may be reused via ignored
+environment variables. Boilerplate templates are local source until explicitly pushed; pushing them
+changes the shared provider and requires a separately authorized configuration task.
 
 ## Owners and operation
 
@@ -55,7 +56,7 @@ Run the [documentation gates](../scripts/scripts.AGENTS.md) for config/runbook c
 the live CLI diff when project access is available. After an authorized push, rerun the same command
 and require `Remote Auth config is up to date.` Report remote checks separately from local gates.
 These checks do not create accounts, send emails, validate app login, prove email delivery, or test
-future DynamoDB IAM. No browser UI changes belong to this setup.
+AWS IAM. No browser UI changes belong to this setup.
 
 CLI authentication stays in its local credential store or `SUPABASE_ACCESS_TOKEN`; never commit
 tokens, user payloads, resolved secret configuration or CLI debug logs. Generated linkage is ignored.

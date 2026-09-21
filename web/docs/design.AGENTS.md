@@ -1,9 +1,7 @@
 # Web design and styling
 
 Read the [web guide](../AGENTS.md) and [accessibility guide](accessibility.AGENTS.md) before UI work.
-The [product README](../../README.md) owns intent. The
-[search-board prototype](../../docs/prototype/search-board.html) is a design exploration with sample
-data, not a source of implemented routes, persistence or a finalized design system.
+The [product README](../../README.md) owns intent.
 
 ## Shared owners
 
@@ -11,8 +9,8 @@ data, not a source of implemented routes, persistence or a finalized design syst
 - [the root layout](../src/app/layout.tsx) loads Ubuntu and Ubuntu Mono once through `next/font`.
 - [the theme barrel](../src/features/theme/theme.AGENTS.md) owns the logical light/dark mapping and
   provider behavior. Keep CSS theme names and TypeScript mapping in agreement.
-- [PageShell](../src/shared/PageShell.component.tsx) owns the blog's main landmark and prose content width.
-  [The application layout](../src/app/app/layout.tsx) owns the wider job-search shell and main landmark;
+- [PageShell](../src/shared/PageShell.component.tsx) owns the public main landmark and content width.
+  [The application layout](../src/app/app/layout.tsx) owns the authenticated shell and main landmark;
   the landing entry owns its own minimal layout.
 
 Use semantic colors and paired foreground/background tokens instead of per-feature color copies.
@@ -35,13 +33,12 @@ classes in this repository.
 
 ## Interaction and visual decisions
 
-Design around understanding the job search at a glance and quick capture on desktop and mobile.
-Prioritize hierarchy, readable density, spacing and clear next actions. Keep status, interest and
-priority distinct in both controls and visual language. Show loading and unavailable values honestly.
+Keep the starter easy to understand on desktop and mobile.
+Prioritize hierarchy, readable density, spacing and clear next actions. Use distinct controls for independent decisions. Show loading and unavailable values honestly.
 Use restrained motion that explains change, with a reduced-motion path. Decoration must not obscure
 content, controls or focus.
 
-Shared components should own reusable interaction and accessibility behavior. Keep role-specific
+Shared components should own reusable interaction and accessibility behavior. Keep feature-specific
 workflow rules in their feature. Do not add a UI framework, icon family, theme system or elaborate
 animation dependency for an isolated component without a concrete need.
 

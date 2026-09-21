@@ -9,12 +9,11 @@ import { safeReturnPath } from './auth.validation';
 const copy: Record<AuthMode, { title: string; description: string }> = {
   login: {
     title: 'Welcome back',
-    description: 'Log in to your job-search workspace.',
+    description: 'Log in to your application.',
   },
   signup: {
     title: 'Create your account',
-    description:
-      'One place to keep track of your job search. Confirm your email to get started.',
+    description: 'Create an account and confirm your email to get started.',
   },
   'forgot-password': {
     title: 'Forgot your password?',

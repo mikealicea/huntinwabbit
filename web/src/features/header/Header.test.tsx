@@ -32,7 +32,7 @@ describe('site header', () => {
     mocks.setTheme.mockClear();
   });
 
-  it('links the application brand to the board without starter navigation', () => {
+  it('links the application brand to the protected application', () => {
     render(
       <HeaderContainer
         signOutAction={async () => ({ status: 'idle', message: '' })}
@@ -44,7 +44,9 @@ describe('site header', () => {
     });
 
     expect(
-      within(navigation).getByRole('link', { name: 'huntinwabbit' }),
+      within(navigation).getByRole('link', {
+        name: 'huntinwabbit-boilerplate',
+      }),
     ).toHaveAttribute('href', '/app');
     expect(
       within(navigation).queryByRole('link', { name: 'Blog' }),

@@ -42,7 +42,7 @@ That's all — `list-tools` will pick it up automatically on the next run.
 ## Running validation
 
 ```bash
-cd /path/to/huntinwabbit/product-workspace/toolbelt
+cd /path/to/huntinwabbit-boilerplate/product-workspace/toolbelt
 bun test packages/list-tools/lib.test.ts
 bun run signoff
 ```

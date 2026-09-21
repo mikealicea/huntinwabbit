@@ -41,7 +41,9 @@ function takeWorkspaceFlag(argv: string[]): {
 const { present: hasWorkspaceFlag, value: workspace } = takeWorkspaceFlag(args);
 
 if (hasWorkspaceFlag && !workspace?.trim()) {
-  console.error("--workspace requires a name, e.g. --workspace huntinwabbit");
+  console.error(
+    "--workspace requires a name, e.g. --workspace huntinwabbit-boilerplate",
+  );
   process.exit(1);
 }
 

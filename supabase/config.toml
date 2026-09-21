@@ -1,6 +1,6 @@
 # One hosted project for local development, deployed dev, and production.
 # This is the local CLI identifier; mise.toml pins the remote push target.
-project_id = "huntinwabbit"
+project_id = "huntinwabbit-boilerplate"
 
 [auth]
 enabled = true
@@ -32,11 +32,11 @@ otp_length = 8
 otp_expiry = 3600
 
 [auth.email.template.confirmation]
-subject = "Confirm your huntinwabbit email"
+subject = "Confirm your huntinwabbit-boilerplate email"
 content_path = "./supabase/templates/confirmation.html"
 
 [auth.email.template.recovery]
-subject = "Reset your huntinwabbit password"
+subject = "Reset your huntinwabbit-boilerplate password"
 content_path = "./supabase/templates/recovery.html"
 
 [auth.sms]
@@ -51,7 +51,7 @@ enroll_enabled = true
 verify_enabled = true
 
 # No application migrations, seed data, buckets, or Edge Functions.
-# Supabase's internal Postgres remains necessary for Auth; application data goes to DynamoDB.
+# Supabase's internal Postgres remains necessary for Auth; the starter stores no application records.
 [db.seed]
 enabled = false
 

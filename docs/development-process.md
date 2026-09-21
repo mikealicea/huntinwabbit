@@ -1,6 +1,6 @@
 # Development practices and parity
 
-huntinwabbit adopts engineering practices from Sanctum while retaining its own product, architecture
+huntinwabbit-boilerplate adopts engineering practices from Sanctum while retaining its own product, architecture
 and tooling choices. The [root guide](../AGENTS.md) governs the resulting workflow. Sanctum is a
 reference for how to develop; the [product README](../README.md) remains the authority for what we
 are building. A reference checkout is never needed to run or interpret these guides.
@@ -8,7 +8,7 @@ are building. A reference checkout is never needed to run or interpret these gui
 Reconciled on 2026-09-17 against the user-provided Sanctum snapshot in `temp/Sanctum/`:
 root, landing-page, server and client guides; framework,
 accessibility and representative feature guidance; and documentation-maintenance scripts. The
-workspace research/insight/toolbelt guidance was also compared; its existing huntinwabbit adaptation
+workspace research/insight/toolbelt guidance was also compared; its existing huntinwabbit-boilerplate adaptation
 already preserves the relevant methods.
 The snapshot has no embedded Git metadata, so no upstream revision is asserted.
 
@@ -33,7 +33,7 @@ wiki link or full Markdown syntax.
 
 ## Deliberate differences
 
-- `web/` is the application, not a marketing site for an iOS app. The job-search frontend uses the authenticated backend; the blog remains inherited scaffolding. No Sanctum routes, purchase flows or marketing claims
+- `web/` is the application, not a marketing site for an iOS app. The authenticated Hello World demo exercises the backend. No Sanctum routes, purchase flows or marketing claims
   were adopted.
 - Web and server are independent npm packages using mise and Biome. Read-only `check` and writing
   `check:fix` remain separate. No root npm workspace, pnpm, Prettier or Xcode workflow is introduced.
@@ -42,8 +42,8 @@ wiki link or full Markdown syntax.
   generated artifacts, state lifetime, recovery and truthful UI do.
 - The app's current daisyUI themes and fonts remain local choices. Web keyboard, focus, reflow and
   motion rules replace native-specific controls and accessibility APIs.
-- No Supabase, Sentry, billing, worker queue or provider selection is implied by the process. Add
-  those only when huntinwabbit's actual requirements justify them.
+- Supabase Auth is implemented. Sentry, billing, persistence and background workers remain future
+  feature decisions, not prerequisites implied by the process.
 - Root `.agents/` is reserved for incident reports. Maintained framework/UI guidance lives in
   `web/docs/`, avoiding the reference app's mixture of imported guides and incidents.
 
@@ -51,24 +51,17 @@ wiki link or full Markdown syntax.
 
 These are recorded limitations, not infrastructure added by this reconciliation:
 
-- Supabase Auth and DynamoDB are now selected; [auth infrastructure](auth-infrastructure.md) owns
-  their boundary. Web authentication and API token verification are implemented; resource ownership authorization,
-  saved-posting persistence and its retention boundary are implemented in the backend; web API integration
-  and account-data deletion remain separate work.
+- Supabase Auth, API JWT verification and the web hello bridge are implemented. There is no
+  application persistence or account deletion. [Auth infrastructure](auth-infrastructure.md) owns
+  the shared provider boundary.
 - Server request and error logs omit paths, credentials and raw errors/causes. The
   [shared barrel](../server/src/shared/shared.AGENTS.md) records that boundary; hosting infrastructure
   logging still requires separate verification.
 - There is no automated credential scanner. Biome and the documentation gate do not prove that
   staged content is free of secrets. Add a scanner as actual tooling, with failure-path tests,
   before claiming parity with Sanctum's committed-secret gate.
-- [Browser end-to-end tests](../web/e2e/e2e.AGENTS.md) cover the initial job-search flows. They are not
+- [Browser end-to-end tests](../web/e2e/e2e.AGENTS.md) cover auth and hello flows. They are not
   a comprehensive accessibility audit. The opt-in [API E2E suite](../server/e2e/e2e.AGENTS.md) checks
   live hello authentication with a dedicated hosted account. The
-  [deployment guide](../server/docs/SERVERLESS-V4.AGENTS.md) records deployment checks and their limits.
+  [deployment guide](../server/docs/SERVERLESS-V4.AGENTS.md) describes deployment checks and their limits.
   Feature barrels state what existing tests actually cover.
-- Blog date parsing validates a non-empty string rather than a valid ISO date. The
-  [blog barrel](../web/src/features/blog/blog.AGENTS.md) records the narrower implementation.
-
-Changes to these behaviors belong in explicitly scoped implementation work with the corresponding
-barrel and checks updated. This reconciliation changes development guidance and its structural
-validation, not application behavior or product direction.

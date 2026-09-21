@@ -43,19 +43,19 @@ and form feedback must not move into Redux. Third-party browser state remains in
 ## App Router lifetime and boundaries
 
 Create a store per mounted workspace provider; never export a module-global store. The verified
-user ID keys the provider. Navigation within the workspace keeps edits; a new account or unmount
+user ID keys the provider. Navigation within the workspace keeps cached results; a new account or unmount
 creates a new session. Server Components authorize and compose children without reading or writing
-Redux. Server and first-client initial state must agree; the date clock starts after hydration.
+Redux. Server and first-client initial state must agree.
 This follows [RTK's Next.js guidance](https://redux-toolkit.js.org/usage/nextjs).
 
 Third-party contexts are adapters with separate responsibilities: `next-themes` owns pre-paint theme
-resolution, system preference and theme storage; dnd-kit owns drag sensors and accessibility.
+resolution, system preference and theme storage.
 Do not mirror their state in Redux or replace these mechanics with product-state providers.
 Auth inputs remain local and credentials/sessions stay at the existing server boundary. Routes stay
 in Next's router. Redux does not add persistence, authorization, extraction or a backend integration.
 Production Redux DevTools are disabled; do not add payload logging or persist personal workspace data.
 
-Live server-data caching uses RTK Query in the job-api feature. Use thunks for
+Live server-data caching uses RTK Query in the hello feature. Use thunks for
 one-shot orchestration and listener middleware for workflows reacting to actions. Define cancellation,
 stale responses, retries and account reset behavior with the feature; never start durable work from
 a page effect. These choices follow [Redux's effects guidance](https://redux.js.org/usage/side-effects-approaches).
@@ -70,8 +70,7 @@ navigation. This adopts [Redux's testing guidance](https://redux.js.org/usage/wr
 Additionally, this repository requires tests for every handwritten branch in providers, actions,
 reducers and selectors: success, empty/no-op, missing IDs, repeated events and cleanup where applicable.
 Use action creators in tests to exercise their contracts with reducer behavior, not just action strings.
-Check immutable inputs, unrelated state, submitted snapshots and store/account isolation. Fix dates
-and IDs in unit tests; exercise clock updates and timer/listener cleanup with fake time.
+Check immutable inputs, unrelated state, submitted snapshots and store/account isolation. Use deterministic fixtures and verify provider lifetime and isolation.
 
 `npm run test:state` enforces complete branch/function/line/statement coverage of the state owners
 and theme adapter. Coverage complements behavioral assertions; never exclude a reachable branch to
@@ -80,4 +79,4 @@ full web, browser and documentation gates in [the web guide](../AGENTS.md).
 
 The implementation map and current failure semantics live in the
 [state barrel](../src/state/state.AGENTS.md) and
-[job-search barrel](../src/features/job-search/job-search.AGENTS.md).
+[hello barrel](../src/features/hello/hello.AGENTS.md).

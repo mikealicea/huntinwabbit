@@ -6,7 +6,9 @@ import { describe, expect, it } from 'vitest';
 import { checkArchitecture } from './architecture.check';
 
 function checkFixture(files: Record<string, string>) {
-  const root = mkdtempSync(path.join(tmpdir(), 'huntinwabbit-architecture-'));
+  const root = mkdtempSync(
+    path.join(tmpdir(), 'huntinwabbit-boilerplate-architecture-'),
+  );
   try {
     for (const [name, text] of Object.entries(files)) {
       mkdirSync(path.dirname(path.join(root, name)), { recursive: true });
@@ -135,7 +137,6 @@ describe('presentation dependency boundaries', () => {
         'Plain.tsx': `export const Plain = () => <div />;`,
         'Wrong.container.tsx': `export function Wrong() { return <div />; }`,
         'app/page.tsx': `export default function Page() { return <div />; }`,
-        'features/blog/blog.mdx-components.tsx': `export const wrapper = () => <div />;`,
       }),
     ).toEqual([
       expect.stringContaining('JSX owner'),
