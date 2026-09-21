@@ -1,5 +1,5 @@
-# Deployment identity for the huntinwabbit backend.
-org: builtinspace
+# Supply your own deployment identity through ignored dotenv files or CI configuration.
+org: ${env:SERVERLESS_ORG}
 service: huntinwabbit
 
 frameworkVersion: '4'

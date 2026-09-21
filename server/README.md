@@ -73,8 +73,9 @@ run. It does not provision users or deploy code. The ordinary `npm test` stays o
 
 ## Deploying
 
-Deployment is a separate authorized operation, not a verification step. The dev target is
-`huntinwabbit-dev` in the `builtinspace` AWS account. Read
+Deployment is a separate authorized operation, not a verification step. Deploy to your own AWS
+account using your configured credentials or AWS_PROFILE. The stack name is `huntinwabbit-<stage>`;
+that name does not select an AWS account. Read
 [the deployment guide](docs/SERVERLESS-V4.AGENTS.md), select the intended stage and access boundary,
 and verify packaging before deploying:
 
@@ -82,7 +83,10 @@ and verify packaging before deploying:
 npx --no-install serverless deploy --stage <authorized-stage>
 ```
 
-Set SUPABASE_URL in the packaging/deployment environment; Serverless passes it to Lambda.
+Set SERVERLESS_ORG to your own Serverless Framework organization and SUPABASE_URL to your own
+Supabase project in ignored `server/.env` or your deployment environment. Neither has a checked-in
+fallback. The organization selects the Serverless account, not the AWS account. Serverless passes
+SUPABASE_URL to Lambda; SERVERLESS_ORG is deployment-only configuration.
 The API enforces bearer authentication in Express behind the existing Function URL.
 
 Requires `SERVERLESS_ACCESS_KEY` (or a license key). See `docs/SERVERLESS-V4.AGENTS.md` for

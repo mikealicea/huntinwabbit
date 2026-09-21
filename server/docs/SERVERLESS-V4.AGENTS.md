@@ -3,8 +3,9 @@
 Read the [server guide](../AGENTS.md) before changing deployment configuration. Exact values belong
 to [serverless.yml](../serverless.yml), [esbuild.config.mjs](../esbuild.config.mjs),
 [package.json](../package.json) and its lockfile. This guide explains the operational boundaries.
-The service targets the `builtinspace` AWS account (339050855812). The dev stack is
-`huntinwabbit-dev` in the configured region. Production deployment remains separate work.
+Operators supply their own Serverless organization through SERVERLESS_ORG and their own AWS
+credentials or AWS_PROFILE. There is no checked-in organization or AWS account target. The stack is
+`huntinwabbit-<stage>` in the configured account and region. Production deployment remains separate work.
 
 ## Build and packaging
 
@@ -30,7 +31,13 @@ For new configuration, reconcile the stage value, environment parser, dependency
 resource access and tests together. Disabled and configured-but-broken capabilities are different
 states. Keep local bypasses out of deployed composition.
 
-SUPABASE_URL is required during packaging/deployment and is passed to Lambda. The
+SERVERLESS_ORG and SUPABASE_URL are required during packaging/deployment, with no fallback.
+Keep actual values in ignored `server/.env`, stage-specific dotenv files or deployment configuration;
+the [environment example](../.env.example) contains placeholders. SERVERLESS_ORG selects the
+Serverless Framework organization, not AWS credentials, and is not passed to Lambda.
+The [Framework environment-variable reference](https://www.serverless.com/framework/docs/guides/variables/env-vars)
+documents dotenv loading and interpolation (checked 2026-09-21).
+SUPABASE_URL is passed to Lambda. The
 [auth parser](../src/features/auth/auth.config.ts) validates it at runtime construction. Public-key
 verification requires no runtime API key or signing secret.
 
@@ -75,8 +82,8 @@ signs out its own session. It does not deploy or prove that the running artifact
 
 ## Verified dev deployment
 
-On 2026-09-19, the packaged service was deployed to `huntinwabbit-dev` in AWS account
-339050855812, `us-east-1`. CloudFormation reported `CREATE_COMPLETE`, and the Node 24 Lambda
+On 2026-09-19, the packaged service was deployed to the maintainer's dev stack.
+CloudFormation reported `CREATE_COMPLETE`, and the Node 24 Lambda
 reported `Active` with a successful update. The actual Function URL is kept in ignored deployment environment files; obtain your own target from deployment outputs.
 
 Live checks returned public health 200 and protected-route 401 for missing credentials, malformed
