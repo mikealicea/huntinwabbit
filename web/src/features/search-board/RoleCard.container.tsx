@@ -26,9 +26,11 @@ import { RoleCard } from './RoleCard.component';
 export function RoleCardContainer({
   role: initial,
   saving = false,
+  onDeleted,
 }: {
   role: Opportunity;
   saving?: boolean;
+  onDeleted: (id: string) => void;
 }) {
   const dispatch = useAppDispatch();
   const [extract, extraction] = useExtractPostingMutation();
@@ -92,9 +94,7 @@ export function RoleCardContainer({
                 id: role.id,
                 expectedApplicationVersion,
               }).unwrap();
-              requestAnimationFrame(() =>
-                document.getElementById('search-board-title')?.focus(),
-              );
+              onDeleted(role.id);
               return 'deleted';
             } catch (error) {
               if (

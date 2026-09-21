@@ -8,7 +8,8 @@ one question: **Where does everything stand?**
 
 The web app implements a live board, batch link capture and saved-role workspace at `/app`.
 Saved links and tracking edits persist through the backend; posting details are extracted asynchronously
-with agent-fetch and Redpill. Tasks, resumes, submitted materials and shared company research remain
+with agent-fetch and Redpill. The role workspace also accepts natural-language edits with saved
+chat history, partial updates and Undo; user corrections survive posting refreshes. Tasks, resumes, submitted materials and shared company research remain
 unavailable. `/` currently links into the app. See the [web README](web/README.md) for setup.
 
 This is a public, self-hostable repository. Configure your own Supabase authentication project and

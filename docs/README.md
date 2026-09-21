@@ -28,6 +28,8 @@ Do not maintain a second implementation in prose.
 
 - [Job parsing processor boundary](job-parsing-data-boundary.md) — public posting retrieval, Redpill
   inference, observed JSON support, credentials and the stateless parsing service used by durable extraction jobs.
+- [Role update data boundary](role-updates-data-boundary.md) — persistent chat, personal text sent to
+  Redpill, override precedence and conversation deletion.
 - [Saved job posting data boundary](job-postings-data-boundary.md) — user-owned DynamoDB records,
   retained data, deployment separation and account-deletion limitations.
 

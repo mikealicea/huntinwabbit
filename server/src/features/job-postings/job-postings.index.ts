@@ -1,5 +1,8 @@
 export { jobPostingsTable } from './job-postings.config.ts';
-export { createDynamoPostingStore } from './job-postings.dynamodb.ts';
+export {
+  createDynamoPostingStore,
+  createDynamoTransport,
+} from './job-postings.dynamodb.ts';
 export { createJobPostingsRouter } from './job-postings.router.ts';
 export {
   type JobPostings,
@@ -9,6 +12,9 @@ export {
   saveResponseSchema,
 } from './job-postings.schemas.ts';
 export { createJobPostings } from './job-postings.service.ts';
+export { createRoleUpdatesRouter } from './job-postings.updates.router.ts';
+
+export { createRoleUpdates, type RoleUpdates } from './job-postings.updates.ts';
 export {
   handler as extractionHandler,
   recover as recoverExtractions,

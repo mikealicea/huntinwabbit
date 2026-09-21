@@ -121,7 +121,7 @@ describe('search board', () => {
     await openConfirmation();
     api.fetcher.mockResolvedValueOnce(Response.json({}, { status: 503 }));
     await user.click(
-      screen.getByRole('button', { name: 'Delete permanently' }),
+      await screen.findByRole('button', { name: 'Delete permanently' }),
     );
     expect(
       await screen.findByText('Deletion could not be confirmed. Try again.'),
@@ -135,7 +135,7 @@ describe('search board', () => {
       recordVersion: item.recordVersion + 1,
     });
     await user.click(
-      screen.getByRole('button', { name: 'Delete permanently' }),
+      await screen.findByRole('button', { name: 'Delete permanently' }),
     );
     expect(
       await screen.findByText(/This posting changed elsewhere/),
@@ -146,7 +146,7 @@ describe('search board', () => {
     await user.click(screen.getByRole('button', { name: 'Review posting' }));
     await openConfirmation();
     await user.click(
-      screen.getByRole('button', { name: 'Delete permanently' }),
+      await screen.findByRole('button', { name: 'Delete permanently' }),
     );
     await waitFor(() => expect(card).not.toBeInTheDocument());
     expect(api.records.has(item.id)).toBe(false);

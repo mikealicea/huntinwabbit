@@ -141,7 +141,7 @@ resources:
                   Action: ['dynamodb:GetItem', 'dynamodb:Query']
                   Resource: !GetAtt JobPostingsTable.Arn
                 - Effect: Allow
-                  Action: ['dynamodb:PutItem']
+                  Action: ['dynamodb:PutItem', 'dynamodb:DeleteItem']
                   Resource: !GetAtt JobPostingsTable.Arn
                   Condition:
                     StringEquals:

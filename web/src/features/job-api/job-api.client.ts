@@ -11,6 +11,10 @@ import {
   listResponseSchema,
   type SavedPosting,
   saveResponseSchema,
+  type UpdateEntry,
+  type UpdateMessage,
+  updateHistorySchema,
+  updateResultSchema,
 } from './job-api.contracts';
 
 const transport = fetchBaseQuery({
@@ -42,11 +46,15 @@ const validatedQuery: BaseQueryFn<
           },
         };
   const schema =
-    api.endpoint === 'postings'
-      ? listResponseSchema
-      : api.endpoint === 'savePosting'
-        ? saveResponseSchema
-        : itemResponseSchema;
+    api.endpoint === 'roleUpdates'
+      ? updateHistorySchema
+      : ['sendRoleUpdate', 'undoRoleUpdate'].includes(api.endpoint)
+        ? updateResultSchema
+        : api.endpoint === 'postings'
+          ? listResponseSchema
+          : api.endpoint === 'savePosting'
+            ? saveResponseSchema
+            : itemResponseSchema;
   const parsed = schema.safeParse(result.data);
   return parsed.success
     ? { data: parsed.data }
@@ -60,8 +68,63 @@ const validatedQuery: BaseQueryFn<
 export const postingApi = createApi({
   reducerPath: 'postingApi',
   baseQuery: validatedQuery,
-  tagTypes: ['Posting'],
+  tagTypes: ['Posting', 'Updates'],
   endpoints: (build) => ({
+    roleUpdates: build.infiniteQuery<
+      ReturnType<typeof updateHistorySchema.parse>,
+      string,
+      string | null
+    >({
+      infiniteQueryOptions: {
+        initialPageParam: null,
+        getNextPageParam: (last) => last.nextCursor ?? undefined,
+      },
+      query: ({ queryArg, pageParam }) => ({
+        url: `/${queryArg}/updates`,
+        params: pageParam ? { cursor: pageParam } : {},
+      }),
+      transformResponse: (value: unknown) => updateHistorySchema.parse(value),
+      providesTags: (_result, _error, id) => [{ type: 'Updates', id }],
+      async onQueryStarted(_arg, { dispatch, queryFulfilled }) {
+        try {
+          await queryFulfilled;
+          dispatch(postingApi.util.invalidateTags(['Posting']));
+        } catch {
+          /* History errors are shown in the panel. */
+        }
+      },
+    }),
+    sendRoleUpdate: build.mutation<UpdateEntry, UpdateMessage & { id: string }>(
+      {
+        query: ({ id, ...body }) => ({
+          url: `/${id}/updates`,
+          method: 'POST',
+          body,
+        }),
+        transformResponse: (value: unknown) =>
+          updateResultSchema.parse(value).entry,
+        invalidatesTags: (_result, _error, { id }) => [
+          { type: 'Updates', id },
+          { type: 'Posting', id },
+        ],
+      },
+    ),
+    undoRoleUpdate: build.mutation<
+      UpdateEntry,
+      { id: string; operationId: string }
+    >({
+      query: ({ id, operationId }) => ({
+        url: `/${id}/updates/${operationId}/undo`,
+        method: 'POST',
+        body: {},
+      }),
+      transformResponse: (value: unknown) =>
+        updateResultSchema.parse(value).entry,
+      invalidatesTags: (_result, _error, { id }) => [
+        'Posting',
+        { type: 'Updates', id },
+      ],
+    }),
     postings: build.infiniteQuery<
       ReturnType<typeof listResponseSchema.parse>,
       void,
@@ -169,6 +232,9 @@ export const postingApi = createApi({
   }),
 });
 export const {
+  useRoleUpdatesInfiniteQuery,
+  useSendRoleUpdateMutation,
+  useUndoRoleUpdateMutation,
   usePostingsInfiniteQuery,
   usePostingQuery,
   useSavePostingMutation,

@@ -3,12 +3,16 @@ import { z } from 'zod';
 import {
   deleteRequestSchema,
   extractionRequestSchema,
+  historyQuerySchema,
   itemResponseSchema,
   listRequestSchema,
   listResponseSchema,
   saveRequestSchema,
   saveResponseSchema,
+  updateHistorySchema,
+  updateMessageSchema,
   updateRequestSchema,
+  updateResultSchema,
 } from './job-api.contracts';
 
 const headers = {
@@ -73,51 +77,72 @@ export function createApiBridge(deps: {
         );
       const url = new URL(request.url);
       const suffix = url.pathname.slice('/api/job-postings'.length);
-      const match = /^\/([0-9a-f-]{36})(\/extraction)?$/.exec(suffix);
+      const match =
+        /^\/([0-9a-f-]{36})(\/extraction|\/updates(?:\/([0-9a-f-]{36})\/undo)?)?$/.exec(
+          suffix,
+        );
       if (suffix && (!match || !z.uuid().safeParse(match[1]).success))
         return failure(404, 'NOT_FOUND');
+      if (match?.[3] && !z.uuid().safeParse(match[3]).success)
+        return failure(404, 'NOT_FOUND');
       const action =
-        request.method === 'GET' && !match
-          ? 'list'
-          : request.method === 'GET' && match && !match[2]
-            ? 'get'
-            : request.method === 'POST' && !match
-              ? 'save'
-              : request.method === 'PATCH' && match && !match[2]
-                ? 'update'
-                : request.method === 'POST' && match?.[2]
-                  ? 'extract'
-                  : request.method === 'DELETE' && match && !match[2]
-                    ? 'delete'
-                    : undefined;
+        request.method === 'GET' && match?.[2] === '/updates'
+          ? 'history'
+          : request.method === 'POST' && match?.[3]
+            ? 'undo'
+            : request.method === 'POST' && match?.[2] === '/updates'
+              ? 'message'
+              : request.method === 'GET' && !match
+                ? 'list'
+                : request.method === 'GET' && match && !match[2]
+                  ? 'get'
+                  : request.method === 'POST' && !match
+                    ? 'save'
+                    : request.method === 'PATCH' && match && !match[2]
+                      ? 'update'
+                      : request.method === 'POST' && match?.[2]
+                        ? 'extract'
+                        : request.method === 'DELETE' && match && !match[2]
+                          ? 'delete'
+                          : undefined;
       if (!action) return failure(405, 'METHOD_NOT_ALLOWED');
       let query = '';
       let body: string | undefined;
       try {
-        if (action === 'list') {
+        if (action === 'list' || action === 'history') {
           if (
             [...url.searchParams.keys()].some(
               (key) => url.searchParams.getAll(key).length !== 1,
             )
           )
             return failure(400, 'INVALID_REQUEST');
-          listRequestSchema.parse(Object.fromEntries(url.searchParams));
+          (action === 'history' ? historyQuerySchema : listRequestSchema).parse(
+            Object.fromEntries(url.searchParams),
+          );
           query = url.search;
         } else if (url.search) return failure(400, 'INVALID_REQUEST');
-        if (['save', 'update', 'extract', 'delete'].includes(action)) {
+        if (
+          ['save', 'update', 'extract', 'delete', 'message', 'undo'].includes(
+            action,
+          )
+        ) {
           if (
             !request.headers.get('content-type')?.startsWith('application/json')
           )
             return failure(415, 'UNSUPPORTED_MEDIA_TYPE');
           const value = await boundedJson(request, 256 * 1024);
           const schema =
-            action === 'save'
-              ? saveRequestSchema
-              : action === 'update'
-                ? updateRequestSchema
-                : action === 'delete'
-                  ? deleteRequestSchema
-                  : extractionRequestSchema;
+            action === 'message'
+              ? updateMessageSchema
+              : action === 'undo'
+                ? z.strictObject({})
+                : action === 'save'
+                  ? saveRequestSchema
+                  : action === 'update'
+                    ? updateRequestSchema
+                    : action === 'delete'
+                      ? deleteRequestSchema
+                      : extractionRequestSchema;
           body = JSON.stringify(schema.parse(value));
         }
       } catch {
@@ -150,11 +175,15 @@ export function createApiBridge(deps: {
           ? new Response(null, { status: 204, headers })
           : failure(502, 'INVALID_RESPONSE');
       const schema =
-        action === 'list'
-          ? listResponseSchema
-          : action === 'save'
-            ? saveResponseSchema
-            : itemResponseSchema;
+        action === 'history'
+          ? updateHistorySchema
+          : ['message', 'undo'].includes(action)
+            ? updateResultSchema
+            : action === 'list'
+              ? listResponseSchema
+              : action === 'save'
+                ? saveResponseSchema
+                : itemResponseSchema;
       const result = schema.parse(await boundedJson(response, 2 * 1024 * 1024));
       return Response.json(result, { status: response.status, headers });
     } catch {

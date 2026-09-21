@@ -20,6 +20,9 @@ import { jobPostingsTable } from './job-postings.config.ts';
 import { type DynamoTransport, readRecord } from './job-postings.dynamodb.ts';
 import { postingPut, readRow } from './job-postings.operations.ts';
 import type { SavedPosting } from './job-postings.schemas.ts';
+import { createRoleUpdateParser } from './job-postings.updates.redpill.ts';
+import type { ParseUpdates } from './job-postings.updates.schemas.ts';
+import { createRoleUpdates } from './job-postings.updates.ts';
 
 const jobSchema = z.object({
   pk: z.string().startsWith('USER#'),
@@ -37,7 +40,15 @@ export function createExtractionWorker(
   send: DynamoTransport,
   parse: ParsePosting | undefined,
   now = Date.now,
+  parseUpdates?: ParseUpdates,
 ) {
+  const updates = createRoleUpdates(
+    table,
+    send,
+    !!parseUpdates,
+    parseUpdates,
+    now,
+  );
   async function transition(
     job: Job,
     status: Job['status'],
@@ -113,6 +124,8 @@ export function createExtractionWorker(
   }
   return {
     async run(pk: string, sk: string) {
+      if (sk.startsWith('JOB#UPDATE-ID#')) return;
+      if (sk.startsWith('JOB#UPDATE#')) return updates.run(pk, sk);
       const value = await readRow(
         table,
         send,
@@ -189,6 +202,10 @@ export function createExtractionWorker(
           );
         for (const value of page.Items) {
           const key = z.object({ pk: z.string(), sk: z.string() }).parse(value);
+          if (key.sk.startsWith('JOB#UPDATE#')) {
+            await updates.recover(key.pk, key.sk);
+            continue;
+          }
           if (key.sk.startsWith('DELETE#')) {
             await cleanupDeletedPosting(table, send, key.pk, key.sk, now());
             continue;
@@ -233,6 +250,8 @@ function runtime() {
           extractPosting: createRedpillExtractor(config.apiKey),
         })
       : undefined,
+    Date.now,
+    config.enabled ? createRoleUpdateParser(config.apiKey) : undefined,
   );
 }
 const streamSchema = z.object({

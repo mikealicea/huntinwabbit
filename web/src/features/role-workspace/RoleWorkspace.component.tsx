@@ -31,6 +31,7 @@ export interface RoleWorkspaceProps {
   extracting?: boolean;
   onExtract?: () => void;
   onTaskCompletionChange: (taskId: string, completed: boolean) => void;
+  updates?: ReactNode;
   materials: ReactNode;
   company: ReactNode;
 }
@@ -47,6 +48,7 @@ export function RoleWorkspace({
   nextActionLabel,
   onApplicationChange,
   onTaskCompletionChange,
+  updates,
   materials,
   company,
 }: RoleWorkspaceProps) {
@@ -263,7 +265,8 @@ export function RoleWorkspace({
             </div>
           </section>
         </div>
-        <div className="min-w-0 space-y-5">
+        <div className="contents min-w-0 space-y-5 lg:block">
+          {updates}
           {materials}
           {company}
         </div>

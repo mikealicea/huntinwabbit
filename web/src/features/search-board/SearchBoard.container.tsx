@@ -2,7 +2,7 @@
 
 import { Accessibility } from '@dnd-kit/dom';
 import { DragDropProvider, DragOverlay } from '@dnd-kit/react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import {
   RequestFeedback,
   usePostingsInfiniteQuery,
@@ -26,6 +26,7 @@ import { boardAccessibility } from './search-board.drag';
 export function SearchBoardContainer() {
   const query = usePostingsInfiniteQuery(undefined, { refetchOnFocus: true });
   const [update, mutation] = useUpdatePostingMutation();
+  const [deletedRoleId, setDeletedRoleId] = useState<string | null>(null);
   useEffect(() => {
     if (query.hasNextPage && !query.isFetching && !query.isError)
       void query.fetchNextPage();
@@ -33,6 +34,14 @@ export function SearchBoardContainer() {
   const opportunities = mergePostingPages(query.data?.pages ?? []).map(
     toOpportunity,
   );
+  const deletedStillVisible = opportunities.some(
+    (role) => role.id === deletedRoleId,
+  );
+  useEffect(() => {
+    // The board survives the deleted card and runs after its modal is removed.
+    if (deletedRoleId && !deletedStillVisible)
+      document.getElementById('search-board-title')?.focus();
+  }, [deletedRoleId, deletedStillVisible]);
   const activeCount = opportunities.filter(
     (role) => role.stage !== 'closed',
   ).length;
@@ -97,6 +106,7 @@ export function SearchBoardContainer() {
               key={stage}
               stage={stage}
               saving={mutation.isLoading}
+              onDeleted={setDeletedRoleId}
               roles={opportunities.filter((role) => role.stage === stage)}
             />
           ))}

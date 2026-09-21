@@ -1,5 +1,8 @@
 import { z } from 'zod';
-import { parseResponseSchema } from '../job-parsing/job-parsing.index.ts';
+import {
+  jobSchema,
+  parseResponseSchema,
+} from '../job-parsing/job-parsing.index.ts';
 
 export const MAX_RECORD_BYTES = 256 * 1024;
 export const applicationSchema = z.strictObject({
@@ -15,6 +18,24 @@ export const applicationSchema = z.strictObject({
   priority: z.enum(['not-set', 'high', 'medium', 'low']),
   followUpOn: z.iso.date().nullable(),
   notes: z.string().max(20_000),
+});
+export const postingFieldsSchema = jobSchema.omit({ company: true }).extend({
+  companyName: jobSchema.shape.company.shape.name,
+  companyWebsite: jobSchema.shape.company.shape.website,
+});
+export const editableFieldsSchema = postingFieldsSchema.extend({
+  ...applicationSchema.shape,
+  sourceUrl: z.url(),
+});
+export type EditableFields = z.infer<typeof editableFieldsSchema>;
+export type FieldName = keyof EditableFields;
+export const fieldNameSchema = z.enum(
+  Object.keys(editableFieldsSchema.shape) as [FieldName, ...FieldName[]],
+);
+export const roleEditsSchema = z.strictObject({
+  overrides: postingFieldsSchema.partial(),
+  revisions: z.partialRecord(fieldNameSchema, z.number().int().nonnegative()),
+  pending: z.string().nullable(),
 });
 export const saveRequestSchema = z.strictObject({
   url: z.string().trim().min(1).max(8_192),
@@ -55,6 +76,7 @@ export const extractionSchema = z.strictObject({
   error: z.string().nullable(),
 });
 export const savedPostingSchema = legacyPostingSchema.extend({
+  edits: roleEditsSchema.optional(),
   applicationVersion: z.number().int().nonnegative(),
   recordVersion: z.number().int().nonnegative(),
   extraction: extractionSchema,

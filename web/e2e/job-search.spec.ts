@@ -490,6 +490,117 @@ test('delete confirmation works by keyboard and removes the posting across reloa
   expect(page.url()).not.toBe(original);
 });
 
+for (const theme of ['light', 'dark']) {
+  test(`role chat persists updates, protects refresh, and undoes in ${theme}`, async ({
+    page,
+  }, testInfo) => {
+    await page.emulateMedia({ colorScheme: theme as 'light' | 'dark' });
+    await expect(page.locator('html')).toHaveAttribute(
+      'data-theme',
+      theme === 'dark' ? 'forest' : 'emerald',
+    );
+    await page
+      .getByRole('link', { name: 'Open Senior Product Engineer at Northstar' })
+      .click();
+    const chat = page.getByRole('region', { name: 'Update role', exact: true });
+    await chat
+      .getByRole('textbox', { name: 'Your update' })
+      .fill(
+        'Set title to Staff Product Engineer and priority high; salary is unclear',
+      );
+    await chat.getByRole('button', { name: 'Send', exact: true }).click();
+    await page.reload();
+    await expect(
+      page.getByRole('heading', {
+        name: 'Staff Product Engineer',
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(chat.getByText('Some changes saved')).toBeVisible();
+    await expect(
+      chat.getByText('Not changed: The salary is unclear.'),
+    ).toBeVisible();
+    await page.getByLabel('Posting actions').click();
+    await page
+      .getByRole('button', { name: 'Refresh posting', exact: true })
+      .click();
+    await expect(
+      page.getByText(
+        'Refresh could not finish. Your previous details are still shown.',
+      ),
+    ).toBeVisible();
+    await page.getByLabel('Posting actions').click();
+    await page
+      .getByRole('button', { name: 'Retry extraction', exact: true })
+      .click();
+    await expect(
+      page.getByText(
+        'Your corrections are preserved when posting details refresh.',
+      ),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('heading', {
+        name: 'Staff Product Engineer',
+        exact: true,
+      }),
+    ).toBeVisible();
+    await page.screenshot({
+      path: testInfo.outputPath(`role-chat-${theme}.png`),
+      fullPage: true,
+    });
+    await chat.getByRole('button', { name: 'Undo changes' }).click();
+    await expect(chat.getByText('Changes undone')).toBeVisible();
+    await page.reload();
+    await expect(chat.getByText('Changes undone')).toBeVisible();
+  });
+  test(`mobile role chat supports keyboard, retry and close in ${theme}`, async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.emulateMedia({ colorScheme: theme as 'light' | 'dark' });
+    await expect(page.locator('html')).toHaveAttribute(
+      'data-theme',
+      theme === 'dark' ? 'forest' : 'emerald',
+    );
+    await page
+      .getByRole('link', { name: 'Open Senior Product Engineer at Northstar' })
+      .click();
+    const opener = page.getByRole('button', {
+      name: 'Update role',
+      exact: true,
+    });
+    await opener.click();
+    const dialog = page.getByRole('dialog', { name: 'Update role' });
+    const input = dialog.getByRole('textbox', { name: 'Your update' });
+    await expect(input).toBeFocused();
+    await input.fill('simulate failure');
+    await input.press('Shift+Enter');
+    await expect(input).toHaveValue('simulate failure\n');
+    await input.press('Enter');
+    await expect(
+      dialog.getByText('Update failed', { exact: true }),
+    ).toBeVisible();
+    await dialog.getByRole('button', { name: 'Retry update' }).click();
+    await expect(
+      dialog.getByText('Changes saved', { exact: true }),
+    ).toBeVisible();
+    await page.screenshot({
+      path: testInfo.outputPath(`role-chat-mobile-${theme}.png`),
+      fullPage: false,
+    });
+    await page.keyboard.press('Escape');
+    await expect(dialog).not.toBeVisible();
+    await expect(opener).toBeFocused();
+    await page.reload();
+    await opener.click();
+    await expect(
+      dialog.getByText('Changes saved', { exact: true }),
+    ).toBeVisible();
+    await dialog.getByRole('button', { name: 'Close', exact: true }).click();
+    await expect(opener).toBeFocused();
+  });
+}
+
 test('card actions refresh and delete in place without starting a drag', async ({
   page,
 }, testInfo) => {

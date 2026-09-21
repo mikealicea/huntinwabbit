@@ -1,4 +1,4 @@
-import type { SavedPosting } from '@/features/job-api/job-api.index';
+import type { Job, SavedPosting } from '@/features/job-api/job-api.index';
 export const STAGES = [
   'collected',
   'applied',
@@ -100,6 +100,7 @@ export interface ApplicationFields {
 
 export interface Opportunity extends ApplicationFields {
   saved?: SavedPosting;
+  jobDetails?: Job;
   companyName?: string | null;
   id: string;
   sourceUrl: string | null;

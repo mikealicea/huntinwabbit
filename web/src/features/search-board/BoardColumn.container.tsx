@@ -10,8 +10,10 @@ export function BoardColumnContainer({
   stage,
   roles,
   saving = false,
+  onDeleted,
 }: {
   saving?: boolean;
+  onDeleted: (id: string) => void;
   stage: Stage;
   roles: Opportunity[];
 }) {
@@ -24,7 +26,12 @@ export function BoardColumnContainer({
       dropRef={ref}
     >
       {roles.map((role) => (
-        <RoleCardContainer key={role.id} role={role} saving={saving} />
+        <RoleCardContainer
+          key={role.id}
+          role={role}
+          saving={saving}
+          onDeleted={onDeleted}
+        />
       ))}
     </BoardColumn>
   );

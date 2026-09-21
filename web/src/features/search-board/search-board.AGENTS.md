@@ -43,6 +43,7 @@ above neighbors. Actions use independent controls rather than the navigation lin
 Card containers send mutations through the existing API cache. Pending requests disable the move
 handle and competing actions; stage writes disable card actions. Delete uses the same permanent
 confirmation as role details, retains the card on failure, and refreshes conflicting versions for
-review before reconfirmation. Acknowledged deletion removes the card and focuses the board heading.
+review before reconfirmation. Acknowledged deletion removes the card. The surviving board container focuses its heading after
+the card and native modal have unmounted; the removed card does not own the focus timer.
 Browser coverage exercises in-place refresh/retry, confirmation cancellation, deletion/reload, keyboard
 menu controls and narrow-card/mobile menus in both themes alongside existing drag tests.

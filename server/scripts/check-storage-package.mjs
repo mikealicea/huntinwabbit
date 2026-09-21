@@ -94,7 +94,7 @@ for (const role of ['ExtractionRole', 'RecoveryRole']) {
     policies.some((statement) =>
       statement.Action.includes('dynamodb:DeleteItem'),
     ),
-    role === 'RecoveryRole',
+    true,
   );
   for (const statement of policies.filter((statement) =>
     statement.Action.includes('dynamodb:DeleteItem'),
@@ -128,6 +128,8 @@ for (const name of [
   '@aws-sdk/lib-dynamodb',
   'job-postings.dynamodb.ts',
   'job-postings.router.ts',
+  'job-postings.updates.ts',
+  'job-postings.updates.router.ts',
 ]) {
   assert(
     sourceMap.sources.some((source) => source.includes(name)),
