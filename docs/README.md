@@ -21,6 +21,8 @@ Do not maintain a second implementation in prose.
 
 ## Current explanations
 
+- [Local socket verification](runbooks/local-socket-verification.md) — running local test/build
+  commands under a restricted sandbox and recovering a cached Turbopack permission failure.
 - [Development practices and parity](development-process.md) — the adopted process, its local owners,
   deliberate differences from the reference app, and current implementation gaps.
 - [Authentication infrastructure](auth-infrastructure.md) — shared Supabase configuration, localhost

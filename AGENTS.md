@@ -165,6 +165,13 @@ Use deterministic fixtures and injected external boundaries. Reproduce a defect 
 avoid assertions that merely restate implementation. Do not disable a failing gate to finish work.
 Report an unavailable environment check precisely and complete the checks that can run.
 
+Local server tests, browser tests and the web production build need permission to bind local
+sockets, even when they use no hosted services. In a sandbox that denies socket binding, run these
+commands through the available command-scoped approval mechanism before their first attempt.
+Do not interpret `listen EPERM` or Turbopack's port-binding denial as an application regression.
+Follow the [local socket verification runbook](docs/runbooks/local-socket-verification.md), including
+its targeted cache recovery if a web build repeats the denial after permission is granted.
+
 ## Feature barrels
 
 Every feature being changed needs a `<Feature>.AGENTS.md` in the narrowest folder that owns it.
