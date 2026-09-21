@@ -22,6 +22,11 @@ protects the hello endpoint using public-key JWT verification; it does not mutat
 - [config.toml](config.toml) owns the shared auth settings and redirect allowlist. It enables email
   confirmation, secure password changes and refresh-token rotation. Existing TOTP capability is
   retained; this does not implement an MFA flow in the app.
+  The production origin and exact confirmation callback use `env(...)` references alongside localhost.
+  Copy [.env.example](.env.example) to ignored `supabase/.env` and supply your own production URLs
+  before pushing. Shell variables override this file. These are CLI inputs, separate from Vercel's
+  environment and the web app's local environment; keep them aligned with production APP_ORIGIN.
+  Checked-in settings describe the intended configuration, not proof of remote convergence.
 - [Root mise.toml](../mise.toml) pins the CLI and owns the push command. The operator must supply SUPABASE_PROJECT_REF for their own project; no maintainer project is a fallback.
   Run its task from the repository root. Do not substitute a linked project or a stage-based target.
 - The confirmation and recovery templates referenced by config send users to the caller’s allowlisted

@@ -26,6 +26,8 @@ From the repository root:
 ```sh
 mise trust
 mise install
+cp supabase/.env.example supabase/.env
+# Fill the production frontend origin and exact /auth/confirm URL in supabase/.env.
 mise exec -- supabase login
 SUPABASE_PROJECT_REF=your-project-ref mise run auth:push
 ```
@@ -41,17 +43,43 @@ pushes without reviewing the complete change. Rerun `mise run auth:push` after a
 the auth up-to-date message; a successful exit after declining a prompt does not verify deployment.
 Use `mise run docs:check` for local documentation validation.
 
-## Localhost now, deployed URLs later
+## Production origin and local development
 
-[config.toml](../supabase/config.toml) contains the current localhost Site URL and redirect allowlist.
-The web app implements `/auth/confirm` for both confirmation and recovery emails. When deploying the app:
+[config.toml](../supabase/config.toml) owns the localhost redirect allowlist and references environment
+variables for the production Site URL and exact hosted callback. Supply both values through ignored
+`supabase/.env`, using [the example](../supabase/.env.example), or through the CLI process environment.
+The pinned CLI's config loader reads `supabase/.env` and `supabase/.env.local`; shell variables take
+precedence. It does not read Vercel settings or `web/.env.local` automatically. Use the same production
+origin as Vercel's APP_ORIGIN, while leaving the web app's local origin on localhost.
+`env(...)` replaces whole values, including array entries; it cannot append `/auth/confirm` to an
+origin, so the callback is a separate complete URL. Editing these files does not update the hosted
+Supabase project. The web app implements
+`/auth/confirm` for both confirmation and recovery emails. When deploying or changing the domain:
 
-1. Set `auth.site_url` to the canonical HTTPS production origin.
-2. Add the exact dev/prod callback and recovery destinations implemented by the app to
-   `auth.additional_redirect_urls`, retaining localhost entries. Avoid broad hosted-domain wildcards.
+1. Set SUPABASE_AUTH_SITE_URL to the canonical HTTPS production origin.
+2. Set SUPABASE_AUTH_REDIRECT_URL to that origin plus `/auth/confirm`. Retain localhost entries
+   in `auth.additional_redirect_urls`; add any separately hosted dev callbacks explicitly.
+   Avoid broad hosted-domain wildcards.
 3. Push once to the shared project, then verify readback. There are no separate dev/prod pushes.
 4. Set each web deployment’s APP_ORIGIN to its own HTTPS origin. The app explicitly requests
    APP_ORIGIN plus `/auth/confirm`; templates use RedirectTo rather than the shared Site URL.
+
+In Vercel, set APP_ORIGIN in the Production environment and deploy again to apply the change.
+This is the frontend origin; API_BASE_URL_PROD remains the backend Function URL and APP_STAGE
+selects prod. Keep localhost as APP_ORIGIN in the local development environment. An unauthenticated
+request to the hosted `/app` should redirect to `/login` on the same hosted origin, never localhost.
+The backend needs no frontend-origin change: the browser calls the same-origin Next.js bridge,
+which forwards bearer credentials to Lambda server-side.
+
+When moving to a custom domain, repeat the origin and callback changes together. Confirmation and
+recovery emails already sent contain the old origin, so account for those links before retiring it.
+Vercel documents environment changes as applying to subsequent deployments; Supabase recommends
+exact production redirect paths ([Vercel](https://vercel.com/docs/environment-variables),
+[Supabase](https://supabase.com/docs/guides/auth/redirect-urls), reviewed 2026-09-21).
+Environment substitution and loading were checked against the pinned
+[CLI configuration loader](https://github.com/supabase/cli/blob/v2.111.0/packages/config/docs/project-config-loading.md)
+on 2026-09-21. Use `supabase/.env` for this version rather than relying on generic documentation's
+root `.env` example.
 
 The app integration uses `https://your-project.supabase.co` and a publishable API key.
 The hosted issuer is that URL plus `/auth/v1`, and its public JWKS endpoint is the issuer plus

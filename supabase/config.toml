@@ -4,13 +4,14 @@ project_id = "huntinwabbit"
 
 [auth]
 enabled = true
-# Replace with the canonical HTTPS production origin when hosting is available.
-site_url = "http://localhost:3000"
-# Add exact HTTPS callback URLs for deployed dev/prod here; retain local URLs.
+# Supply your production origin through ignored supabase/.env or the shell environment.
+site_url = "env(SUPABASE_AUTH_SITE_URL)"
+# Retain local URLs and use exact callback paths for hosted deployments.
 # The web app requests /auth/confirm on its configured APP_ORIGIN.
 additional_redirect_urls = [
   "http://localhost:3000/**",
   "http://127.0.0.1:3000/**",
+  "env(SUPABASE_AUTH_REDIRECT_URL)",
 ]
 jwt_expiry = 3600
 enable_refresh_token_rotation = true
