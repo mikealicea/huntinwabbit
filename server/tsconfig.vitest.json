@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "types": ["vitest/globals", "node"],
+    "tsBuildInfoFile": ".tsbuildinfo.vitest"
+  },
+  "include": ["src", "e2e", "vitest.config.ts", "vitest.e2e.config.ts"],
+  "exclude": []
+}

@@ -1,0 +1,11 @@
+[tools]
+node = "24.18.0"
+supabase = "2.111.0"
+
+[tasks."auth:push"]
+description = "Review and push configuration to your Supabase project"
+run = 'supabase config push --project-ref "${SUPABASE_PROJECT_REF:?Set SUPABASE_PROJECT_REF to your project}" --workdir .'
+
+[tasks."docs:check"]
+description = "Validate repository documentation"
+run = "node --test scripts/documentation-structure.test.mjs && node scripts/check-documentation.mjs"

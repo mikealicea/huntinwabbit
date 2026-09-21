@@ -1,0 +1,128 @@
+# Xcode
+sanctum-landing-page-baseline/
+build/
+DerivedData/
+*.xcuserstate
+*.xccheckout
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# User-specific Xcode files
+xcuserdata/
+*.xcodeproj/
+*.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
+
+# Playgrounds
+timeline.xctimeline
+playground.xcworkspace
+
+# Swift Package Manager
+.build/
+Packages/
+Package.resolved
+*.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/
+
+# CocoaPods
+Pods/
+Podfile.lock
+*.xcworkspace
+
+# Carthage
+Carthage/Build/
+Carthage/Checkouts/
+
+# Secrets and environment
+# Dotenv files only (.env, .env.local, server/.env.production, …).
+# Deliberately NOT `*.env.*`, which would also swallow source files like
+# server/src/shared/shared.env.ts.
+.env
+.env.*
+!web/.env.example
+!server/.env.example
+!server/.env.e2e.example
+Secrets.swift
+!Secrets.swift.example
+
+# The client's backend configuration, injected into Info.plist at build time. One file per
+# build configuration — Secrets.Debug.xcconfig points at dev, Secrets.Release.xcconfig at
+# production. Matched by glob so a future configuration cannot be committed by accident; the
+# committed `Secrets.example.xcconfig` documents the shape and is the one exception.
+Secrets*.xcconfig
+!Secrets.example.xcconfig
+# Sentry CLI profiles contain the symbol-upload auth token. CI uses an environment secret instead.
+.sentryclirc
+
+# IDEs
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots
+fastlane/test_output
+
+# Code coverage
+*.gcno
+*.gcda
+
+# Archives
+*.xcarchive
+
+# Axiom plugin state
+.axiom/
+
+# Node / TypeScript
+node_modules/
+coverage/
+logs/
+*.log
+npm-debug.log*
+.npm
+.eslintcache
+*.tsbuildinfo*
+mise.local.toml
+.vscode/
+.serverless/
+
+# Next.js / Pagefind (landing page)
+.next/
+.next-e2e/
+out/
+_pagefind/
+.vercel/
+next-env.d.ts
+
+# Scratch dir: `npm run clean` targets it, and the local blob store writes
+# uploaded clips here when SANCTUM_LOCAL_ADAPTERS=1.
+server/tmp/
+
+tmp-example/
+
+# Scratch dir at the repo root. Ignored *before* anything is written to it, because
+# what lands here is operational — resolved SSM values, dashboard paste sheets — and
+# a secret is committable the moment the folder isn't.
+/temp/
+
+.obsidian
+
+# Browser test artifacts
+web/test-results/
+web/playwright-report/
+
+# Supabase checkout-local linkage and CLI state
+supabase/.temp/
+supabase/.branches/

@@ -1,0 +1,22 @@
+{
+  "name": "toolbelt",
+  "version": "0.1.0",
+  "description": "A collection of TypeScript tools for AI agents",
+  "scripts": {
+    "biome:check": "bun x @biomejs/biome check .",
+    "biome:write": "bun x @biomejs/biome check --write .",
+    "signoff": "bun test && bun run biome:write && bun run biome:check",
+    "test": "bun test",
+    "test:watch": "bun test --watch"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.8",
+    "bun-types": "^1.3.10"
+  },
+  "dependencies": {
+    "sweph": "2.10.3-5"
+  },
+  "trustedDependencies": [
+    "sweph"
+  ]
+}

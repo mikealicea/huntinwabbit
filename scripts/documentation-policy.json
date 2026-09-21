@@ -1,0 +1,112 @@
+{
+  "ownershipClasses": [
+    {
+      "name": "incidents",
+      "include": [
+        ".agents/**"
+      ]
+    },
+    {
+      "name": "workspace",
+      "include": [
+        "product-workspace/**"
+      ]
+    },
+    {
+      "name": "historical",
+      "include": [
+        "docs/oneOff/**"
+      ]
+    },
+    {
+      "name": "current",
+      "include": [
+        "AGENTS.md",
+        "README.md",
+        "assets/**",
+        "server/**",
+        "web/**",
+        "docs/**",
+        "scripts/**",
+        "supabase/**"
+      ],
+      "exclude": [
+        "docs/oneOff/**"
+      ]
+    }
+  ],
+  "linkCheckClasses": [
+    "current",
+    "incidents"
+  ],
+  "barrelIndexes": [
+    {
+      "guide": "AGENTS.md",
+      "include": [
+        "scripts/*.AGENTS.md",
+        "assets/*.AGENTS.md",
+        "supabase/*.AGENTS.md"
+      ]
+    },
+    {
+      "guide": "server/AGENTS.md",
+      "include": [
+        "server/src/**/*.AGENTS.md",
+        "server/scripts/*.AGENTS.md",
+        "server/docs/*.AGENTS.md"
+      ]
+    },
+    {
+      "guide": "web/AGENTS.md",
+      "include": [
+        "web/src/**/*.AGENTS.md",
+        "web/scripts/*.AGENTS.md",
+        "web/docs/*.AGENTS.md"
+      ]
+    }
+  ],
+  "documentIndexes": [
+    {
+      "index": "docs/README.md",
+      "include": [
+        "docs/*.md",
+        "docs/runbooks/*.md"
+      ]
+    },
+    {
+      "index": "product-workspace/huntinwabbit-projects.md",
+      "include": [
+        "product-workspace/projects/**/*.index.md"
+      ],
+      "allowBasename": true
+    },
+    {
+      "index": "product-workspace/research/huntinwabbit-research.md",
+      "include": [
+        "product-workspace/research/**/*.index.md"
+      ],
+      "allowBasename": true
+    }
+  ],
+  "featureDirectories": [
+    "web/src/features",
+    "server/src/features"
+  ],
+  "requiredSymlinks": [
+    {
+      "path": "CLAUDE.md",
+      "target": "AGENTS.md"
+    },
+    {
+      "path": "web/CLAUDE.md",
+      "target": "AGENTS.md"
+    },
+    {
+      "path": "server/CLAUDE.md",
+      "target": "AGENTS.md"
+    }
+  ],
+  "deprecatedPrefixes": [
+    "docs/planned/"
+  ]
+}

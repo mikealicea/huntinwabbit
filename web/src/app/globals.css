@@ -1,0 +1,49 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+@plugin "daisyui" {
+  themes:
+    emerald --default,
+    forest --prefersdark;
+}
+
+@custom-variant dark (&:where([data-theme="forest"], [data-theme="forest"] *));
+
+@theme inline {
+  --font-sans: var(--font-ubuntu-sans);
+  --font-mono: var(--font-ubuntu-mono);
+}
+
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--color-base-content);
+    outline-offset: 3px;
+  }
+}
+
+/* Theme defaults use faint field borders. Keep input boundaries perceptible in
+   both palettes, including an unchecked task, without changing status colors. */
+.input,
+.select,
+.textarea,
+.checkbox {
+  border-color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+}
+
+.input[aria-invalid="true"] {
+  border-color: var(--color-error);
+}
+
+.input::placeholder,
+.textarea::placeholder {
+  color: color-mix(in oklab, var(--color-base-content) 75%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none;
+    transition: none;
+    scroll-behavior: auto;
+  }
+}
