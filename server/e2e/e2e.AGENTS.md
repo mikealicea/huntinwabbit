@@ -17,6 +17,12 @@ external operation, separate from the offline server gate. Run only against an a
   ignored `.env.e2e` in `server/` and fill your own dev API URL, Supabase URL and publishable key.
   Run `mise exec -- npm run test:e2e` there.
 
+The example also shows a commented prod target and dedicated-account file. For an authorized
+production check, replace the active target and account settings with production values, including
+the matching Supabase configuration. Keep only one active assignment per key. The suite reads
+`E2E_API_URL` directly; it does not use the frontend's `APP_STAGE` or infer a target from the Git branch.
+Keep routine local checks pointed at dev.
+
 Configure an ignored dedicated account file, or supply E2E_EMAIL and E2E_PASSWORD together through a
 secret store/environment. File paths are relative to the server working directory. CI must supply
 its own credentials; the example contains none. The suite fails visibly when configuration or

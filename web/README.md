@@ -38,6 +38,14 @@ explicit stage. Production builds can target dev. No hosted endpoint is built in
 used as a fallback. Keep actual deployment targets and credentials out of checked-in examples.
 The [auth runbook](../docs/auth-infrastructure.md) describes authentication configuration.
 
+Keep both stage URLs in `.env.local` using the slots in [.env.example](.env.example). After a prod
+backend deployment, set `API_BASE_URL_PROD` to its API Function URL. Keep `APP_STAGE=dev` for ordinary
+local work; select `APP_STAGE=prod` and restart the web server when intentionally using production
+data. Git branch selection does not select the API stage. For a hosted production frontend, configure
+`APP_STAGE=prod`, `API_BASE_URL_PROD`, the matching Supabase settings and its public `APP_ORIGIN`
+in the hosting environment. Extraction and recovery are backend workers; their function names are
+not frontend environment inputs.
+
 Open [the app](http://localhost:3000/app). Node and npm versions come from
 [mise.toml](mise.toml) and [package.json](package.json). This is an independent npm package;
 there is no root workspace. Commit the lockfile when changing dependencies.

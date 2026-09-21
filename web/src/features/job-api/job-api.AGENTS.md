@@ -12,6 +12,8 @@ fetch posting websites, run inference or own durable extraction. Those belong to
   development defaults to dev; other runtimes require an explicit stage. Every stage requires its
   own configured API origin. There is no maintainer endpoint fallback. Checked-in examples use
   placeholders; actual deployment targets belong in ignored local environments or hosting config.
+  [The environment example](../../../.env.example) includes both dev and prod origins. Adding a
+  production origin does not select it: the configured stage, not the Git branch, chooses the target.
 - [server composition](job-api.server.ts) and [bridge](job-api.bridge.ts) back the allowlisted
   [Next route](../../app/api/job-postings/[[...path]]/route.ts). Every request verifies identity through
   the auth feature before retrieving the same user's session token. Cookie refreshes are persisted.
