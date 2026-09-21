@@ -5,6 +5,7 @@ export interface SearchBoardProps {
   capture: ReactNode;
   children: ReactNode;
   complete?: boolean;
+  status?: ReactNode;
 }
 export function SearchBoard({
   activeCount,
@@ -12,6 +13,7 @@ export function SearchBoard({
   capture,
   children,
   complete = true,
+  status,
 }: SearchBoardProps) {
   return (
     <>
@@ -33,12 +35,17 @@ export function SearchBoard({
             {totalCount - activeCount} closed
           </p>
         </div>
-        <p
-          id="board-move-help"
-          className="max-w-sm text-sm text-base-content/75"
-        >
-          Drag a handle to move a role, or open it to change its stage.
-        </p>
+        <div className="ml-auto flex w-full flex-col items-end gap-2 sm:w-auto">
+          <div className="flex h-11 w-11 items-center justify-center">
+            {status}
+          </div>
+          <p
+            id="board-move-help"
+            className="max-w-sm text-sm text-base-content/75"
+          >
+            Drag a handle to move a role, or open it to change its stage.
+          </p>
+        </div>
       </div>
       {capture}
       {complete && totalCount === 0 && (

@@ -573,3 +573,117 @@ test('card actions refresh and delete in place without starting a drag', async (
     page.getByText('4 active roles', { exact: false }),
   ).toBeVisible();
 });
+
+for (const viewport of [
+  { name: 'desktop light', width: 1440, height: 1000, scheme: 'light' },
+  { name: 'mobile dark', width: 390, height: 844, scheme: 'dark' },
+]) {
+  test(`board status keeps layout steady during loading and errors on ${viewport.name}`, async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize(viewport);
+    await page.emulateMedia({
+      colorScheme: viewport.scheme as 'light' | 'dark',
+      reducedMotion: 'reduce',
+    });
+    let finishRequest: () => void = () => {};
+    let fail = false;
+    await page.route('**/api/job-postings?*', async (route) => {
+      await new Promise<void>((resolve) => {
+        finishRequest = resolve;
+      });
+      if (fail) await route.fulfill({ status: 503, json: {} });
+      else await route.continue();
+    });
+    await page.reload();
+    await expect(
+      page.getByRole('heading', { name: 'Your search' }),
+    ).toBeVisible();
+    const positions = async () =>
+      Promise.all(
+        [
+          page.getByRole('heading', { name: 'Your search' }),
+          page.getByRole('button', { name: 'Add job links' }),
+          page.getByRole('region', { name: 'Collected', exact: true }),
+        ].map(async (locator) => (await locator.boundingBox())?.y),
+      );
+    const loadingPositions = await positions();
+    await page.screenshot({
+      path: testInfo.outputPath('status-loading.png'),
+      fullPage: true,
+    });
+    finishRequest();
+    await expect(
+      page.getByRole('link', {
+        name: 'Open Senior Product Engineer at Northstar',
+      }),
+    ).toBeVisible();
+    expect(await positions()).toEqual(loadingPositions);
+    await expect(page.getByRole('status', { name: 'Board status' })).toHaveText(
+      'Board up to date',
+    );
+    await page.screenshot({
+      path: testInfo.outputPath('status-idle.png'),
+      fullPage: true,
+    });
+
+    fail = true;
+    await page.reload();
+    await expect(page.getByRole('status', { name: 'Board status' })).toHaveText(
+      'Loading your saved roles…',
+    );
+    const pendingPositions = await positions();
+    finishRequest();
+    const error = page.getByRole('button', {
+      name: 'Board request failed. Show details',
+    });
+    await expect(error).toBeVisible();
+    expect(await positions()).toEqual(pendingPositions);
+    await error.focus();
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('main').getByRole('alert')).toContainText(
+      'We could not complete that request',
+    );
+    expect(await positions()).toEqual(pendingPositions);
+    await page.screenshot({
+      path: testInfo.outputPath('status-error.png'),
+      fullPage: true,
+    });
+    await page.keyboard.press('Escape');
+    await expect(error).toBeFocused();
+    await expect(page.getByRole('main').getByRole('alert')).toHaveCount(0);
+    await error.click();
+    fail = false;
+    await page.getByRole('button', { name: 'Try again' }).click();
+    await expect(page.getByRole('status', { name: 'Board status' })).toHaveText(
+      'Loading your saved roles…',
+    );
+    finishRequest();
+    await expect(page.getByRole('status', { name: 'Board status' })).toHaveText(
+      'Board up to date',
+    );
+    expect(await positions()).toEqual(pendingPositions);
+    await page.unroute('**/api/job-postings?*');
+    if (viewport.width > 1000) {
+      await page.route('**/api/job-postings/*', async (route) => {
+        if (route.request().method() === 'PATCH') {
+          await new Promise<void>((resolve) => {
+            finishRequest = resolve;
+          });
+        }
+        await route.continue();
+      });
+      const moving = moveProductRole(page, 'Applied');
+      await expect(
+        page.getByRole('status', { name: 'Board status' }),
+      ).toHaveText('Saving stage…');
+      expect(await positions()).toEqual(pendingPositions);
+      finishRequest();
+      await moving;
+      await expect(
+        page.getByRole('status', { name: 'Board status' }),
+      ).toHaveText('Board up to date');
+      expect(await positions()).toEqual(pendingPositions);
+    }
+  });
+}

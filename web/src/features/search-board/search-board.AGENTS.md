@@ -3,7 +3,14 @@
 The authenticated board shows the user's saved roles in six stages. [SearchBoard.container.tsx](SearchBoard.container.tsx)
 loads all API pages sequentially, keeps partial results on failure, and labels incomplete counts.
 An API failure never becomes a successful empty search. [Presentation](SearchBoard.component.tsx)
-receives counts, completeness and connected slots.
+receives counts, completeness and connected slots. A fixed-size [status marker](BoardStatus.component.tsx)
+sits at the far right above the move instructions: a green check when board requests are idle,
+a motion-aware spinner while loading pages, refreshing or saving a stage, and an X after a failed
+request. Error details and existing retry/sign-in actions open in an overlay, with keyboard activation,
+Escape and outside dismissal. These states reserve the same header space rather than inserting
+messages above the board. Background refresh retains complete cached counts and the empty-board
+message; partial or failed lists remain labeled incomplete. The marker describes board requests;
+card extraction and capture feedback remain with their owning controls.
 
 [Column containers](BoardColumn.container.tsx) receive mapped roles and coordinate drop targets.
 [Card containers](RoleCard.container.tsx) own drag mechanics, clock context and polling for pending
@@ -17,14 +24,17 @@ returns to the moved handle after refresh. Cancellation/outside drops do not wri
 the backend's newest-saved order; there is no within-stage sorting or filtering.
 
 Queued/processing cards show a labeled pulsing extraction indicator, including refreshes with
-existing facts. Stage saves also show the shared activity cue. Reduced motion keeps the cue static.
+existing facts. Stage saves use the header status spinner. Reduced motion keeps the cue static.
 Pending cards also breathe with a theme-colored border and soft glow using Tailwind pseudo-element
 utilities in card presentation. Only the decorative halo changes opacity; content, focus and drag
 geometry stay steady. Reduced motion keeps a static halo. Terminal states remove it.
 
 Tests use real stores and deterministic HTTP boundaries. Browser tests exercise pointer, keyboard,
 emulated touch, cancellation, populated/empty columns, mobile reflow and both themes. Run web,
-state, architecture, browser and documentation gates. Browser automation is not a screen-reader audit.
+state, architecture, browser and documentation gates. Browser regression tests measure heading,
+capture and column positions across loading, error, retry and stage-save transitions, and exercise
+the error popover at desktop/mobile sizes.
+Browser automation is not a screen-reader audit.
 
 Cards expose the shared [PostingActions](../role-workspace/PostingActions.component.tsx) dropdown
 immediately left of the move handle. Refresh/retry keeps existing facts visible and polls accepted extraction;

@@ -15,8 +15,8 @@ import {
   type Stage,
   toOpportunity,
 } from '@/features/job-search/job-search.index';
-import { LoadingPulse } from '@/shared/shared.index';
 import { BoardColumnContainer } from './BoardColumn.container';
+import { BoardStatus } from './BoardStatus.component';
 import {
   BoardColumns,
   DragPreview,
@@ -37,68 +37,74 @@ export function SearchBoardContainer() {
     (role) => role.stage !== 'closed',
   ).length;
   return (
-    <>
-      <RequestFeedback
-        loading={query.isLoading}
-        error={query.error ?? mutation.error}
-        onRetry={() => {
-          mutation.reset();
-          void query.refetch();
-        }}
-      />
-      {mutation.isLoading && (
-        <p role="status" className="mb-3">
-          <LoadingPulse />
-          Saving stage…
-        </p>
-      )}
-      <SearchBoard
-        complete={!query.isFetching && !query.hasNextPage && !query.isError}
-        activeCount={activeCount}
-        totalCount={opportunities.length}
-        capture={<JobCaptureContainer />}
-      >
-        <DragDropProvider
-          plugins={(defaults) =>
-            defaults.map((plugin) =>
-              plugin === Accessibility ? boardAccessibility : plugin,
-            )
+    <SearchBoard
+      complete={Boolean(query.data) && !query.hasNextPage && !query.isError}
+      status={
+        <BoardStatus
+          busy={
+            query.isFetching ||
+            mutation.isLoading ||
+            Boolean(query.hasNextPage && !query.isError)
           }
-          onDragEnd={async (event) => {
-            const id = event.operation.source?.id;
-            const target = event.operation.target?.id;
-            const role = opportunities.find((item) => item.id === id);
-            if (!role) return;
-            if (!event.canceled && STAGES.includes(target as Stage)) {
-              const stage = target as Stage;
-              if (role.saved && !mutation.isLoading)
-                await update({
-                  id: role.id,
-                  expectedApplicationVersion: role.saved.applicationVersion,
-                  changes: { stage },
-                });
-            }
-            await query.refetch();
-            requestAnimationFrame(() =>
-              document.getElementById(`move-${role.id}`)?.focus(),
-            );
-          }}
-        >
-          <BoardColumns>
-            {STAGES.map((stage) => (
-              <BoardColumnContainer
-                key={stage}
-                stage={stage}
-                saving={mutation.isLoading}
-                roles={opportunities.filter((role) => role.stage === stage)}
-              />
-            ))}
-          </BoardColumns>
-          <DragOverlay dropAnimation={null}>
-            {(source) => <DragPreview label={String(source.data.label)} />}
-          </DragOverlay>
-        </DragDropProvider>
-      </SearchBoard>
-    </>
+          message={
+            mutation.isLoading ? 'Saving stage…' : 'Loading your saved roles…'
+          }
+          failed={Boolean(query.error ?? mutation.error)}
+          feedback={
+            <RequestFeedback
+              error={query.error ?? mutation.error}
+              onRetry={() => {
+                mutation.reset();
+                void query.refetch();
+              }}
+            />
+          }
+        />
+      }
+      activeCount={activeCount}
+      totalCount={opportunities.length}
+      capture={<JobCaptureContainer />}
+    >
+      <DragDropProvider
+        plugins={(defaults) =>
+          defaults.map((plugin) =>
+            plugin === Accessibility ? boardAccessibility : plugin,
+          )
+        }
+        onDragEnd={async (event) => {
+          const id = event.operation.source?.id;
+          const target = event.operation.target?.id;
+          const role = opportunities.find((item) => item.id === id);
+          if (!role) return;
+          if (!event.canceled && STAGES.includes(target as Stage)) {
+            const stage = target as Stage;
+            if (role.saved && !mutation.isLoading)
+              await update({
+                id: role.id,
+                expectedApplicationVersion: role.saved.applicationVersion,
+                changes: { stage },
+              });
+          }
+          await query.refetch();
+          requestAnimationFrame(() =>
+            document.getElementById(`move-${role.id}`)?.focus(),
+          );
+        }}
+      >
+        <BoardColumns>
+          {STAGES.map((stage) => (
+            <BoardColumnContainer
+              key={stage}
+              stage={stage}
+              saving={mutation.isLoading}
+              roles={opportunities.filter((role) => role.stage === stage)}
+            />
+          ))}
+        </BoardColumns>
+        <DragOverlay dropAnimation={null}>
+          {(source) => <DragPreview label={String(source.data.label)} />}
+        </DragOverlay>
+      </DragDropProvider>
+    </SearchBoard>
   );
 }
