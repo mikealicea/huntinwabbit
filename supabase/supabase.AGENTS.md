@@ -27,7 +27,11 @@ protects the hello endpoint using public-key JWT verification; it does not mutat
   before pushing. Shell variables override this file. These are CLI inputs, separate from Vercel's
   environment and the web app's local environment; keep them aligned with production APP_ORIGIN.
   Checked-in settings describe the intended configuration, not proof of remote convergence.
-- [Root mise.toml](../mise.toml) pins the CLI and owns the push command. The operator must supply SUPABASE_PROJECT_REF for their own project; no maintainer project is a fallback.
+- [Root mise.toml](../mise.toml) pins the CLI and owns the push command. The task reads
+  SUPABASE_PROJECT_REF from `supabase/.env`, with an exported shell value taking precedence.
+  Node's dotenv loader supplies the value before the shell builds the CLI arguments; the task does
+  not look for a `.env.local` override for the project reference.
+  Missing or empty references stop before calling Supabase; no linked or maintainer project is a fallback.
   Run its task from the repository root. Do not substitute a linked project or a stage-based target.
 - The confirmation and recovery templates referenced by config send users to the caller’s allowlisted
   `/auth/confirm` endpoint. Token hashes are opaque provider values, including PKCE-prefixed hashes;

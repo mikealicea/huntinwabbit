@@ -27,15 +27,20 @@ From the repository root:
 mise trust
 mise install
 cp supabase/.env.example supabase/.env
-# Fill the production frontend origin and exact /auth/confirm URL in supabase/.env.
+# Fill the project ref, production frontend origin and exact /auth/confirm URL in supabase/.env.
 mise exec -- supabase login
-SUPABASE_PROJECT_REF=your-project-ref mise run auth:push
+mise run auth:push
 ```
 
 The existing CLI login can be reused. Automation may supply `SUPABASE_ACCESS_TOKEN` from a secret
 store instead. This is a management credential, not an application API key. The task explicitly
 targets the existing project and requires neither database credentials nor `supabase link`.
 No Terraform state, new hosted compute, local Docker stack or root npm package is needed.
+
+Set SUPABASE_PROJECT_REF in ignored `supabase/.env` to the existing project's reference ID.
+The push task reads it before constructing the CLI arguments; an exported shell value overrides
+the file value. The task does not look for `.env.local` for the project reference. A missing or empty
+reference stops the task before the CLI runs. No separate `export` is needed for normal use.
 
 Review each CLI diff before accepting its prompt. The pinned CLI also considers API, database and
 Storage configuration; keep unrelated changes out of an auth push. Do not use `--yes` for unattended

@@ -4,7 +4,10 @@ supabase = "2.111.0"
 
 [tasks."auth:push"]
 description = "Review and push configuration to your Supabase project"
-run = 'supabase config push --project-ref "${SUPABASE_PROJECT_REF:?Set SUPABASE_PROJECT_REF to your project}" --workdir .'
+run = '''
+SUPABASE_PROJECT_REF="$(node --env-file-if-exists=supabase/.env -p 'process.env.SUPABASE_PROJECT_REF ?? ""')"
+supabase config push --project-ref "${SUPABASE_PROJECT_REF:?Set SUPABASE_PROJECT_REF in supabase/.env or your shell}" --workdir .
+'''
 
 [tasks."docs:check"]
 description = "Validate repository documentation"
