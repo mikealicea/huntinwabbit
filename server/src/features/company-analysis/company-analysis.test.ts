@@ -2,7 +2,9 @@ import { randomUUID } from 'node:crypto';
 import { TransactWriteCommand } from '@aws-sdk/lib-dynamodb';
 import request from 'supertest';
 import { describe, expect, it, vi } from 'vitest';
+import { z } from 'zod';
 import { buildApp } from '../../app.ts';
+import { AppError } from '../../shared/shared.errors.ts';
 import { createCompanyStore } from '../companies/companies.index.ts';
 import {
   createCompanyAnalysisInputs,
@@ -20,6 +22,7 @@ import { createJobPostings } from '../job-postings/job-postings.service.ts';
 import { memoryPostings } from '../job-postings/job-postings.test-support.ts';
 import { createRoleUpdates } from '../job-postings/job-postings.updates.ts';
 import { companyAnalysisConfig } from './company-analysis.config.ts';
+import { analysisFailure } from './company-analysis.errors.ts';
 import {
   createCompanyAnalyzer,
   sharedFindings,
@@ -457,6 +460,90 @@ describe('durable company analysis', () => {
     await s.pump();
     expect(s.analyze).toHaveBeenCalledTimes(count);
   });
+  it.each([
+    ['evidence', 'INVALID_ANALYSIS_EVIDENCE'],
+    ['schema', 'INVALID_ANALYSIS_OUTPUT'],
+    ['storage', 'ANALYSIS_STORAGE_FAILED'],
+    ['unexpected', 'ANALYSIS_FAILED'],
+    ['unsafe-code', 'ANALYSIS_FAILED'],
+  ])(
+    'persists and logs a safe %s failure while status reads still succeed',
+    async (kind, code) => {
+      const log = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => undefined);
+      try {
+        const s = setup();
+        const a = await s.save();
+        const id = a.companyAssociation?.company?.id as string;
+        if (kind === 'evidence' || kind === 'schema') {
+          s.analyze.mockImplementation(
+            createCompanyAnalyzer('fictional', async () =>
+              kind === 'schema'
+                ? { private: 'private provider content' }
+                : {
+                    findings: [
+                      {
+                        ...finding(),
+                        evidence: [
+                          { reference: 0, excerpt: 'private provider content' },
+                        ],
+                      },
+                    ],
+                  },
+            ),
+          );
+        } else {
+          s.analyze.mockRejectedValue(
+            kind === 'unsafe-code'
+              ? new AppError(500, 'private provider content', {
+                  code: 'private provider content',
+                })
+              : Object.assign(new Error('private provider content'), {
+                  name: kind === 'storage' ? 'AccessDeniedException' : 'Error',
+                }),
+          );
+        }
+        const started = await s.analysis.request(pk, id, {
+          operationId: randomUUID(),
+          intent: 'refresh',
+        });
+        await s.pump();
+        const response = await request(s.app)
+          .get(`/companies/${id}/analysis`)
+          .set('Authorization', 'Bearer alice')
+          .expect(200);
+        expect(response.body).toMatchObject({
+          status: 'failed',
+          error: code,
+          items: [],
+        });
+        expect(log).toHaveBeenCalledTimes(1);
+        expect(log.mock.calls[0]?.[0]).toEqual({
+          event: 'company-analysis.failed',
+          generation: started.generation,
+          phase: 'map',
+          progress: expect.any(Number),
+          code,
+          reason: kind === 'storage' ? 'AccessDeniedException' : code,
+          ...(kind === 'schema' ? { validation: expect.any(Array) } : {}),
+        });
+        expect(JSON.stringify([response.body, log.mock.calls])).not.toContain(
+          'private provider content',
+        );
+        expect(JSON.stringify(log.mock.calls)).not.toContain(pk);
+        expect(JSON.stringify(log.mock.calls)).not.toContain(id);
+        expect(JSON.stringify(log.mock.calls)).not.toContain('"private"');
+        const calls = s.analyze.mock.calls.length;
+        s.advance(900001);
+        await s.analysis.recover();
+        await s.pump();
+        expect(s.analyze).toHaveBeenCalledTimes(calls);
+      } finally {
+        log.mockRestore();
+      }
+    },
+  );
   it('returns a disabled capability without inference', async () => {
     const s = setup(undefined, false);
     const a = await s.save();
@@ -472,7 +559,48 @@ describe('durable company analysis', () => {
   });
 });
 describe('analysis model boundary', () => {
-  it('validates exact source evidence and prevents personal observations becoming requirements', async () => {
+  it('classifies transport and stored-data failures without disclosing their causes', () => {
+    const invalid = z.string().safeParse({ private: 'private source' });
+    expect(analysisFailure(invalid.error)).toEqual({
+      code: 'INVALID_STORED_ANALYSIS',
+      reason: 'INVALID_STORED_ANALYSIS',
+    });
+    for (const name of ['AbortError', 'TimeoutError'])
+      expect(
+        analysisFailure(Object.assign(new Error('private source'), { name })),
+      ).toEqual({
+        code: 'ANALYSIS_TIMEOUT',
+        reason: name,
+      });
+    expect(
+      analysisFailure(
+        new AppError(504, 'private source', { code: 'PARSE_TIMEOUT' }),
+      ),
+    ).toEqual({
+      code: 'PARSE_TIMEOUT',
+      reason: 'PARSE_TIMEOUT',
+    });
+    expect(
+      analysisFailure(
+        Object.assign(new Error('private source'), { name: 'private source' }),
+      ),
+    ).toEqual({
+      code: 'ANALYSIS_FAILED',
+      reason: 'ANALYSIS_FAILED',
+    });
+  });
+  it('rejects malformed merge output with a safe code and retains its cause privately', async () => {
+    const analyze = createCompanyAnalyzer('fictional', async () => ({
+      findings: 'private source',
+    }));
+    await expect(
+      analyze({ findings: [finding()] }, abort()),
+    ).rejects.toMatchObject({
+      code: 'INVALID_ANALYSIS_OUTPUT',
+      cause: expect.any(z.ZodError),
+    });
+  });
+  it('validates exact evidence and separates personal/history observations from employer requirements', async () => {
     const complete = vi.fn(
       async (
         _instructions: string,
@@ -486,9 +614,50 @@ describe('analysis model boundary', () => {
     );
     const analyze = createCompanyAnalyzer('fictional', complete);
     expect(await analyze({ sources: [sample] }, abort())).toEqual([finding()]);
-    await expect(
-      analyze({ sources: [{ ...sample, source: 'personal' }] }, abort()),
-    ).rejects.toThrow();
+    for (const source of ['personal', 'history'] as const)
+      expect(
+        await analyze({ sources: [{ ...sample, source }] }, abort()),
+      ).toEqual([{ ...finding({ ...sample, source }), qualifier: 'observed' }]);
+    complete.mockResolvedValue({
+      findings: [
+        {
+          ...finding(),
+          evidence: [
+            { reference: 0, excerpt: 'TypeScript' },
+            { reference: 1, excerpt: 'TypeScript' },
+            { reference: 2, excerpt: 'TypeScript' },
+          ],
+        },
+      ],
+    });
+    const personal = {
+      ...sample,
+      roleId: randomUUID(),
+      source: 'personal' as const,
+    };
+    const historical = {
+      ...sample,
+      roleId: randomUUID(),
+      source: 'history' as const,
+    };
+    const mixed = await analyze(
+      { sources: [sample, personal, historical] },
+      abort(),
+    );
+    expect(mixed).toEqual([
+      finding(),
+      {
+        ...finding(),
+        qualifier: 'observed',
+        evidence: [
+          ...finding(personal).evidence,
+          ...finding(historical).evidence,
+        ],
+      },
+    ]);
+    expect(sharedFindings(mixed, 3).map((item) => item.qualifier)).toEqual([
+      'observed',
+    ]);
     await expect(
       analyze(
         {
@@ -498,16 +667,14 @@ describe('analysis model boundary', () => {
         },
         abort(),
       ),
-    ).rejects.toThrow();
+    ).rejects.toMatchObject({ code: 'INVALID_ANALYSIS_EVIDENCE' });
     expect(complete.mock.calls[0]?.[0]).toContain('untrusted DATA');
   });
-  it('requires lossless merge membership and rejects category or qualifier changes', async () => {
+  it('owns merge metadata and preserves incompatible candidates without combining their support', async () => {
     const complete = vi.fn(async () => ({
       findings: [
         {
-          category: 'technology',
           label: 'TypeScript',
-          qualifier: 'required',
           explanation: '',
           members: [0, 1],
         },
@@ -518,14 +685,62 @@ describe('analysis model boundary', () => {
     expect(
       (await analyze({ findings: [finding(), other] }, abort()))[0]?.evidence,
     ).toHaveLength(2);
+    for (const changed of [
+      { ...other, qualifier: 'preferred' as const },
+      { ...other, category: 'requirement' as const },
+    ]) {
+      const result = await analyze({ findings: [finding(), changed] }, abort());
+      expect(result).toEqual([finding(), changed]);
+      expect(sharedFindings(result, 2)).toEqual([]);
+    }
+    complete.mockResolvedValue({
+      findings: [{ label: 'TypeScript', explanation: '', members: [0, 0] }],
+    });
     await expect(
-      analyze(
-        { findings: [finding(), { ...other, qualifier: 'preferred' }] },
-        abort(),
-      ),
-    ).rejects.toThrow();
+      analyze({ findings: [finding(), other] }, abort()),
+    ).resolves.toEqual([finding(), other]);
+    complete.mockResolvedValue({
+      findings: [{ label: 'TypeScript', explanation: '', members: [0, 2] }],
+    });
+    await expect(
+      analyze({ findings: [finding(), other] }, abort()),
+    ).resolves.toEqual([finding(), other]);
+    complete.mockResolvedValue({
+      findings: [
+        { label: 'TypeScript', explanation: '', members: [0, 1] },
+        { label: 'TypeScript', explanation: '', members: [1, 2] },
+      ],
+    });
+    const third = finding({ ...sample, roleId: randomUUID() });
+    expect(
+      await analyze({ findings: [finding(), other, third] }, abort()),
+    ).toEqual([finding(), other, third]);
     complete.mockResolvedValue({ findings: [] });
-    await expect(analyze({ findings: [finding()] }, abort())).rejects.toThrow();
+    await expect(analyze({ findings: [finding()] }, abort())).resolves.toEqual([
+      finding(),
+    ]);
+  });
+  it('ignores redundant merge fields without allowing them to override validated metadata', async () => {
+    const other = finding({ ...sample, roleId: randomUUID() });
+    const analyze = createCompanyAnalyzer('fictional', async () => ({
+      findings: [
+        {
+          label: 'TypeScript',
+          explanation: '',
+          members: [0, 1],
+          category: 'requirement',
+          qualifier: 'preferred',
+          private: 'untrusted extra output',
+        },
+      ],
+    }));
+    expect(await analyze({ findings: [finding(), other] }, abort())).toEqual([
+      {
+        ...finding(),
+        explanation: '',
+        evidence: [...finding().evidence, ...other.evidence],
+      },
+    ]);
   });
   it('splits all Unicode source text without loss and counts distinct roles rather than mentions', () => {
     const text = 'TypeScript 🐇 '.repeat(5000);
@@ -611,28 +826,34 @@ it('reads large descriptions and all note pages and paginates published findings
   ).rejects.toMatchObject({ statusCode: 409 });
 });
 it('survives lost completion acknowledgement without repeating inference', async () => {
-  let lose = true;
-  const s = setup((send) => async (command, signal) => {
-    const result = await send(command, signal);
-    if (
-      lose &&
-      command instanceof TransactWriteCommand &&
-      command.input.TransactItems?.some((w) =>
-        String(w.Put?.Item?.sk).includes('NODE#'),
-      )
-    ) {
-      lose = false;
-      throw new Error('lost completion');
-    }
-    return result;
-  });
-  const a = await s.save();
-  const id = a.companyAssociation?.company?.id as string;
-  await s.analysis.request(pk, id, {
-    operationId: randomUUID(),
-    intent: 'refresh',
-  });
-  await s.pump();
-  expect((await s.analysis.get(pk, id)).status).toBe('complete');
-  expect(s.analyze).toHaveBeenCalledTimes(1);
+  const log = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  try {
+    let lose = true;
+    const s = setup((send) => async (command, signal) => {
+      const result = await send(command, signal);
+      if (
+        lose &&
+        command instanceof TransactWriteCommand &&
+        command.input.TransactItems?.some((w) =>
+          String(w.Put?.Item?.sk).includes('NODE#'),
+        )
+      ) {
+        lose = false;
+        throw new Error('lost completion');
+      }
+      return result;
+    });
+    const a = await s.save();
+    const id = a.companyAssociation?.company?.id as string;
+    await s.analysis.request(pk, id, {
+      operationId: randomUUID(),
+      intent: 'refresh',
+    });
+    await s.pump();
+    expect((await s.analysis.get(pk, id)).status).toBe('complete');
+    expect(s.analyze).toHaveBeenCalledTimes(1);
+    expect(log).not.toHaveBeenCalled();
+  } finally {
+    log.mockRestore();
+  }
 });

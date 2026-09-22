@@ -187,3 +187,5 @@ revision changes. Runtime and worker composition install it; do not bypass it fo
 The same module paginates validated role, comment and update-history inputs through a narrow reader
 interface. [Company analysis](../company-analysis/company-analysis.AGENTS.md) owns paid work, stale
 results, deletion invalidation and cleanup. Test mutation effects through the decorated transport.
+The [storage fake](job-postings.test-support.ts) rejects unaliased `hidden` in update expressions,
+matching DynamoDB's reserved-word constraint for analysis invalidation and publication.

@@ -6,7 +6,7 @@ import {
   type TransactWriteCommandInput,
 } from '@aws-sdk/lib-dynamodb';
 import { z } from 'zod';
-import { AppError } from '../../shared/shared.errors.ts';
+import { analysisError, analysisFailure } from './company-analysis.errors.ts';
 import { sharedFindings, sourceBatches } from './company-analysis.model.ts';
 import {
   type AnalysisResponse,
@@ -35,11 +35,6 @@ const resultPrefix = (company: string, generation: string) =>
   `CA-RESULT#${company}#${generation}#`;
 const taskKey = (state: State) =>
   `CA-JOB#${state.companyId}#${state.generation}#${pad(state.version)}`;
-export function analysisError(code: string, status = 503) {
-  return new AppError(status, 'Company analysis could not be completed.', {
-    code,
-  });
-}
 export function analysisInvalidation(
   table: string,
   pk: string,
@@ -51,7 +46,8 @@ export function analysisInvalidation(
     Update: {
       TableName: table,
       Key: { pk, sk: sourceKey(company) },
-      UpdateExpression: `SET revision = if_not_exists(revision, :zero) + :one, dueGroup = :group, dueAt = :due${hidden ? ', hidden = :hidden' : ''}`,
+      UpdateExpression: `SET revision = if_not_exists(revision, :zero) + :one, dueGroup = :group, dueAt = :due${hidden ? ', #hidden = :hidden' : ''}`,
+      ...(hidden ? { ExpressionAttributeNames: { '#hidden': 'hidden' } } : {}),
       ExpressionAttributeValues: {
         ':zero': 0,
         ':one': 1,
@@ -451,7 +447,8 @@ export function createCompanyAnalysis(deps: {
               Update: {
                 TableName: table,
                 Key: { pk: state.pk, sk: sourceKey(state.companyId) },
-                UpdateExpression: 'SET hidden = :false',
+                UpdateExpression: 'SET #hidden = :false',
+                ExpressionAttributeNames: { '#hidden': 'hidden' },
                 ConditionExpression: 'revision = :revision',
                 ExpressionAttributeValues: {
                   ':false': false,
@@ -650,12 +647,15 @@ export function createCompanyAnalysis(deps: {
       }
       await finishTask(state, next, writes);
     } catch (cause) {
-      await fail(
-        state,
-        cause instanceof AppError
-          ? (cause.code ?? 'ANALYSIS_FAILED')
-          : 'ANALYSIS_FAILED',
-      );
+      const failure = analysisFailure(cause);
+      if (await fail(state, failure.code))
+        console.error({
+          event: 'company-analysis.failed',
+          generation: state.generation,
+          phase: state.phase,
+          progress: state.progress,
+          ...failure,
+        });
     }
   }
   async function fail(state: State, error: string) {
@@ -664,7 +664,7 @@ export function createCompanyAnalysis(deps: {
       current?.generation !== state.generation ||
       current.version !== state.version
     )
-      return;
+      return false;
     await transact([
       statePut(
         { ...state, version: state.version + 1, status: 'failed', error },
@@ -672,6 +672,7 @@ export function createCompanyAnalysis(deps: {
       ),
       cleanup(state.pk, state.companyId, state.generation, true),
     ]);
+    return true;
   }
   async function clean(value: Record<string, unknown>) {
     const item = z

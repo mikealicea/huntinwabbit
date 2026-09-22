@@ -30,12 +30,41 @@ mixed snapshots. The scheduler coalesces changes after a quiet period; exact dea
 has no provider key and dispatches due work through new stream-job records.
 
 [Model adapter](company-analysis.model.ts) reuses the Redpill transport, splits complete source text
-into bounded batches, validates exact evidence substrings, and requires lossless candidate membership
-when merging. Keep singleton candidates until the final distinct-role filter. Personal and historical
+into bounded batches, validates exact evidence substrings, and preserves every candidate when
+merging. Keep singleton candidates until the final distinct-role filter. Personal and historical
 sources must remain observed qualifiers. Corrections are current; superseded extraction/history is
 labeled historical. Model validation cannot prove semantic accuracy or completeness.
+The adapter assigns personal/history evidence the observed qualifier deterministically, splitting
+mixed-provenance findings before reduction. A model's requirement/preference label for a personal
+observation does not fail the run or contribute employer-requirement support. Exact excerpts and
+references must still validate; no missing or rewritten evidence is accepted.
+Reduction asks the model only for synonym groups, labels and explanations. Categories/qualifiers
+come from the validated candidates; redundant model fields are discarded rather than trusted.
+A proposed group spanning incompatible categories/qualifiers
+is declined while retaining every original candidate. Proposals with invented or duplicate/overlapping
+references are also declined; omitted candidates remain singletons. Every input survives exactly once,
+either within an accepted merge or unchanged. This can leave synonyms uncombined, but never fabricates
+support or loses candidates. Malformed output shape and capacity failures still fail the step.
+Source invalidation and final publication alias the `hidden` attribute in DynamoDB expressions;
+it is reserved. The storage fake rejects its unaliased use so publication, deletion and reassignment
+tests exercise the production constraint.
 
 ## Failure, privacy and compatibility
+
+Status reads return HTTP 200 when the stored analysis record was retrieved, including when the
+background job failed. Accepted commands return 202; request/authentication/storage failures use
+HTTP errors. `progress` counts completed durable steps, not a percentage, and `analyzedRoles`
+counts usable snapshotted roles rather than successful model calls.
+
+[Failure classification](company-analysis.errors.ts) preserves fixed codes for model output shape,
+evidence, capacity, provider and storage failures. Unknown failures
+remain generic. After a worker persists a failure, it emits `company-analysis.failed` with the
+generation UUID, phase, step count and allowlisted code/reason. Correlate that generation with the
+authenticated status response in the analysis worker's CloudWatch logs. Model-schema failures also
+log bounded validation codes and allowlisted field names, replacing unknown names with a placeholder.
+Raw validation issues, error messages, stacks and nested causes are never serialized. A lost completion acknowledgement that
+already advanced state does not emit a false failure. Earlier generic failures cannot be diagnosed
+retroactively; a user-requested retry after deploying diagnostics is needed to capture a new failure.
 
 Each paid step conditionally claims its job. Duplicate events or uncertain claim acknowledgements
 never authorize another call. Recovery marks overdue work failed; users explicitly retry uncertain
@@ -63,7 +92,9 @@ compatible. No deployment or inference backfill occurs merely by installing the 
 [Tests](company-analysis.test.ts) cover shared/single/empty results, input paging, comments/history,
 claims, duplicate delivery, lost acknowledgements, recovery, deletion/reassignment, stale completion,
 cleanup, model evidence, malformed merges, ownership, schedule postponement and immediate refresh
-without duplicate work. Inject storage and model boundaries;
-ordinary tests never call Redpill. Run server gates/build, storage/native packaging checks,
+without duplicate work. Regressions also verify readable failed status responses, diagnostic
+redaction and specific model validation codes while retaining strict evidence checks and explicit
+paid retries. Tests inject storage and model boundaries; ordinary tests never call Redpill.
+Run server gates/build, storage/native packaging checks,
 web/browser gates and root documentation checks. Fake storage does not prove deployed IAM, stream
 scheduling, or model quality; live evaluations need a separately authorized target.

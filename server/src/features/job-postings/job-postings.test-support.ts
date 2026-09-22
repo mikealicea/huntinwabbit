@@ -56,6 +56,16 @@ export function memoryPostings() {
       const existing = rows.get(key(address.pk, address.sk));
       const condition = operation.ConditionExpression;
       const values = operation.ExpressionAttributeValues;
+      // DynamoDB reserves HIDDEN. The fake must reject the same invalid
+      // expression that would otherwise pass locally and fail on publication.
+      if (
+        /\bhidden\b/i.test(
+          entry.Update?.UpdateExpression?.replace(/[#:]\w+/g, '') ?? '',
+        )
+      )
+        throw Object.assign(new Error('Unaliased reserved attribute'), {
+          name: 'ValidationException',
+        });
       if (
         condition === 'generation = :generation AND version = :version' &&
         (existing?.generation !== values?.[':generation'] ||
@@ -126,7 +136,10 @@ export function memoryPostings() {
             dueAt: values?.[':due'],
             ...(values?.[':hidden'] ? { hidden: true } : {}),
           });
-        } else if (entry.Update.UpdateExpression === 'SET hidden = :false') {
+        } else if (
+          entry.Update.UpdateExpression === 'SET #hidden = :false' &&
+          entry.Update.ExpressionAttributeNames?.['#hidden'] === 'hidden'
+        ) {
           rows.set(key(address.pk, address.sk), { ...existing, hidden: false });
         } else throw new Error('Unsupported update');
       }

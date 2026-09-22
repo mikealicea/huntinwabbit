@@ -1,14 +1,12 @@
 import express, { type Response, Router } from 'express';
 import { z } from 'zod';
 import type { AuthLocals } from '../auth/auth.index.ts';
+import { analysisError } from './company-analysis.errors.ts';
 import {
   analysisQuerySchema,
   analysisRequestSchema,
 } from './company-analysis.schemas.ts';
-import {
-  analysisError,
-  type CompanyAnalysis,
-} from './company-analysis.store.ts';
+import type { CompanyAnalysis } from './company-analysis.store.ts';
 export function createCompanyAnalysisRouter(analysis?: CompanyAnalysis) {
   const router = Router();
   router
