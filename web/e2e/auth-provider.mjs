@@ -8,6 +8,7 @@ const initialPostings = JSON.parse(
 );
 const postings = new Map();
 const companies = new Map();
+const companyAnalyses = new Map();
 const updateHistories = new Map();
 const roleNotes = new Map();
 const sources = new Map();
@@ -127,6 +128,65 @@ const server = createServer(async (request, response) => {
     const companyRecords = companies.get(owner);
     if (url.pathname.startsWith('/companies')) {
       const [, , companyId, child] = url.pathname.split('/');
+      if (child === 'analysis') {
+        if (!companyRecords.has(companyId)) return error(404, 'not_found');
+        const key = `${owner}:${companyId}`;
+        let state = companyAnalyses.get(key);
+        if (request.method === 'POST') {
+          state = {
+            generation: randomUUID(),
+            readyAt: Date.now() + 200,
+            operationId: body.operationId,
+          };
+          companyAnalyses.set(key, state);
+        } else if (request.method !== 'GET')
+          return error(405, 'method_not_allowed');
+        const roles = [...records.values()].filter(
+          (item) => item.companyAssociation?.company?.id === companyId,
+        );
+        const complete = state && Date.now() >= state.readyAt;
+        return send(request.method === 'POST' ? 202 : 200, {
+          schemaVersion: 1,
+          status: !state ? 'not-started' : complete ? 'complete' : 'processing',
+          generation: state?.generation ?? null,
+          stale: false,
+          totalRoles: roles.length,
+          analyzedRoles: roles.length,
+          completedAt: complete ? '2026-09-22T12:00:00.000Z' : null,
+          progress: complete ? 3 : 0,
+          error: null,
+          nextCursor: null,
+          items:
+            complete && roles.length
+              ? [
+                  {
+                    category: 'requirement',
+                    label: 'Cross-functional collaboration',
+                    qualifier: 'required',
+                    explanation: 'Work with teammates across disciplines.',
+                    evidence: roles.map((item) => ({
+                      roleId: item.id,
+                      roleTitle: item.parsedPosting?.job.title ?? 'Saved role',
+                      source: 'posting',
+                      excerpt: 'Work with the team.',
+                    })),
+                  },
+                  {
+                    category: 'technology',
+                    label: 'TypeScript',
+                    qualifier: 'used',
+                    explanation: 'Named in the saved role details.',
+                    evidence: roles.map((item) => ({
+                      roleId: item.id,
+                      roleTitle: item.parsedPosting?.job.title ?? 'Saved role',
+                      source: 'posting',
+                      excerpt: 'TypeScript',
+                    })),
+                  },
+                ]
+              : [],
+        });
+      }
       if (request.method !== 'GET') return error(405, 'method_not_allowed');
       if (!companyId)
         return send(200, {

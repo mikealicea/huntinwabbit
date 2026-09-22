@@ -37,3 +37,8 @@ pointers fail rather than overwrite another target.
 company backfill. It defaults to dry-run, checks AWS account identity, checkpoints completed pages,
 and uses conditional association writes. It never calls inference or fetches postings. The
 [runbook](../../docs/runbooks/company-backfill.md) owns target selection, replay and rollout order.
+
+Storage package checks also verify company-analysis handler/stream configuration and transactional
+update/condition permissions. Company backfill invalidates analysis revisions transactionally; if
+analysis workers are enabled, applied membership changes can schedule paid analysis. Keep analysis
+disabled during an association-only migration. Dry-run remains read-only.

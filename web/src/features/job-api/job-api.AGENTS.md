@@ -71,7 +71,6 @@ bodies and revisions on both sides of the bridge; delete requires an empty 204. 
 mutations invalidate notes and posting caches so role deletion reviews current application versions.
 Create IDs are retained by the notes container for explicit retry; the backend prevents duplication.
 
-
 Retained page text uses an owner-scoped source read and optional input on save/extraction. The source
 query shares posting invalidation but raw text is not embedded in list/detail records. Relevant write
 bodies have a larger bounded bridge allowance for JSON escaping; unrelated limits are unchanged.
@@ -79,3 +78,15 @@ Source-changing extraction carries a reviewed application version and operation 
 retain their original inputs. Nullable fetch timestamps and optional provenance support pasted-only
 results while legacy responses remain readable. See the [parsing boundary](../../../../docs/job-parsing-data-boundary.md)
 for coordinated rollout and rollback requirements.
+
+Company analysis adds authenticated GET/POST paths under each company, validated by the
+[analysis contracts](job-api.analysis.contracts.ts). The server schemas remain authoritative. An
+idempotent ensure command runs from the query cache lifecycle only for uninitialized companies;
+its mutation state is shared with the analysis container for error feedback. Result refetches restart
+pagination to avoid mixing generations. Refresh requests retain operation IDs for explicit retries,
+and no paid mutation is automatically retried. Posting invalidation also refreshes analysis state.
+
+Analysis responses optionally include the server scheduling deadline. Older servers remain readable
+without a countdown; deploy the accepting frontend before a backend that emits this new field because
+older frontend response contracts are strict. Analyze now uses the existing refresh intent and its
+operation receipt; no new paid-work endpoint or automatic client timer request is introduced.

@@ -63,6 +63,20 @@ function boundary(mode = 'roles') {
         },
       });
     }
+    if (url.pathname.endsWith('/analysis'))
+      return Response.json({
+        schemaVersion: 1,
+        status: 'disabled',
+        generation: null,
+        stale: false,
+        totalRoles: 0,
+        analyzedRoles: 0,
+        completedAt: null,
+        progress: 0,
+        error: null,
+        items: [],
+        nextCursor: null,
+      });
     if (url.pathname.includes('/companies')) {
       if (mode === 'missing') return Response.json({}, { status: 404 });
       if (url.pathname.endsWith(company.id))

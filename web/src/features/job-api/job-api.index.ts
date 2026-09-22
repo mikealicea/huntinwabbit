@@ -1,6 +1,8 @@
+export type { CompanyAnalysis } from './job-api.analysis.contracts';
 export {
   postingApi,
   useCompaniesInfiniteQuery,
+  useCompanyAnalysisInfiniteQuery,
   useCompanyQuery,
   useCompanyRolesInfiniteQuery,
   useCreateNoteMutation,
@@ -10,6 +12,7 @@ export {
   useExtractPostingMutation,
   usePostingQuery,
   usePostingsInfiniteQuery,
+  useRequestCompanyAnalysisMutation,
   useRoleNotesInfiniteQuery,
   useRoleUpdatesInfiniteQuery,
   useSavePostingMutation,

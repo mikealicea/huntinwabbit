@@ -6,6 +6,10 @@ import {
   fetchBaseQuery,
 } from '@reduxjs/toolkit/query/react';
 import {
+  analysisResponseSchema,
+  type CompanyAnalysis,
+} from './job-api.analysis.contracts';
+import {
   type Company,
   type CompanySelection,
   companiesResponseSchema,
@@ -58,25 +62,29 @@ const validatedQuery: BaseQueryFn<
   const schema =
     api.endpoint === 'sourceText'
       ? sourceTextResponseSchema
-      : api.endpoint === 'roleNotes'
-        ? notesPageSchema
-        : ['createNote', 'editNote'].includes(api.endpoint)
-          ? noteResultSchema
-          : api.endpoint === 'company'
-            ? companyResponseSchema
-            : api.endpoint === 'companies'
-              ? companiesResponseSchema
-              : api.endpoint === 'companyRoles'
-                ? listResponseSchema
-                : api.endpoint === 'roleUpdates'
-                  ? updateHistorySchema
-                  : ['sendRoleUpdate', 'undoRoleUpdate'].includes(api.endpoint)
-                    ? updateResultSchema
-                    : api.endpoint === 'postings'
-                      ? listResponseSchema
-                      : api.endpoint === 'savePosting'
-                        ? saveResponseSchema
-                        : itemResponseSchema;
+      : ['companyAnalysis', 'requestCompanyAnalysis'].includes(api.endpoint)
+        ? analysisResponseSchema
+        : api.endpoint === 'roleNotes'
+          ? notesPageSchema
+          : ['createNote', 'editNote'].includes(api.endpoint)
+            ? noteResultSchema
+            : api.endpoint === 'company'
+              ? companyResponseSchema
+              : api.endpoint === 'companies'
+                ? companiesResponseSchema
+                : api.endpoint === 'companyRoles'
+                  ? listResponseSchema
+                  : api.endpoint === 'roleUpdates'
+                    ? updateHistorySchema
+                    : ['sendRoleUpdate', 'undoRoleUpdate'].includes(
+                          api.endpoint,
+                        )
+                      ? updateResultSchema
+                      : api.endpoint === 'postings'
+                        ? listResponseSchema
+                        : api.endpoint === 'savePosting'
+                          ? saveResponseSchema
+                          : itemResponseSchema;
   const parsed = schema.safeParse(result.data);
   return parsed.success
     ? { data: parsed.data }
@@ -90,7 +98,7 @@ const validatedQuery: BaseQueryFn<
 export const postingApi = createApi({
   reducerPath: 'postingApi',
   baseQuery: validatedQuery,
-  tagTypes: ['Posting', 'Updates', 'Notes'],
+  tagTypes: ['Posting', 'Updates', 'Notes', 'Analysis'],
   endpoints: (build) => ({
     sourceText: build.query<
       ReturnType<typeof sourceTextResponseSchema.parse>,
@@ -100,6 +108,52 @@ export const postingApi = createApi({
       transformResponse: (value: unknown) =>
         sourceTextResponseSchema.parse(value),
       providesTags: (_result, _error, id) => [{ type: 'Posting', id }],
+    }),
+    companyAnalysis: build.infiniteQuery<
+      CompanyAnalysis,
+      string,
+      string | null
+    >({
+      infiniteQueryOptions: {
+        initialPageParam: null,
+        refetchCachedPages: false,
+        getNextPageParam: (last) => last.nextCursor ?? undefined,
+      },
+      query: ({ queryArg, pageParam }) => ({
+        url: `/companies/${queryArg}/analysis`,
+        params: pageParam ? { cursor: pageParam } : {},
+      }),
+      transformResponse: (value: unknown) =>
+        analysisResponseSchema.parse(value),
+      providesTags: ['Posting', 'Analysis'],
+      async onCacheEntryAdded(id, { cacheDataLoaded, dispatch }) {
+        try {
+          const { data } = await cacheDataLoaded;
+          if (data.pages[0]?.status === 'not-started') {
+            await dispatch(
+              postingApi.endpoints.requestCompanyAnalysis.initiate(
+                { id, operationId: crypto.randomUUID(), intent: 'ensure' },
+                { fixedCacheKey: `company-analysis:${id}` },
+              ),
+            ).unwrap();
+          }
+        } catch {
+          /* Query/mutation state owns safe error feedback; no automatic paid retry. */
+        }
+      },
+    }),
+    requestCompanyAnalysis: build.mutation<
+      CompanyAnalysis,
+      { id: string; operationId: string; intent: 'ensure' | 'refresh' }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/companies/${id}/analysis`,
+        method: 'POST',
+        body,
+      }),
+      transformResponse: (value: unknown) =>
+        analysisResponseSchema.parse(value),
+      invalidatesTags: ['Analysis'],
     }),
     company: build.query<Company, string>({
       query: (id) => `/companies/${id}`,
@@ -401,6 +455,8 @@ export const postingApi = createApi({
 });
 export const {
   useSourceTextQuery,
+  useCompanyAnalysisInfiniteQuery,
+  useRequestCompanyAnalysisMutation,
   useRoleNotesInfiniteQuery,
   useCreateNoteMutation,
   useEditNoteMutation,

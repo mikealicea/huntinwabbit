@@ -1,3 +1,8 @@
+import {
+  analysisQuerySchema,
+  analysisRequestSchema,
+  analysisResponseSchema,
+} from './job-api.analysis.contracts';
 import 'server-only';
 import { z } from 'zod';
 import {
@@ -90,9 +95,8 @@ export function createApiBridge(deps: {
         );
       const url = new URL(request.url);
       const suffix = url.pathname.slice('/api/job-postings'.length);
-      const companyMatch = /^\/companies(?:\/([0-9a-f-]{36})(\/roles)?)?$/.exec(
-        suffix,
-      );
+      const companyMatch =
+        /^\/companies(?:\/([0-9a-f-]{36})(\/roles|\/analysis)?)?$/.exec(suffix);
       if (companyMatch?.[1] && !z.uuid().safeParse(companyMatch[1]).success)
         return failure(404, 'NOT_FOUND');
       const match =
@@ -128,13 +132,19 @@ export function createApiBridge(deps: {
           : undefined) ??
         noteAction ??
         (companyMatch
-          ? request.method === 'GET'
-            ? companyMatch[2]
-              ? 'companyRoles'
-              : companyMatch[1]
-                ? 'company'
-                : 'companies'
-            : undefined
+          ? companyMatch[2] === '/analysis'
+            ? request.method === 'GET'
+              ? 'analysis'
+              : request.method === 'POST'
+                ? 'requestAnalysis'
+                : undefined
+            : request.method === 'GET'
+              ? companyMatch[2]
+                ? 'companyRoles'
+                : companyMatch[1]
+                  ? 'company'
+                  : 'companies'
+              : undefined
           : request.method === 'PATCH' && match?.[2] === '/company'
             ? 'selectCompany'
             : request.method === 'GET' && match?.[2] === '/updates'
@@ -162,9 +172,14 @@ export function createApiBridge(deps: {
       let body: string | undefined;
       try {
         if (
-          ['list', 'history', 'companies', 'companyRoles', 'notes'].includes(
-            action,
-          )
+          [
+            'list',
+            'history',
+            'companies',
+            'companyRoles',
+            'notes',
+            'analysis',
+          ].includes(action)
         ) {
           if (
             [...url.searchParams.keys()].some(
@@ -172,18 +187,21 @@ export function createApiBridge(deps: {
             )
           )
             return failure(400, 'INVALID_REQUEST');
-          (action === 'notes'
-            ? notesQuerySchema
-            : action === 'companies'
-              ? companyQuerySchema
-              : action === 'history'
-                ? historyQuerySchema
-                : listRequestSchema
+          (action === 'analysis'
+            ? analysisQuerySchema
+            : action === 'notes'
+              ? notesQuerySchema
+              : action === 'companies'
+                ? companyQuerySchema
+                : action === 'history'
+                  ? historyQuerySchema
+                  : listRequestSchema
           ).parse(Object.fromEntries(url.searchParams));
           query = url.search;
         } else if (url.search) return failure(400, 'INVALID_REQUEST');
         if (
           [
+            'requestAnalysis',
             'save',
             'update',
             'extract',
@@ -205,25 +223,27 @@ export function createApiBridge(deps: {
             ['save', 'extract'].includes(action) ? 1024 * 1024 : 256 * 1024,
           );
           const schema =
-            action === 'createNote'
-              ? createNoteSchema
-              : action === 'editNote'
-                ? editNoteSchema
-                : action === 'deleteNote'
-                  ? deleteNoteSchema
-                  : action === 'selectCompany'
-                    ? companySelectionSchema
-                    : action === 'message'
-                      ? updateMessageSchema
-                      : action === 'undo'
-                        ? z.strictObject({})
-                        : action === 'save'
-                          ? saveRequestSchema
-                          : action === 'update'
-                            ? updateRequestSchema
-                            : action === 'delete'
-                              ? deleteRequestSchema
-                              : extractionRequestSchema;
+            action === 'requestAnalysis'
+              ? analysisRequestSchema
+              : action === 'createNote'
+                ? createNoteSchema
+                : action === 'editNote'
+                  ? editNoteSchema
+                  : action === 'deleteNote'
+                    ? deleteNoteSchema
+                    : action === 'selectCompany'
+                      ? companySelectionSchema
+                      : action === 'message'
+                        ? updateMessageSchema
+                        : action === 'undo'
+                          ? z.strictObject({})
+                          : action === 'save'
+                            ? saveRequestSchema
+                            : action === 'update'
+                              ? updateRequestSchema
+                              : action === 'delete'
+                                ? deleteRequestSchema
+                                : extractionRequestSchema;
           body = JSON.stringify(schema.parse(value));
         }
       } catch {
@@ -258,25 +278,27 @@ export function createApiBridge(deps: {
       const schema =
         action === 'sourceText'
           ? sourceTextResponseSchema
-          : action === 'notes'
-            ? notesPageSchema
-            : ['createNote', 'editNote'].includes(action)
-              ? noteResultSchema
-              : action === 'company'
-                ? companyResponseSchema
-                : action === 'companies'
-                  ? companiesResponseSchema
-                  : action === 'companyRoles'
-                    ? listResponseSchema
-                    : action === 'history'
-                      ? updateHistorySchema
-                      : ['message', 'undo'].includes(action)
-                        ? updateResultSchema
-                        : action === 'list'
-                          ? listResponseSchema
-                          : action === 'save'
-                            ? saveResponseSchema
-                            : itemResponseSchema;
+          : ['analysis', 'requestAnalysis'].includes(action)
+            ? analysisResponseSchema
+            : action === 'notes'
+              ? notesPageSchema
+              : ['createNote', 'editNote'].includes(action)
+                ? noteResultSchema
+                : action === 'company'
+                  ? companyResponseSchema
+                  : action === 'companies'
+                    ? companiesResponseSchema
+                    : action === 'companyRoles'
+                      ? listResponseSchema
+                      : action === 'history'
+                        ? updateHistorySchema
+                        : ['message', 'undo'].includes(action)
+                          ? updateResultSchema
+                          : action === 'list'
+                            ? listResponseSchema
+                            : action === 'save'
+                              ? saveResponseSchema
+                              : itemResponseSchema;
       const result = schema.parse(await boundedJson(response, 2 * 1024 * 1024));
       return Response.json(result, { status: response.status, headers });
     } catch {

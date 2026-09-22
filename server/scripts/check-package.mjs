@@ -50,6 +50,9 @@ const unsigned = encode({ alg: 'ES256', kid: 'package-test' }) + '.' + encode({
   role: 'authenticated', is_anonymous: false, exp: Math.floor(Date.now()/1000) + 300,
 });
 const token = unsigned + '.' + sign('sha256', Buffer.from(unsigned), { key: privateKey, dsaEncoding: 'ieee-p1363' }).toString('base64url');
+const analysis = await import('./src/analysis.js');
+assert.equal(typeof analysis.handler, 'function');
+assert.equal(typeof analysis.recover, 'function');
 const { handler } = await import('./src/lambda.js');
 const event = {
   version: '2.0', routeKey: '$default', rawPath: '/job-postings/parse', rawQueryString: '',
@@ -62,7 +65,7 @@ assert.equal(result.statusCode, 422);
 assert.equal(JSON.parse(result.body).code, 'SOURCE_UNAVAILABLE');
 const unauthenticated = await handler({ ...event, headers: { 'content-type': 'application/json' } }, {});
 assert.equal(unauthenticated.statusCode, 401);
-console.log('Linux Lambda package: authentication, parser route, IPC, and native agent-fetch passed.');
+console.log('Linux Lambda package: authentication, parser route, IPC, native agent-fetch and analysis exports passed.');
 `,
   );
   execFileSync(

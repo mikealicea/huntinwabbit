@@ -146,7 +146,7 @@ Run server/build, documentation and package gates; fake storage does not prove A
 ## Company associations
 
 [Posting-company coordination](job-postings.companies.ts) owns versioned selection, membership reads
-and no-cost backfill. [Companies](../companies/companies.AGENTS.md) own identity and matching.
+and association backfill. Backfill invalidation can schedule paid company analysis when enabled. [Companies](../companies/companies.AGENTS.md) own identity and matching.
 Save/extraction/chat commits maintain membership transactionally with posting data; deletion removes
 membership but retains the company. Manual assignment/clear survives extraction. Chat company-name
 edits can reassign only this role, with association snapshots/revisions protecting Undo and newer
@@ -155,7 +155,7 @@ manual selections. Generated employer facts are never rewritten merely to change
 
 [Note schemas](job-postings.notes.schemas.ts) and [router](job-postings.notes.router.ts) own direct
 create/list/edit/delete contracts; [operations](job-postings.notes.ts) enforce ownership and bounded
-storage access using the existing table. Notes are not extraction jobs and never trigger inference.
+storage access using the existing table. Notes are not posting extraction jobs. When company analysis is enabled, comment changes invalidate and schedule that company’s analysis.
 The timeline is independently paginated, newest first, with owner/role-bound cursors. Stored entries
 and lookup pointers are validated. Missing and other-owner roles share the same unavailable response.
 
@@ -172,9 +172,9 @@ to role-specific note rows and pointers, with paginated progress committed atomi
 without a phase start with jobs; the existing recovery error alarm covers failed cleanup.
 
 The legacy application notes field remains decodable and compatible with the old tracking API but
-is not displayed by the timeline. No migration is required. AI input excludes this field and historical
+is not displayed by the timeline. No migration is required. Role-update AI input excludes this field and historical
 receipts that changed it; new model output cannot change it. Legacy receipts remain readable, but
-Undo containing a notes change is refused as a whole. Comments are never included in AI input.
+Undo containing a notes change is refused as a whole. Comments remain excluded from role-update AI input. The separately enabled [company analysis](../company-analysis/company-analysis.AGENTS.md) includes comments and history.
 [Notes tests](job-postings.notes.test.ts) cover ownership, replay, conflicts, pagination and cleanup.
 Ship the API and extraction/recovery workers together before enabling the notes frontend. Follow the
 [company rollout](../../../../docs/runbooks/company-backfill.md) when also introducing associations. No new infrastructure
@@ -205,3 +205,13 @@ live source row transactionally; table backups retain their existing lifecycle.
 writes, replacement/removal, disabled parsing, version and URL conflicts, worker revision fences,
 authentication, payload bounds and deletion cleanup. Existing lifecycle tests continue to cover
 concurrent tracking updates, uncertain claims and late results.
+
+## Company analysis coordination
+
+[Analysis adapter](job-postings.analysis.ts) decorates posting transactions with atomic company source
+revision changes. Runtime and worker composition install it; do not bypass it for new mutation paths.
+The same module paginates validated role, comment and update-history inputs through a narrow reader
+interface. [Company analysis](../company-analysis/company-analysis.AGENTS.md) owns paid work, stale
+results, deletion invalidation and cleanup. Test mutation effects through the decorated transport.
+The [storage fake](job-postings.test-support.ts) rejects unaliased `hidden` in update expressions,
+matching DynamoDB's reserved-word constraint for analysis invalidation and publication.

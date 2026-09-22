@@ -1,6 +1,6 @@
 # Saved companies
 
-Companies give one user's saved roles a shared identity and a stable page. Notes, research, contacts,
+Companies give one user's saved roles a shared identity and a stable page. Company requirements/technology analysis belongs to [company analysis](../company-analysis/company-analysis.AGENTS.md). Notes, other research, contacts,
 interview processes, company renaming, merging and deletion are not implemented. Records are private
 to the authenticated account; matching never considers another user's companies.
 
@@ -36,7 +36,7 @@ never used as employer domains. Corporate suffix removal only broadens compatibl
 Durable extraction ranks a bounded shortlist from page text before the existing model call. Temporary
 references, bounded names and website hostnames reach Redpill; internal IDs and application data do
 not. The extractor accepts only supplied references; invalid matching metadata does not invalidate
-otherwise valid job facts. No model call is made by the manual picker or backfill.
+otherwise valid job facts. The manual picker and backfill do not call the model directly; their membership writes can schedule separately enabled company analysis.
 
 An explicit selection, creation or clear is manual and survives refreshes. Company-name chat edits
 can replace it; website-only edits cannot move a manual association. Association revisions fence

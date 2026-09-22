@@ -22,6 +22,7 @@ import {
   type ParsePosting,
   type ParseResponse,
 } from '../job-parsing/job-parsing.index.ts';
+import { withCompanyAnalysisInvalidation } from './job-postings.analysis.ts';
 import { cleanupDeletedPosting } from './job-postings.cleanup.ts';
 import { jobPostingsTable } from './job-postings.config.ts';
 import { type DynamoTransport, readRecord } from './job-postings.dynamodb.ts';
@@ -307,13 +308,15 @@ function runtime() {
   const client = DynamoDBDocumentClient.from(
     new DynamoDBClient({ maxAttempts: 3 }),
   );
-  const send: DynamoTransport = (command, signal) => {
-    if (command instanceof GetCommand)
+  const send: DynamoTransport = withCompanyAnalysisInvalidation(
+    (command, signal) => {
+      if (command instanceof GetCommand)
+        return client.send(command, { abortSignal: signal });
+      if (command instanceof QueryCommand)
+        return client.send(command, { abortSignal: signal });
       return client.send(command, { abortSignal: signal });
-    if (command instanceof QueryCommand)
-      return client.send(command, { abortSignal: signal });
-    return client.send(command, { abortSignal: signal });
-  };
+    },
+  );
   const config = jobParsingConfig(process.env);
   return createExtractionWorker(
     table,

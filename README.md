@@ -11,8 +11,9 @@ Saved links and tracking edits persist through the backend; posting details are 
 with agent-fetch and Redpill. The role workspace also accepts natural-language edits with saved
 chat history, partial updates and Undo. A Markdown notes composer saves timestamped comments with
 editing and deletion. User corrections survive posting refreshes. Company pages group saved roles
-under persistent company identities, with automatic matching and manual corrections. Tasks, resumes,
-submitted materials and shared company research remain
+under persistent company identities, with automatic matching and manual corrections. Optional background
+analysis finds shared requirements and technologies, with evidence from saved roles and personal context. Tasks, resumes,
+submitted materials and freeform company research remain
 unavailable. `/` currently links into the app. See the [web README](web/README.md) for setup.
 
 This is a public, self-hostable repository. Configure your own Supabase authentication project and
