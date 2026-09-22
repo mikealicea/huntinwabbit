@@ -17,7 +17,8 @@ confirmation and error feedback; company cards show stage labels and omit drag c
 deletion removes cached membership and focuses the surviving company heading. The company persists
 when its last role leaves. Opening a role uses its existing workspace.
 
-[Picker container](ChangeCompany.container.tsx) loads searchable companies and sends versioned
+[Picker container](ChangeCompany.container.tsx) opens from a pencil beside the role's company name,
+with the accessible label Change company. It loads searchable companies and sends versioned
 selection, create-and-select or clear mutations. [Dialog](ChangeCompany.component.tsx) owns only local
 form state. A conflict retains input, refreshes the role, and requires closing/reviewing/reopening
 before another save. Accepted manual choices survive refreshes. Native modal behavior owns focus

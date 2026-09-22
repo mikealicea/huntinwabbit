@@ -19,15 +19,29 @@ export function ChangeCompanyContainer({
   const [open, setOpen] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
   return (
-    <div className="mb-3">
+    <>
       <button
         type="button"
         ref={trigger}
-        className="btn btn-ghost btn-sm min-h-11 -ml-3"
+        className="btn btn-ghost btn-sm btn-square min-h-11 min-w-11 shrink-0"
+        aria-label="Change company"
+        title="Change company"
         disabled={disabled}
         onClick={() => setOpen(true)}
       >
-        Change company
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.75"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="size-4"
+        >
+          <path d="m16 3 5 5-12 12-6 1 1-6L16 3Z" />
+          <path d="m13 6 5 5" />
+        </svg>
       </button>
       {open && (
         <CompanyPickerContainer
@@ -38,7 +52,7 @@ export function ChangeCompanyContainer({
           }}
         />
       )}
-    </div>
+    </>
   );
 }
 function CompanyPickerContainer({

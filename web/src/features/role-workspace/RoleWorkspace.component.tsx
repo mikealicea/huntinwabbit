@@ -61,21 +61,21 @@ export function RoleWorkspace({
         <span aria-hidden="true">←</span> Search board
       </Link>
       <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0">
-          <p className="mb-2 text-sm font-medium text-base-content/75">
+        <div className="min-w-0 max-w-full">
+          <div className="mb-2 flex items-center gap-1 text-sm font-medium text-base-content/75">
             {role.companyId ? (
               <Link
-                className="inline-flex min-h-11 items-center hover:underline"
+                className="inline-flex min-h-11 min-w-0 items-center break-words hover:underline"
                 href={`/app/companies/${role.companyId}`}
                 aria-label={`View ${companyLabel} company`}
               >
                 {companyLabel}
               </Link>
             ) : (
-              companyLabel
+              <span className="min-w-0 break-words">{companyLabel}</span>
             )}
-          </p>
-          {companyControl}
+            {companyControl}
+          </div>
           <h1 className="break-words text-3xl font-bold tracking-tight sm:text-4xl">
             {roleName}
           </h1>
