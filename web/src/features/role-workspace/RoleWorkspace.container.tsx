@@ -19,6 +19,7 @@ import {
 import { selectToday, useAppSelector } from '@/state/state.index';
 import { RoleNotesContainer } from './RoleNotes.container';
 import { RoleNotFound } from './RoleNotFound.component';
+import { RoleStatus } from './RoleStatus.component';
 import { RoleWorkspace } from './RoleWorkspace.component';
 import { UnavailableSection } from './UnavailableSection.component';
 import { UpdateRoleContainer } from './UpdateRole.container';
@@ -63,91 +64,106 @@ export function RoleWorkspaceContainer({ roleId }: { roleId: string }) {
     }
   }
   return (
-    <>
-      <RequestFeedback
-        error={query.error ?? mutation.error ?? extraction.error}
-        onRetry={() => {
-          mutation.reset();
-          extraction.reset();
-          void query.refetch();
-        }}
-      />
-      <RoleWorkspace
-        key={role.id}
-        role={role}
-        roleName={getRoleTitle(role)}
-        companyLabel={getCompanyLabel(role, [])}
-        companyControl={
-          <ChangeCompanyContainer
-            posting={query.currentData}
-            disabled={deletion.isLoading || mutation.isLoading}
-          />
-        }
-        nextActionLabel={getNextAction(role, today).label}
-        onApplicationChange={change}
-        saving={mutation.isLoading || deletion.isLoading || query.isFetching}
-        deleting={deletion.isLoading}
-        deleteDisabled={mutation.isLoading || extraction.isLoading}
-        onDelete={async (expectedApplicationVersion) => {
-          if (mutation.isLoading || extraction.isLoading || deletion.isLoading)
-            return 'failed';
-          try {
-            await remove({ id: roleId, expectedApplicationVersion }).unwrap();
-            router.replace('/app');
-            return 'deleted';
-          } catch (error) {
-            if (
-              typeof error === 'object' &&
-              error &&
-              'status' in error &&
-              error.status === 409
-            ) {
-              await query.refetch();
-              return 'conflict';
-            }
-            return 'failed';
+    <RoleWorkspace
+      key={role.id}
+      role={role}
+      status={
+        <RoleStatus
+          role={role}
+          extracting={extraction.isLoading}
+          busy={query.isFetching || mutation.isLoading || deletion.isLoading}
+          failed={Boolean(query.error ?? mutation.error ?? extraction.error)}
+          message={
+            deletion.isLoading
+              ? 'Deleting role…'
+              : mutation.isLoading
+                ? 'Saving role…'
+                : 'Loading role…'
           }
-        }}
-        extracting={extraction.isLoading || deletion.isLoading}
-        onExtract={() => {
+          feedback={
+            <RequestFeedback
+              error={query.error ?? mutation.error ?? extraction.error}
+              onRetry={() => {
+                mutation.reset();
+                extraction.reset();
+                void query.refetch();
+              }}
+            />
+          }
+        />
+      }
+      roleName={getRoleTitle(role)}
+      companyLabel={getCompanyLabel(role, [])}
+      companyControl={
+        <ChangeCompanyContainer
+          posting={query.currentData}
+          disabled={deletion.isLoading || mutation.isLoading}
+        />
+      }
+      nextActionLabel={getNextAction(role, today).label}
+      onApplicationChange={change}
+      saving={mutation.isLoading || deletion.isLoading || query.isFetching}
+      deleting={deletion.isLoading}
+      deleteDisabled={mutation.isLoading || extraction.isLoading}
+      onDelete={async (expectedApplicationVersion) => {
+        if (mutation.isLoading || extraction.isLoading || deletion.isLoading)
+          return 'failed';
+        try {
+          await remove({ id: roleId, expectedApplicationVersion }).unwrap();
+          router.replace('/app');
+          return 'deleted';
+        } catch (error) {
           if (
-            query.currentData &&
-            !deletion.isLoading &&
-            !extraction.isLoading &&
-            !pending
-          )
-            void extract({
-              id: roleId,
-              expectedGeneration: query.currentData.extraction.generation,
-            });
-        }}
-        onTaskCompletionChange={() => {}}
-        notes={
-          <RoleNotesContainer
-            key={`${role.id}-notes`}
-            roleId={role.id}
-            disabled={deletion.isLoading}
-          />
+            typeof error === 'object' &&
+            error &&
+            'status' in error &&
+            error.status === 409
+          ) {
+            await query.refetch();
+            return 'conflict';
+          }
+          return 'failed';
         }
-        updates={
-          <UpdateRoleContainer
-            key={`${role.id}-updates`}
-            roleId={role.id}
-            pending={!!role.saved?.edits?.pending}
-            disabled={deletion.isLoading}
-          />
-        }
-        materials={
-          <UnavailableSection title="Application materials">
-            Resume selection and submitted materials are not connected yet.
-          </UnavailableSection>
-        }
-        company={
-          <UnavailableSection title="Company research & contacts">
-            Shared company research and contacts are not connected yet.
-          </UnavailableSection>
-        }
-      />
-    </>
+      }}
+      extracting={extraction.isLoading || deletion.isLoading}
+      onExtract={() => {
+        if (
+          query.currentData &&
+          !deletion.isLoading &&
+          !extraction.isLoading &&
+          !pending
+        )
+          void extract({
+            id: roleId,
+            expectedGeneration: query.currentData.extraction.generation,
+          });
+      }}
+      onTaskCompletionChange={() => {}}
+      notes={
+        <RoleNotesContainer
+          key={`${role.id}-notes`}
+          roleId={role.id}
+          disabled={deletion.isLoading}
+        />
+      }
+      updates={
+        <UpdateRoleContainer
+          key={`${role.id}-updates`}
+          roleId={role.id}
+          pending={!!role.saved?.edits?.pending}
+          disabled={deletion.isLoading}
+        />
+      }
+      materials={
+        <UnavailableSection title="Application materials">
+          Resume selection and submitted materials are not connected yet.
+        </UnavailableSection>
+      }
+      company={
+        <UnavailableSection title="Company research & contacts">
+          Shared company research and contacts are not connected yet.
+        </UnavailableSection>
+      }
+    />
   );
 }

@@ -3,7 +3,8 @@
 The authenticated board shows the user's saved roles in six stages. [SearchBoard.container.tsx](SearchBoard.container.tsx)
 loads all API pages sequentially, keeps partial results on failure, and labels incomplete counts.
 An API failure never becomes a successful empty search. [Presentation](SearchBoard.component.tsx)
-receives counts, completeness and connected slots. A fixed-size [status marker](BoardStatus.component.tsx)
+receives counts, completeness and connected slots. A fixed-size [status marker](BoardStatus.component.tsx), using shared
+[RequestStatus](../../shared/RequestStatus.component.tsx),
 sits at the far right above the move instructions: a green check when board requests are idle,
 a motion-aware spinner while loading pages, refreshing or saving a stage, and an X after a failed
 request. Error details and existing retry/sign-in actions open in an overlay, with keyboard activation,

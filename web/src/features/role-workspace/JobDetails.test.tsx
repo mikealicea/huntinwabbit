@@ -123,7 +123,5 @@ it('renders effective corrections, including explicit technology clears, during 
   expect(screen.getByRole('heading', { name: 'My correction' })).toBeVisible();
   expect(screen.getByText('Technologies not listed')).toBeVisible();
   expect(screen.queryByText('TypeScript (required)')).not.toBeInTheDocument();
-  expect(screen.getByRole('status')).toHaveTextContent(
-    'Your previous details are still shown.',
-  );
+  expect(screen.queryByRole('status')).not.toBeInTheDocument();
 });

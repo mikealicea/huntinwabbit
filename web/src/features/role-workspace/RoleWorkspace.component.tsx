@@ -31,6 +31,7 @@ export interface RoleWorkspaceProps {
   extracting?: boolean;
   onExtract?: () => void;
   onTaskCompletionChange: (taskId: string, completed: boolean) => void;
+  status?: ReactNode;
   updates?: ReactNode;
   notes?: ReactNode;
   materials: ReactNode;
@@ -50,6 +51,7 @@ export function RoleWorkspace({
   nextActionLabel,
   onApplicationChange,
   onTaskCompletionChange,
+  status,
   updates,
   notes,
   materials,
@@ -100,6 +102,7 @@ export function RoleWorkspace({
               onDelete={onDelete}
             />
           )}
+          {status}
         </div>
       </div>
       <div className="mb-7 grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -166,7 +169,7 @@ export function RoleWorkspace({
       </div>
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
         <div className="min-w-0 space-y-5">
-          <JobDetails role={role} extracting={extracting && !deleting} />
+          <JobDetails role={role} />
           <section
             className="card border border-base-300 bg-base-100 shadow-sm"
             aria-labelledby="tasks-title"

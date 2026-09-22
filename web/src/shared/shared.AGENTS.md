@@ -22,3 +22,9 @@ without HTML execution, images or MDX. It preserves paragraph line breaks and su
 credential-free HTTP(S) links, opened with noreferrer/noopener. Headings stay below workspace section
 headings. It owns no fetching or comment policy; the existing description and notes tests exercise
 this shared contract.
+
+[RequestStatus](RequestStatus.component.tsx) reserves a fixed header space for supplied request state
+and optional feedback. Callers own labels and success/error policy. Busy, failed, neutral and success
+icons have a live text equivalent. Optional details open in an overlay with keyboard activation,
+Escape focus restoration and outside/focus dismissal; reduced motion disables spinning. Board and
+role workspace browser tests exercise the shared behavior with their own request recovery actions.

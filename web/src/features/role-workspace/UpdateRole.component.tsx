@@ -51,6 +51,7 @@ export function UpdateRole({
   onRetry,
 }: UpdateRoleProps) {
   const [text, setText] = useState('');
+  const [historyExpanded, setHistoryExpanded] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null);
   const opener = useRef<HTMLButtonElement>(null);
   const id = useId();
@@ -61,6 +62,7 @@ export function UpdateRole({
   const newestId = newest?.id;
   const newestStatus = newest?.status;
   useEffect(() => {
+    if (!historyExpanded) return;
     for (const history of [desktopHistory.current, mobileHistory.current]) {
       if (
         history &&
@@ -72,7 +74,7 @@ export function UpdateRole({
         history.scrollTop = history.scrollHeight;
     }
     previousNewest.current = { id: newestId, status: newestStatus };
-  }, [newestId, newestStatus]);
+  }, [newestId, newestStatus, historyExpanded]);
   async function send() {
     const draft = text;
     if (pending || !draft.trim()) return;
@@ -101,8 +103,94 @@ export function UpdateRole({
           Type a change or paste an email. Clear changes save automatically, and
           you can undo them.
         </p>
+        <p role="status" className="text-sm">
+          {loading
+            ? 'Loading history…'
+            : pending
+              ? 'An update is in progress. You can leave and return.'
+              : newest?.status === 'failed'
+                ? 'The latest update failed. See update history to review or retry.'
+                : newest?.status === 'partial'
+                  ? 'Some changes were skipped. See update history for details.'
+                  : entries.length
+                    ? 'Update history is saved with this role.'
+                    : ''}
+        </p>
+        {error && (
+          <div role="alert" className="text-sm">
+            <p>{error}</p>
+            <button
+              type="button"
+              className="btn btn-sm mt-2 min-h-11"
+              onClick={onReload}
+            >
+              Refresh role and history
+            </button>
+          </div>
+        )}
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            void send();
+          }}
+          className="space-y-2"
+        >
+          <label
+            className="block text-sm font-medium"
+            htmlFor={`${id}-${suffix}-message`}
+          >
+            Your update
+          </label>
+          <textarea
+            id={`${id}-${suffix}-message`}
+            className="textarea min-h-28 w-full text-base"
+            aria-describedby={`${id}-${suffix}-hint`}
+            maxLength={20000}
+            value={text}
+            placeholder="The role is remote, and the salary is…"
+            onChange={(event) => setText(event.target.value)}
+            onKeyDown={(event) => {
+              if (
+                event.key !== 'Enter' ||
+                !event.metaKey ||
+                event.nativeEvent.isComposing
+              ) {
+                return;
+              }
+              event.preventDefault();
+              if (!event.repeat) void send();
+            }}
+          />
+          <div className="flex items-center justify-between gap-3">
+            <p
+              id={`${id}-${suffix}-hint`}
+              className="text-xs text-base-content/75"
+            >
+              Text is processed by Redpill. Cmd+Enter to submit.
+            </p>
+            <button
+              type="submit"
+              className="btn btn-primary min-h-11"
+              disabled={pending || !text.trim()}
+            >
+              Send
+            </button>
+          </div>
+        </form>
+        <button
+          type="button"
+          className="btn btn-ghost min-h-11 justify-between"
+          aria-expanded={historyExpanded}
+          aria-controls={`${id}-${suffix}-history`}
+          onClick={() => setHistoryExpanded((expanded) => !expanded)}
+        >
+          Update history
+          <span aria-hidden="true">{historyExpanded ? '−' : '+'}</span>
+        </button>
         <div
           className="min-h-32 flex-1 space-y-4 overflow-y-auto break-words lg:max-h-[55vh]"
+          id={`${id}-${suffix}-history`}
+          hidden={!historyExpanded}
           ref={mobile ? mobileHistory : desktopHistory}
           role="log"
           aria-label="Update history"
@@ -190,71 +278,6 @@ export function UpdateRole({
             </article>
           ))}
         </div>
-        <p role="status" className="text-sm">
-          {loading
-            ? 'Loading history…'
-            : pending
-              ? 'An update is in progress. You can leave and return.'
-              : entries.length
-                ? 'Update history is saved with this role.'
-                : ''}
-        </p>
-        {error && (
-          <div role="alert" className="text-sm">
-            <p>{error}</p>
-            <button
-              type="button"
-              className="btn btn-sm mt-2 min-h-11"
-              onClick={onReload}
-            >
-              Refresh role and history
-            </button>
-          </div>
-        )}
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            void send();
-          }}
-          className="space-y-2"
-        >
-          <label
-            className="block text-sm font-medium"
-            htmlFor={`${id}-${suffix}-message`}
-          >
-            Your update
-          </label>
-          <textarea
-            id={`${id}-${suffix}-message`}
-            className="textarea min-h-28 w-full text-base"
-            maxLength={20000}
-            value={text}
-            placeholder="The role is remote, and the salary is…"
-            onChange={(event) => setText(event.target.value)}
-            onKeyDown={(event) => {
-              if (
-                event.key === 'Enter' &&
-                !event.shiftKey &&
-                !event.nativeEvent.isComposing
-              ) {
-                event.preventDefault();
-                void send();
-              }
-            }}
-          />
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-xs text-base-content/75">
-              Text is processed by Redpill. Shift+Enter adds a line.
-            </p>
-            <button
-              type="submit"
-              className="btn btn-primary min-h-11"
-              disabled={pending || !text.trim()}
-            >
-              Send
-            </button>
-          </div>
-        </form>
       </div>
     );
   }

@@ -415,6 +415,9 @@ test('refresh retains facts and drafts on failure, then replaces facts on explic
   await page
     .getByRole('button', { name: 'Refresh posting', exact: true })
     .click();
+  await page
+    .getByRole('button', { name: /Updating role.*Show details/ })
+    .click();
   await expect(
     page.getByText('Waiting to refresh posting details…'),
   ).toBeVisible();
@@ -599,6 +602,15 @@ for (const theme of ['light', 'dark']) {
         exact: true,
       }),
     ).toBeVisible();
+    const historyToggle = chat.getByRole('button', { name: 'Update history' });
+    await expect(historyToggle).toHaveAttribute('aria-expanded', 'false');
+    await expect(chat.getByRole('log')).toBeHidden();
+    await page.screenshot({
+      path: testInfo.outputPath(`role-collapsed-${theme}.png`),
+      fullPage: true,
+    });
+    await historyToggle.focus();
+    await page.keyboard.press('Enter');
     await expect(chat.getByText('Some changes saved')).toBeVisible();
     await expect(
       chat.getByText('Not changed: The salary is unclear.'),
@@ -606,6 +618,9 @@ for (const theme of ['light', 'dark']) {
     await page.getByLabel('Posting actions').click();
     await page
       .getByRole('button', { name: 'Refresh posting', exact: true })
+      .click();
+    await page
+      .getByRole('button', { name: /Role request failed.*Show details/ })
       .click();
     await expect(
       page.getByText(
@@ -615,6 +630,9 @@ for (const theme of ['light', 'dark']) {
     await page.getByLabel('Posting actions').click();
     await page
       .getByRole('button', { name: 'Retry extraction', exact: true })
+      .click();
+    await page
+      .getByRole('button', { name: /Role up to date.*Show details/ })
       .click();
     await expect(
       page.getByText(
@@ -634,6 +652,7 @@ for (const theme of ['light', 'dark']) {
     await chat.getByRole('button', { name: 'Undo changes' }).click();
     await expect(chat.getByText('Changes undone')).toBeVisible();
     await page.reload();
+    await chat.getByRole('button', { name: 'Update history' }).click();
     await expect(chat.getByText('Changes undone')).toBeVisible();
   });
   test(`mobile role chat supports keyboard, retry and close in ${theme}`, async ({
@@ -657,9 +676,11 @@ for (const theme of ['light', 'dark']) {
     const input = dialog.getByRole('textbox', { name: 'Your update' });
     await expect(input).toBeFocused();
     await input.fill('simulate failure');
-    await input.press('Shift+Enter');
-    await expect(input).toHaveValue('simulate failure\n');
+    await expect(dialog.getByRole('log')).toBeHidden();
     await input.press('Enter');
+    await expect(input).toHaveValue('simulate failure\n');
+    await input.press('Meta+Enter');
+    await dialog.getByRole('button', { name: 'Update history' }).click();
     await expect(
       dialog.getByText('Update failed', { exact: true }),
     ).toBeVisible();
@@ -676,6 +697,7 @@ for (const theme of ['light', 'dark']) {
     await expect(opener).toBeFocused();
     await page.reload();
     await opener.click();
+    await dialog.getByRole('button', { name: 'Update history' }).click();
     await expect(
       dialog.getByText('Changes saved', { exact: true }),
     ).toBeVisible();
@@ -972,5 +994,78 @@ for (const scheme of ['light', 'dark'] as const) {
     await expect(
       section.getByText('No comments yet. Add your first note above.'),
     ).toBeVisible();
+  });
+}
+
+for (const viewport of [
+  { name: 'desktop', width: 1440, height: 1000, theme: 'light' as const },
+  { name: 'mobile', width: 390, height: 844, theme: 'dark' as const },
+]) {
+  test(`role header status supports failure recovery on ${viewport.name}`, async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize(viewport);
+    await page.emulateMedia({ colorScheme: viewport.theme });
+    await page
+      .getByRole('link', { name: 'Open Senior Product Engineer at Northstar' })
+      .click();
+    const heading = page.getByRole('heading', {
+      name: 'Senior Product Engineer',
+      level: 1,
+    });
+    await expect(heading).toBeVisible();
+    const stage = page.getByRole('combobox', { name: 'Stage', exact: true });
+    const originalStage = await stage.inputValue();
+    const position = await heading.boundingBox();
+    await page.route('**/api/job-postings/*', async (route) => {
+      if (route.request().method() === 'PATCH') {
+        await route.fulfill({ status: 503, json: {} });
+      } else await route.continue();
+    });
+    await page
+      .getByRole('combobox', { name: 'Stage', exact: true })
+      .selectOption('offer');
+    const status = page.getByRole('status', { name: 'Role status' });
+    await expect(status).toHaveText('Role request failed');
+    expect(await heading.boundingBox()).toEqual(position);
+    const trigger = page.getByRole('button', {
+      name: 'Role request failed. Show details',
+    });
+    await trigger.focus();
+    await page.keyboard.press('Enter');
+    const requestError = page
+      .getByRole('alert')
+      .filter({ hasText: 'We could not complete that request' });
+    await expect(requestError).toBeVisible();
+    await page.screenshot({
+      path: testInfo.outputPath('role-status-error.png'),
+      fullPage: false,
+    });
+    await page.keyboard.press('Escape');
+    await expect(trigger).toBeFocused();
+    await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    await trigger.click();
+    await page.getByRole('button', { name: 'Try again', exact: true }).click();
+    await expect(status).toHaveText('Role up to date');
+    await expect(requestError).toBeHidden();
+    await expect(
+      page.getByRole('combobox', { name: 'Stage', exact: true }),
+    ).toHaveValue(originalStage);
+    await expect(
+      page.getByText(
+        'Details extracted from the posting. Review them against the original.',
+      ),
+    ).toBeVisible();
+    await page
+      .getByRole('heading', { name: 'Job details', exact: true })
+      .click();
+    await expect(
+      page.getByRole('button', { name: 'Role up to date. Show details' }),
+    ).toHaveAttribute('aria-expanded', 'false');
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
   });
 }

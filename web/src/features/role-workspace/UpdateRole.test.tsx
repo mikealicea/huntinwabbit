@@ -1,5 +1,11 @@
 /** @vitest-environment jsdom */
-import { render, screen, waitFor, within } from '@testing-library/react';
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, expect, it, vi } from 'vitest';
 import type { UpdateEntry } from '@/features/job-api/job-api.index';
@@ -45,9 +51,10 @@ it('sends text through props, supports newlines and preserves drafts on failure'
   const view = render(<UpdateRole {...props({ onSend })} />);
   const input = screen.getByRole('textbox', { name: 'Your update' });
   await user.type(input, 'Salary is 150k');
-  await user.keyboard('{Shift>}{Enter}{/Shift}');
-  expect(input).toHaveValue('Salary is 150k\n');
   await user.keyboard('{Enter}');
+  expect(onSend).not.toHaveBeenCalled();
+  expect(input).toHaveValue('Salary is 150k\n');
+  await user.keyboard('{Meta>}{Enter}{/Meta}');
   expect(onSend).toHaveBeenCalledWith('Salary is 150k\n');
   expect(input).toHaveValue('Salary is 150k\n');
   view.rerender(<UpdateRole {...props({ onSend: vi.fn(async () => true) })} />);
@@ -62,6 +69,7 @@ it('shows partial updates, emits Undo and disables competing requests while pend
   });
   const user = userEvent.setup();
   const view = render(<UpdateRole {...p} />);
+  await user.click(screen.getByRole('button', { name: 'Update history' }));
   expect(
     within(screen.getByRole('region', { name: 'Update role' })).getByText(
       'Some changes saved',
@@ -87,7 +95,11 @@ it('emits explicit retry and older-history requests', async () => {
     error: 'Could not confirm.',
   });
   render(<UpdateRole {...p} />);
+  expect(screen.getByRole('region', { name: 'Update role' })).toHaveTextContent(
+    'The latest update failed. See update history to review or retry.',
+  );
   const user = userEvent.setup();
+  await user.click(screen.getByRole('button', { name: 'Update history' }));
   await user.click(screen.getByRole('button', { name: 'Load older messages' }));
   expect(p.onOlder).toHaveBeenCalled();
   await user.click(screen.getByRole('button', { name: 'Retry update' }));
@@ -140,6 +152,7 @@ it('loads persisted history and submits and undoes through a real store', async 
     'Set priority high',
   );
   await user.click(chat.getByRole('button', { name: 'Send' }));
+  await user.click(chat.getByRole('button', { name: 'Update history' }));
   await waitFor(() =>
     expect(chat.getByText('Changes saved')).toBeInTheDocument(),
   );
@@ -149,9 +162,46 @@ it('loads persisted history and submits and undoes through a real store', async 
   );
   view.unmount();
   render(ui());
+  await user.click(screen.getByRole('button', { name: 'Update history' }));
   expect(
     await within(
       screen.getByRole('region', { name: 'Update role' }),
     ).findByText('Changes undone'),
   ).toBeInTheDocument();
+});
+
+it('keeps history collapsed by default and preserves the draft when toggled', async () => {
+  const user = userEvent.setup();
+  render(<UpdateRole {...props({ entries: [entry] })} />);
+  const toggle = screen.getByRole('button', { name: 'Update history' });
+  const input = screen.getByRole('textbox', { name: 'Your update' });
+  expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  expect(screen.queryByRole('log')).not.toBeInTheDocument();
+  await user.type(input, 'My draft');
+  toggle.focus();
+  await user.keyboard('{Enter}');
+  expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  const history = screen.getByRole('log');
+  expect(history).toHaveTextContent(entry.text);
+  expect(
+    input.compareDocumentPosition(history) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+  await user.keyboard(' ');
+  expect(screen.queryByRole('log')).not.toBeInTheDocument();
+  expect(input).toHaveValue('My draft');
+});
+
+it('ignores composing, repeated, blank and pending keyboard submissions', () => {
+  const p = props();
+  const view = render(<UpdateRole {...p} />);
+  const input = screen.getByRole('textbox', { name: 'Your update' });
+  fireEvent.keyDown(input, { key: 'Enter', metaKey: true });
+  fireEvent.change(input, { target: { value: 'Set priority high' } });
+  fireEvent.keyDown(input, { key: 'Enter', metaKey: true, isComposing: true });
+  fireEvent.keyDown(input, { key: 'Enter', metaKey: true, repeat: true });
+  expect(p.onSend).not.toHaveBeenCalled();
+  view.rerender(<UpdateRole {...p} pending />);
+  fireEvent.keyDown(input, { key: 'Enter', metaKey: true });
+  expect(p.onSend).not.toHaveBeenCalled();
+  expect(input).toBeEnabled();
 });

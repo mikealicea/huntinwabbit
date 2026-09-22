@@ -21,14 +21,21 @@ from link persistence; terminal failure offers an explicit retry. Completed post
 the saved URL. Existing facts remain visible during refresh and after failure; success replaces generated facts while preserving user overrides.
 Unsaved comment drafts survive refresh. Pending requests cannot submit another extraction.
 
-Refresh/extraction, saves and deletion show the shared pulsing activity cue while pending.
-Loading text stays readable and reduced-motion preferences disable the pulse.
+[RoleStatus](RoleStatus.component.tsx) places network and extraction feedback beside the stage badge
+in the role header. It uses the shared [RequestStatus](../../shared/RequestStatus.component.tsx)
+marker also used by the board: busy spinner, error X, completed check or a neutral information icon
+when extraction is unavailable or has not completed. Its popover contains request recovery,
+extraction progress/failure, correction-preservation and changed-source messages previously shown
+with posting details. Status is announced without moving the page layout. Keyboard activation,
+Escape with focus restoration, outside clicks and focus leaving control the popover.
+Initial loading or unavailable-role errors still use the standalone request feedback.
+Reduced-motion preferences disable the spinner and loading pulse.
 
 [PostingActions](PostingActions.component.tsx) groups extraction/refresh/retry and deletion in a
 daisyUI details dropdown beside the stage badge. The feature exports this presentation contract
 for board cards, whose containers supply their own mutations and compact menu placement. The three-dot trigger is labeled Posting actions.
 Escape, outside clicks, focus leaving and action selection close the dropdown. Extraction progress
-remains visible in Job details while the menu is closed; pending work disables repeat submissions.
+remains available in the header status popover while the menu is closed; pending work disables repeat submissions.
 
 [DeletePosting](DeletePosting.component.tsx) owns the native confirmation dialog, initial Cancel focus,
 Tab containment and Escape dismissal. The dialog mounts outside the dropdown; closing it restores
@@ -55,7 +62,10 @@ No upload, submission or shared-company editing capability is claimed.
 [UpdateRoleContainer](UpdateRole.container.tsx) connects durable history, submission and Undo through
 RTK Query. [UpdateRole](UpdateRole.component.tsx) renders typed props and owns only composer/dialog
 state. Desktop shows the chat above secondary sections; mobile opens a native full-screen dialog.
-Enter sends, Shift+Enter adds a newline, and closing restores focus. Processing never owns the server
+Enter inserts a newline; Cmd+Enter sends using the same availability checks as the Send button.
+Composition and held-key repeats do not submit. The composer appears above Update history,
+which starts collapsed and can be expanded with its keyboard-accessible toggle. Status and errors
+remain visible while history is collapsed. Closing the mobile dialog restores focus. Processing never owns the server
 job lifetime. The composer remains editable while another update runs, but sending is disabled.
 
 Messages and change receipts persist with the role. Clear portions apply immediately; skipped or
