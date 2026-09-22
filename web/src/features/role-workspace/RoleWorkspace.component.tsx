@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { type ReactNode, useState } from 'react';
+import type { ReactNode } from 'react';
 import {
   type ApplicationFields,
   getSourceHost,
@@ -14,7 +14,6 @@ import {
   STAGES,
   type Stage,
 } from '@/features/job-search/job-search.index';
-import { LoadingPulse } from '@/shared/shared.index';
 import type { DeleteOutcome } from './DeletePosting.component';
 import { JobDetails } from './JobDetails.component';
 import { PostingActions } from './PostingActions.component';
@@ -32,6 +31,7 @@ export interface RoleWorkspaceProps {
   onExtract?: () => void;
   onTaskCompletionChange: (taskId: string, completed: boolean) => void;
   updates?: ReactNode;
+  notes?: ReactNode;
   materials: ReactNode;
   company: ReactNode;
 }
@@ -49,11 +49,10 @@ export function RoleWorkspace({
   onApplicationChange,
   onTaskCompletionChange,
   updates,
+  notes,
   materials,
   company,
 }: RoleWorkspaceProps) {
-  const [notes, setNotes] = useState<string | null>(null);
-  const [savedNotice, setSavedNotice] = useState(false);
   return (
     <div className="mx-auto max-w-6xl">
       <Link href="/app" className="btn btn-ghost -ml-3 mb-5 min-h-11">
@@ -165,7 +164,7 @@ export function RoleWorkspace({
               </p>
               <div>
                 <h2 id="tasks-title" className="card-title">
-                  Follow-up & notes
+                  Follow-up
                 </h2>
                 <p className="mt-2 text-sm text-base-content/75">
                   Next: {nextActionLabel}
@@ -214,58 +213,11 @@ export function RoleWorkspace({
                   }
                 />
               </div>
-              <div className="fieldset p-0">
-                <label htmlFor="role-notes" className="fieldset-legend py-1">
-                  Prep & interview notes
-                </label>
-                <textarea
-                  disabled={saving}
-                  id="role-notes"
-                  className="textarea min-h-40 w-full text-base leading-relaxed"
-                  placeholder="Rounds, questions, things to prepare…"
-                  maxLength={20000}
-                  value={notes ?? role.notes}
-                  onChange={(event) => {
-                    setNotes(event.target.value);
-                    setSavedNotice(false);
-                  }}
-                />
-                <button
-                  type="button"
-                  className="btn btn-primary mt-2"
-                  disabled={saving || notes === null}
-                  onClick={async () => {
-                    const draft = notes;
-                    const success = await onApplicationChange({
-                      notes: draft ?? role.notes,
-                    });
-                    if (success !== false) {
-                      setNotes((current) =>
-                        current === draft ? null : current,
-                      );
-                      setSavedNotice(true);
-                    }
-                  }}
-                >
-                  Save notes
-                </button>
-                <p role="status" className="mt-1 text-sm text-base-content/75">
-                  {saving && !deleting && <LoadingPulse />}
-                  {saving
-                    ? deleting
-                      ? 'Deleting…'
-                      : 'Saving…'
-                    : notes !== null
-                      ? 'You have unsaved notes.'
-                      : savedNotice
-                        ? 'Notes saved.'
-                        : 'Notes are saved to this role.'}
-                </p>
-              </div>
             </div>
           </section>
         </div>
         <div className="contents min-w-0 space-y-5 lg:block">
+          {notes}
           {updates}
           {materials}
           {company}

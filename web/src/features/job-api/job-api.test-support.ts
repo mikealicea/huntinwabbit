@@ -1,12 +1,17 @@
 import { vi } from 'vitest';
 import fixture from '../../../e2e/postings.fixture.json';
-import { type SavedPosting, savedPostingSchema } from './job-api.contracts';
+import {
+  type RoleNote,
+  type SavedPosting,
+  savedPostingSchema,
+} from './job-api.contracts';
 export const postingFixtures = () =>
   fixture.map((item) => savedPostingSchema.parse(item));
 export function mockPostingApi(initial = postingFixtures()) {
   const records = new Map(
     initial.map((item) => [item.id, structuredClone(item)]),
   );
+  const notes = new Map<string, RoleNote[]>();
   let sequence = 100;
   const NativeRequest = globalThis.Request;
   vi.stubGlobal(
@@ -29,6 +34,60 @@ export function mockPostingApi(initial = postingFixtures()) {
       const id = url.pathname.split('/')[3];
       const json = (body: unknown, status = 200) =>
         Response.json(body, { status });
+      if (url.pathname.split('/')[4] === 'notes') {
+        const role = records.get(id);
+        if (!role) return json({}, 404);
+        const list = notes.get(id) ?? [];
+        notes.set(id, list);
+        if (request.method === 'GET') {
+          const after = Number(url.searchParams.get('cursor') ?? 0);
+          return json({
+            schemaVersion: 1,
+            items: list.slice(after, after + 20),
+            nextCursor: list.length > after + 20 ? String(after + 20) : null,
+          });
+        }
+        const body = await request.json();
+        const noteId = url.pathname.split('/')[5] ?? body.id;
+        const note = list.find((value) => value.id === noteId);
+        if (request.method === 'POST') {
+          if (note)
+            return note.body === body.body
+              ? json({ schemaVersion: 1, note })
+              : json({}, 409);
+          const created = {
+            id: noteId,
+            body: body.body,
+            revision: 1,
+            createdAt: '2026-09-22T12:00:00.000Z',
+            updatedAt: '2026-09-22T12:00:00.000Z',
+          };
+          list.unshift(created);
+          role.applicationVersion++;
+          role.recordVersion++;
+          return json({ schemaVersion: 1, note: created }, 201);
+        }
+        if (!note)
+          return request.method === 'DELETE'
+            ? new Response(null, { status: 204 })
+            : json({}, 404);
+        if (note.revision !== body.expectedRevision) return json({}, 409);
+        role.applicationVersion++;
+        role.recordVersion++;
+        if (request.method === 'DELETE') {
+          notes.set(
+            id,
+            list.filter((value) => value.id !== noteId),
+          );
+          return new Response(null, { status: 204 });
+        }
+        Object.assign(note, {
+          body: body.body,
+          revision: note.revision + 1,
+          updatedAt: '2026-09-22T13:00:00.000Z',
+        });
+        return json({ schemaVersion: 1, note });
+      }
       if (request.method === 'GET' && url.pathname.endsWith('/updates'))
         return records.has(id)
           ? json({ schemaVersion: 1, items: [], nextCursor: null })
@@ -107,5 +166,5 @@ export function mockPostingApi(initial = postingFixtures()) {
     },
   );
   vi.stubGlobal('fetch', fetcher);
-  return { records, fetcher };
+  return { records, notes, fetcher };
 }

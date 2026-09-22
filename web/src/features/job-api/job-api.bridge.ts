@@ -1,12 +1,18 @@
 import 'server-only';
 import { z } from 'zod';
 import {
+  createNoteSchema,
+  deleteNoteSchema,
   deleteRequestSchema,
+  editNoteSchema,
   extractionRequestSchema,
   historyQuerySchema,
   itemResponseSchema,
   listRequestSchema,
   listResponseSchema,
+  noteResultSchema,
+  notesPageSchema,
+  notesQuerySchema,
   saveRequestSchema,
   saveResponseSchema,
   updateHistorySchema,
@@ -78,15 +84,31 @@ export function createApiBridge(deps: {
       const url = new URL(request.url);
       const suffix = url.pathname.slice('/api/job-postings'.length);
       const match =
-        /^\/([0-9a-f-]{36})(\/extraction|\/updates(?:\/([0-9a-f-]{36})\/undo)?)?$/.exec(
+        /^\/([0-9a-f-]{36})(\/extraction|\/updates(?:\/([0-9a-f-]{36})\/undo)?|\/notes(?:\/([0-9a-f-]{36}))?)?$/.exec(
           suffix,
         );
       if (suffix && (!match || !z.uuid().safeParse(match[1]).success))
         return failure(404, 'NOT_FOUND');
       if (match?.[3] && !z.uuid().safeParse(match[3]).success)
         return failure(404, 'NOT_FOUND');
+      if (match?.[4] && !z.uuid().safeParse(match[4]).success)
+        return failure(404, 'NOT_FOUND');
+      const isNotes = match?.[2]?.startsWith('/notes');
+      const noteAction = isNotes
+        ? request.method === 'GET' && !match?.[4]
+          ? 'notes'
+          : request.method === 'POST' && !match?.[4]
+            ? 'createNote'
+            : request.method === 'PATCH' && match?.[4]
+              ? 'editNote'
+              : request.method === 'DELETE' && match?.[4]
+                ? 'deleteNote'
+                : undefined
+        : undefined;
+      if (isNotes && !noteAction) return failure(405, 'METHOD_NOT_ALLOWED');
       const action =
-        request.method === 'GET' && match?.[2] === '/updates'
+        noteAction ??
+        (request.method === 'GET' && match?.[2] === '/updates'
           ? 'history'
           : request.method === 'POST' && match?.[3]
             ? 'undo'
@@ -104,27 +126,38 @@ export function createApiBridge(deps: {
                         ? 'extract'
                         : request.method === 'DELETE' && match && !match[2]
                           ? 'delete'
-                          : undefined;
+                          : undefined);
       if (!action) return failure(405, 'METHOD_NOT_ALLOWED');
       let query = '';
       let body: string | undefined;
       try {
-        if (action === 'list' || action === 'history') {
+        if (action === 'list' || action === 'history' || action === 'notes') {
           if (
             [...url.searchParams.keys()].some(
               (key) => url.searchParams.getAll(key).length !== 1,
             )
           )
             return failure(400, 'INVALID_REQUEST');
-          (action === 'history' ? historyQuerySchema : listRequestSchema).parse(
-            Object.fromEntries(url.searchParams),
-          );
+          (action === 'notes'
+            ? notesQuerySchema
+            : action === 'history'
+              ? historyQuerySchema
+              : listRequestSchema
+          ).parse(Object.fromEntries(url.searchParams));
           query = url.search;
         } else if (url.search) return failure(400, 'INVALID_REQUEST');
         if (
-          ['save', 'update', 'extract', 'delete', 'message', 'undo'].includes(
-            action,
-          )
+          [
+            'save',
+            'update',
+            'extract',
+            'delete',
+            'message',
+            'undo',
+            'createNote',
+            'editNote',
+            'deleteNote',
+          ].includes(action)
         ) {
           if (
             !request.headers.get('content-type')?.startsWith('application/json')
@@ -132,17 +165,23 @@ export function createApiBridge(deps: {
             return failure(415, 'UNSUPPORTED_MEDIA_TYPE');
           const value = await boundedJson(request, 256 * 1024);
           const schema =
-            action === 'message'
-              ? updateMessageSchema
-              : action === 'undo'
-                ? z.strictObject({})
-                : action === 'save'
-                  ? saveRequestSchema
-                  : action === 'update'
-                    ? updateRequestSchema
-                    : action === 'delete'
-                      ? deleteRequestSchema
-                      : extractionRequestSchema;
+            action === 'createNote'
+              ? createNoteSchema
+              : action === 'editNote'
+                ? editNoteSchema
+                : action === 'deleteNote'
+                  ? deleteNoteSchema
+                  : action === 'message'
+                    ? updateMessageSchema
+                    : action === 'undo'
+                      ? z.strictObject({})
+                      : action === 'save'
+                        ? saveRequestSchema
+                        : action === 'update'
+                          ? updateRequestSchema
+                          : action === 'delete'
+                            ? deleteRequestSchema
+                            : extractionRequestSchema;
           body = JSON.stringify(schema.parse(value));
         }
       } catch {
@@ -170,20 +209,24 @@ export function createApiBridge(deps: {
           : 502;
         return failure(status, status === 409 ? 'CONFLICT' : 'API_UNAVAILABLE');
       }
-      if (action === 'delete')
+      if (action === 'delete' || action === 'deleteNote')
         return response.status === 204
           ? new Response(null, { status: 204, headers })
           : failure(502, 'INVALID_RESPONSE');
       const schema =
-        action === 'history'
-          ? updateHistorySchema
-          : ['message', 'undo'].includes(action)
-            ? updateResultSchema
-            : action === 'list'
-              ? listResponseSchema
-              : action === 'save'
-                ? saveResponseSchema
-                : itemResponseSchema;
+        action === 'notes'
+          ? notesPageSchema
+          : ['createNote', 'editNote'].includes(action)
+            ? noteResultSchema
+            : action === 'history'
+              ? updateHistorySchema
+              : ['message', 'undo'].includes(action)
+                ? updateResultSchema
+                : action === 'list'
+                  ? listResponseSchema
+                  : action === 'save'
+                    ? saveResponseSchema
+                    : itemResponseSchema;
       const result = schema.parse(await boundedJson(response, 2 * 1024 * 1024));
       return Response.json(result, { status: response.status, headers });
     } catch {

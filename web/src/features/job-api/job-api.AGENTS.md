@@ -39,8 +39,8 @@ later pages preserve earlier results. Individual pending roles poll every five s
 role details stop polling after terminal extraction. Reconnect/focus refresh is observational. Closing
 or reloading the browser cannot stop an accepted backend extraction job.
 
-Saving a link is idempotent by backend-normalized URL. Updates use application versions; conflicts
-retain note drafts for review. Successful writes invalidate lists and details. Extraction acknowledgements immediately update the
+Saving a link is idempotent by backend-normalized URL. Tracking updates use application versions. Comments use separate note revisions and retain drafts
+on conflicts. Successful writes invalidate lists and details. Extraction acknowledgements immediately update the
 detail cache so pending controls and polling start without waiting for a refetch. DELETE validates the
 expected application version and requires an empty 204 success; it removes the acknowledged ID from
 cached board pages before navigation. Failed deletions retain cached data. Deletion returns no response payload; upstream errors remain sanitized. The browser keeps no
@@ -60,3 +60,8 @@ origin rules. History remains in RTK Query rather than a duplicate product slice
 reads invalidate posting caches so durable results appear on the board and role. Submission carries
 a client operation ID for acknowledgement recovery; the server owns paid work and ordering.
 The [role workspace barrel](../role-workspace/role-workspace.AGENTS.md) owns interaction details.
+
+Comments use allowlisted notes routes and independently paginated Notes cache tags. The API validates
+bodies and revisions on both sides of the bridge; delete requires an empty 204. Successful or uncertain
+mutations invalidate notes and posting caches so role deletion reviews current application versions.
+Create IDs are retained by the notes container for explicit retry; the backend prevents duplication.

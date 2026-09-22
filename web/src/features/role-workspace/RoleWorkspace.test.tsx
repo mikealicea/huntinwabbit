@@ -54,26 +54,26 @@ describe('live role workspace', () => {
     ).not.toBeInTheDocument();
     expect(screen.getAllByText('Not available yet')).toHaveLength(2);
     await waitFor(() =>
-      expect(
-        screen.getByRole('textbox', { name: 'Prep & interview notes' }),
-      ).toBeEnabled(),
+      expect(screen.getByRole('textbox', { name: 'Add a note' })).toBeEnabled(),
     );
     await user.type(
-      screen.getByRole('textbox', { name: 'Prep & interview notes' }),
+      screen.getByRole('textbox', { name: 'Add a note' }),
       'Fictional saved note',
     );
     expect(api.records.get(item.id)?.application.notes).toBe('');
-    await user.click(screen.getByRole('button', { name: 'Save notes' }));
+    await user.click(screen.getByRole('button', { name: 'Add comment' }));
     await waitFor(() =>
-      expect(api.records.get(item.id)?.application.notes).toBe(
-        'Fictional saved note',
-      ),
+      expect(api.notes.get(item.id)?.[0]?.body).toBe('Fictional saved note'),
     );
+    await screen.findByText('Comment saved.');
     view.unmount();
     render(ui());
     expect(
-      await screen.findByRole('textbox', { name: 'Prep & interview notes' }),
-    ).toHaveValue('Fictional saved note');
+      await screen.findByRole('textbox', { name: 'Add a note' }),
+    ).toHaveValue('');
+    await waitFor(() =>
+      expect(screen.getByText('Fictional saved note')).toBeVisible(),
+    );
   });
   it('shows 404 recovery only after the direct API lookup', async () => {
     mockPostingApi([]);
@@ -86,7 +86,7 @@ describe('live role workspace', () => {
       await screen.findByRole('heading', { name: 'Role not found' }),
     ).toBeInTheDocument();
   });
-  it('preserves a note draft on a conflicting edit', async () => {
+  it('preserves a note draft on a failed submission', async () => {
     const api = mockPostingApi();
     const item = postingFixtures()[0];
     const user = userEvent.setup();
@@ -96,21 +96,19 @@ describe('live role workspace', () => {
       </StoreProvider>,
     );
     await user.type(
-      await screen.findByRole('textbox', { name: 'Prep & interview notes' }),
+      await screen.findByRole('textbox', { name: 'Add a note' }),
       'My unsaved draft',
     );
-    api.records.set(item.id, {
-      ...item,
-      applicationVersion: 1,
-      application: { ...item.application, notes: 'Other tab' },
-    });
-    await user.click(screen.getByRole('button', { name: 'Save notes' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'changed elsewhere',
+    api.fetcher.mockImplementationOnce(async () =>
+      Response.json({}, { status: 503 }),
     );
-    expect(
-      screen.getByRole('textbox', { name: 'Prep & interview notes' }),
-    ).toHaveValue('My unsaved draft');
+    await user.click(screen.getByRole('button', { name: 'Add comment' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'could not be confirmed',
+    );
+    expect(screen.getByRole('textbox', { name: 'Add a note' })).toHaveValue(
+      'My unsaved draft',
+    );
   });
 });
 
@@ -124,7 +122,7 @@ it('keeps draft notes and prior facts while refresh is pending', async () => {
     </StoreProvider>,
   );
   await user.type(
-    await screen.findByRole('textbox', { name: 'Prep & interview notes' }),
+    await screen.findByRole('textbox', { name: 'Add a note' }),
     'Draft stays',
   );
   await user.click(screen.getByLabelText('Posting actions'));
@@ -133,9 +131,9 @@ it('keeps draft notes and prior facts while refresh is pending', async () => {
   expect(
     await screen.findByRole('button', { name: 'Refreshing posting…' }),
   ).toBeDisabled();
-  expect(
-    screen.getByRole('textbox', { name: 'Prep & interview notes' }),
-  ).toHaveValue('Draft stays');
+  expect(screen.getByRole('textbox', { name: 'Add a note' })).toHaveValue(
+    'Draft stays',
+  );
   expect(api.records.get(item.id)?.parsedPosting).toEqual(item.parsedPosting);
   expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
     item.parsedPosting?.job.title ?? '',

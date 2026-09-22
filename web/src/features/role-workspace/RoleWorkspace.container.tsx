@@ -16,6 +16,7 @@ import {
   toOpportunity,
 } from '@/features/job-search/job-search.index';
 import { selectToday, useAppSelector } from '@/state/state.index';
+import { RoleNotesContainer } from './RoleNotes.container';
 import { RoleNotFound } from './RoleNotFound.component';
 import { RoleWorkspace } from './RoleWorkspace.component';
 import { UnavailableSection } from './UnavailableSection.component';
@@ -77,7 +78,7 @@ export function RoleWorkspaceContainer({ roleId }: { roleId: string }) {
         companyLabel={getCompanyLabel(role, [])}
         nextActionLabel={getNextAction(role, today).label}
         onApplicationChange={change}
-        saving={mutation.isLoading || deletion.isLoading}
+        saving={mutation.isLoading || deletion.isLoading || query.isFetching}
         deleting={deletion.isLoading}
         deleteDisabled={mutation.isLoading || extraction.isLoading}
         onDelete={async (expectedApplicationVersion) => {
@@ -114,9 +115,16 @@ export function RoleWorkspaceContainer({ roleId }: { roleId: string }) {
             });
         }}
         onTaskCompletionChange={() => {}}
+        notes={
+          <RoleNotesContainer
+            key={`${role.id}-notes`}
+            roleId={role.id}
+            disabled={deletion.isLoading}
+          />
+        }
         updates={
           <UpdateRoleContainer
-            key={role.id}
+            key={`${role.id}-updates`}
             roleId={role.id}
             pending={!!role.saved?.edits?.pending}
             disabled={deletion.isLoading}
