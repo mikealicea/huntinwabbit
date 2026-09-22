@@ -6,21 +6,20 @@ views using the [API feature](../job-api/job-api.AGENTS.md). It polls pending ex
 focused and wires persistent application changes into [presentation](RoleWorkspace.component.tsx).
 
 Stage, interest, priority and follow-up persist independently. Controls show pending state and prevent
-competing writes. Notes remain a local draft until Save notes succeeds; failure/conflict preserves
-that draft. A conflict refreshes server data and requires deliberate resubmission. Leaving the page
-can discard unsaved notes. Extraction only updates generated facts and never overwrites tracking.
+competing tracking writes. Notes use an independent comment timeline, described below. Leaving the page
+can discard unsaved comment drafts. Extraction only updates generated facts and never overwrites tracking.
 
 [JobDetails](JobDetails.component.tsx) groups all locations, employment type, salary and work arrangement
 in a wrapping overview. Requirements (with distinct preferred qualifications), Tech stack, Responsibilities
 and Full job details follow in that order. Benefits, all compensation bands and posting metadata remain
 available below. Missing facts remain unknown; older records without technology extraction offer refresh.
 Technology labels preserve stated required/preferred distinctions.
-[PostingDescription](PostingDescription.component.tsx) renders Markdown with nested headings, paragraphs
+[PostingDescription](PostingDescription.component.tsx) delegates to shared SafeMarkdown to render Markdown with nested headings, paragraphs
 and lists, retaining plain-text line breaks. HTML stays inert text; images never load, and description
 links allow only credential-free HTTP(S) destinations. No raw HTML or MDX evaluation is used. Queued/processing/failed/disabled states distinguish extraction
 from link persistence; terminal failure offers an explicit retry. Completed postings offer refresh of
 the saved URL. Existing facts remain visible during refresh and after failure; success replaces generated facts while preserving user overrides.
-Unsaved note drafts survive refresh. Pending requests cannot submit another extraction.
+Unsaved comment drafts survive refresh. Pending requests cannot submit another extraction.
 
 Refresh/extraction, saves and deletion show the shared pulsing activity cue while pending.
 Loading text stays readable and reduced-motion preferences disable the pulse.
@@ -65,11 +64,11 @@ local drafts, with an explicit retry for a saved failed operation. Ambiguous sub
 the operation ID while the text is unchanged; history refresh recovers an accepted request. Chat
 history is paginated, polls pending operations, and refreshes role/board caches on settlement.
 
-Source-derived facts resolve through saved overrides, including empty values. All persisted role
-fields are supported, including fields shown in the detailed posting section. Chat does not create
-unimplemented tasks, material records or shared company profiles. Pasted text is processed by Redpill;
-links are values, not fetching instructions. Unsaved notes remain local and survive chat updates;
-users must review their draft before saving over a newly changed server note.
+Source-derived facts resolve through saved overrides, including empty values. Posting and tracking fields are supported, including fields shown in the detailed posting section;
+notes and comments must be entered through the Notes composer. Chat does not create
+unimplemented tasks or material records. Company-name corrections can reassign this role to an existing
+or new company; they do not edit shared research. Pasted text is processed by Redpill;
+links are values, not fetching instructions. Comment drafts remain local and survive chat updates. Chat does not read or modify the comment timeline.
 
 [Chat tests](UpdateRole.test.tsx) exercise props and a fresh real store. Browser tests cover desktop
 and mobile, both themes, persisted history, partial updates, retry, refresh precedence and Undo.
@@ -78,3 +77,27 @@ Company headings link to the associated company page. The connected Change compa
 by [company workspace](../company-workspace/company-workspace.AGENTS.md); selecting, creating or clearing
 an association leaves role history and original extracted company facts intact. The association
 revision protects corrections from stale chat results and Undo.
+## Notes timeline
+
+[RoleNotesContainer](RoleNotes.container.tsx) owns paginated RTK Query reads and direct mutations;
+[RoleNotes](RoleNotes.component.tsx) composes the notepad, status and newest-first entries.
+[NoteComposer](NoteComposer.component.tsx) provides Write/Preview using the shared safe Markdown
+renderer. Enter inserts a newline; Cmd+Enter submits a comment or saves an inline edit, using the
+same availability checks as the submit button. Composition and held-key repeats do not submit.
+The composer clears only on
+acknowledged success and preserves text typed while the submitted snapshot was saving. Comments
+are private to the authenticated role owner, without replies, attachments or AI processing.
+
+[NoteEntry](NoteEntry.component.tsx) owns inline edits and a deletion confirmation with initial Cancel
+focus. Cancel restores the action focus; successful deletion returns focus to the composer. Edits
+show an Edited indicator. A conflict retains the draft, displays the current saved comment and
+requires review before resubmission; deletion conflicts require canceling and reconfirming. If an
+entry disappears remotely or leaves the loaded pages, its active edit remains available for copying
+into a new comment rather than being silently discarded.
+Failures do not hide unrelated role content. Older-page failures preserve loaded comments.
+
+Create retries reuse the ID while the submitted body is unchanged. No automatic write retries or
+browser persistence are added. Background refreshes preserve drafts; navigation/reload may discard
+them. Legacy single-field notes are retained in storage for compatibility but not displayed or migrated.
+[Notes tests](RoleNotes.test.tsx) exercise real stores, acknowledgements, conflicts and pagination;
+browser tests cover Markdown, reload, edit/delete, keyboard focus and both responsive themes.

@@ -7,6 +7,8 @@ export {
   createDynamoPostingStore,
   createDynamoTransport,
 } from './job-postings.dynamodb.ts';
+export { createRoleNotesRouter } from './job-postings.notes.router.ts';
+export { createRoleNotes, type RoleNotes } from './job-postings.notes.ts';
 export { createJobPostingsRouter } from './job-postings.router.ts';
 export {
   type JobPostings,

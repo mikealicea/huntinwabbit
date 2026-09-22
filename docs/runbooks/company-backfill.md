@@ -7,11 +7,15 @@ source facts, overrides and extraction state. Existing assignments are never rep
 
 ## Release order
 
-1. Release web readers that tolerate absent and present associations. Until the backend is updated,
-   legacy role pages and the board remain usable; the company picker reports unavailable requests.
+1. Prepare a compatibility-only web release with the updated saved-posting and update-history schemas,
+   retaining the currently deployed UI. Its readers must tolerate absent and present associations
+   before the backend writes them. This is a separate release artifact, not a runtime feature flag.
 2. Release API and extraction/recovery workers with the same updated stored schemas. Stop old worker
    versions from processing jobs before writing associations; old strict readers reject new fields.
-3. Review and run the targeted migration for each account that needs its existing roles linked.
+   Include the role-comment handlers and AI note-exclusion changes from the same revision.
+3. Release the complete frontend, including company pages and the role-comment timeline. Both APIs
+   are now available; enabling comments follows the notes feature's backend-first requirement.
+4. Review and run the targeted migration for each account that needs its existing roles linked.
    New extractions and explicit selection already establish associations through runtime code.
 
 Rollbacks must retain readers supporting company associations and chat snapshots. Do not delete saved

@@ -370,6 +370,12 @@ export function createRoleUpdates(
         counts.set(change.field, (counts.get(change.field) ?? 0) + 1);
       for (const change of changes) {
         const field = change.field;
+        if (field === 'notes') {
+          result.entry.skipped.push(
+            'Notes: use the Notes composer to add a comment.',
+          );
+          continue;
+        }
         let value = change.value;
         if (
           (field === 'companyName' || field === 'companyWebsite') &&
@@ -578,6 +584,7 @@ export function createRoleUpdates(
       let size = 0;
       for (const entry of recent.items) {
         if (
+          entry.changes.some((change) => change.field === 'notes') ||
           entry.id === data.entry.id ||
           ['queued', 'processing', 'failed'].includes(entry.status)
         )
@@ -586,11 +593,12 @@ export function createRoleUpdates(
         if (size > 20_000) break;
         context.unshift(entry);
       }
+      const { notes: _notes, ...current } = data.baseline;
       const output = modelUpdatesSchema.parse(
         await parse(
           {
             text: data.entry.text,
-            current: data.baseline,
+            current,
             history: context,
             today,
           },
@@ -630,6 +638,8 @@ export function createRoleUpdates(
       const { job, data } = saved;
       if (data.entry.undoneAt) return data.entry;
       if (found.item.edits?.pending || !data.entry.changes.length)
+        throw postingError('CONFLICT');
+      if (data.entry.changes.some((change) => change.field === 'notes'))
         throw postingError('CONFLICT');
       const fields = effectiveUpdateFields(found.item);
       const next = structuredClone(found.item);

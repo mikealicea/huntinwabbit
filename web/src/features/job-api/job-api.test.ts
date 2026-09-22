@@ -311,3 +311,61 @@ it('validates role update requests, history and undo through the authenticated b
     ).status,
   ).toBe(400);
 });
+
+it('bridges comment routes with bounded contracts and rejects unsupported methods', async () => {
+  const id = postingFixtures()[0].id;
+  const note = {
+    id: '00000000-0000-4000-8000-000000000090',
+    body: '**Fictional** note',
+    revision: 1,
+    createdAt: '2026-09-22T00:00:00.000Z',
+    updatedAt: '2026-09-22T00:00:00.000Z',
+  };
+  const s = setup({ schemaVersion: 1, note });
+  const call = (path: string, method: string, body?: unknown) =>
+    s.bridge(
+      new Request(`http://localhost:3000/api/job-postings/${id}/notes${path}`, {
+        method,
+        headers: {
+          origin: 'http://localhost:3000',
+          'Content-Type': 'application/json',
+        },
+        ...(body ? { body: JSON.stringify(body) } : {}),
+      }),
+    );
+  expect(
+    (await call('', 'POST', { id: note.id, body: note.body })).status,
+  ).toBe(200);
+  expect(
+    (
+      await call(`/${note.id}`, 'PATCH', {
+        expectedRevision: 1,
+        body: 'Edited',
+      })
+    ).status,
+  ).toBe(200);
+  s.fetcher.mockResolvedValueOnce(new Response(null, { status: 204 }));
+  expect(
+    (await call(`/${note.id}`, 'DELETE', { expectedRevision: 1 })).status,
+  ).toBe(204);
+  s.fetcher.mockResolvedValueOnce(
+    Response.json({ schemaVersion: 1, items: [note], nextCursor: null }),
+  );
+  expect((await call('?cursor=fixture', 'GET')).status).toBe(200);
+  expect((await call('', 'PATCH', { body: 'Wrong route' })).status).toBe(405);
+  expect((await call(`/${note.id}`, 'GET')).status).toBe(405);
+  expect((await call('', 'POST', { id: note.id, body: ' ' })).status).toBe(400);
+  expect(
+    (await call('', 'POST', { id: note.id, body: 'x'.repeat(20001) })).status,
+  ).toBe(400);
+  expect((await call('?cursor=a&cursor=b', 'GET')).status).toBe(400);
+  expect(
+    (await call('/not-a-uuid', 'DELETE', { expectedRevision: 1 })).status,
+  ).toBe(404);
+  s.fetcher.mockResolvedValueOnce(
+    Response.json({ schemaVersion: 1, note: { ...note, body: 123 } }),
+  );
+  expect(
+    (await call('', 'POST', { id: note.id, body: note.body })).status,
+  ).toBe(503);
+});

@@ -9,6 +9,7 @@ const initialPostings = JSON.parse(
 const postings = new Map();
 const companies = new Map();
 const updateHistories = new Map();
+const roleNotes = new Map();
 let postingSequence = 100;
 
 const accounts = new Map();
@@ -190,6 +191,61 @@ const server = createServer(async (request, response) => {
       item.recordVersion++;
       item.applicationVersion++;
       return send(200, { schemaVersion: 1, item });
+    }
+    if (operation === 'notes') {
+      const role = records.get(id);
+      if (!role) return error(404, 'not_found');
+      const key = `${owner}:${id}`;
+      const list = roleNotes.get(key) ?? [];
+      roleNotes.set(key, list);
+      if (request.method === 'GET') {
+        const after = Number(url.searchParams.get('cursor') ?? 0);
+        return send(200, {
+          schemaVersion: 1,
+          items: list.slice(after, after + 20),
+          nextCursor: list.length > after + 20 ? String(after + 20) : null,
+        });
+      }
+      const noteId = url.pathname.split('/')[4] ?? body.id;
+      const note = list.find((item) => item.id === noteId);
+      if (request.method === 'POST') {
+        if (note)
+          return note.body === body.body
+            ? send(200, { schemaVersion: 1, note })
+            : error(409, 'conflict');
+        const timestamp = new Date().toISOString();
+        const created = {
+          id: noteId,
+          body: body.body,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+          revision: 1,
+        };
+        list.unshift(created);
+        role.applicationVersion++;
+        role.recordVersion++;
+        return send(201, { schemaVersion: 1, note: created });
+      }
+      if (!note) return error(404, 'not_found');
+      if (note.revision !== body.expectedRevision)
+        return error(409, 'conflict');
+      role.applicationVersion++;
+      role.recordVersion++;
+      if (request.method === 'DELETE') {
+        roleNotes.set(
+          key,
+          list.filter((item) => item.id !== noteId),
+        );
+        response.writeHead(204);
+        response.end();
+        return;
+      }
+      Object.assign(note, {
+        body: body.body,
+        revision: note.revision + 1,
+        updatedAt: new Date().toISOString(),
+      });
+      return send(200, { schemaVersion: 1, note });
     }
     if (operation === 'updates') {
       const role = records.get(id);

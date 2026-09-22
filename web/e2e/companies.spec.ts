@@ -32,6 +32,13 @@ for (const theme of ['light', 'dark'] as const) {
     await page
       .getByRole('link', { name: /Open Senior Product Engineer/ })
       .click();
+    await page
+      .getByRole('textbox', { name: 'Add a note' })
+      .fill('Ask about the fictional team.');
+    await page.getByRole('button', { name: 'Add comment' }).click();
+    await expect(
+      page.getByText('Comment saved.', { exact: true }),
+    ).toBeVisible();
     await page.getByRole('button', { name: 'Change company' }).click();
     const dialog = page.getByRole('dialog', { name: 'Change company' });
     await expect(dialog.getByRole('searchbox')).toBeFocused();
@@ -44,6 +51,10 @@ for (const theme of ['light', 'dark'] as const) {
     await expect(
       page.getByRole('button', { name: 'Change company' }),
     ).toBeFocused();
+    await page.reload();
+    await expect(
+      page.getByRole('article', { name: 'Comment', exact: true }),
+    ).toContainText('Ask about the fictional team.');
     await page
       .getByRole('link', { name: 'View Fictional Studio company' })
       .click();

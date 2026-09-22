@@ -41,3 +41,7 @@ mobile-dialog focus/dismissal in both themes. Screenshots are retained in ignore
 multiple-role membership, refresh/delete actions, reload, empty companies, focus, and desktop/mobile
 layouts in both themes. The loopback fixture owns fictional companies per test account. Company
 screenshots remain ignored review artifacts; the suite never creates hosted company records.
+Notes scenarios use the isolated API fixture to verify distinct persisted comments, Markdown preview,
+editing, Cmd+Enter submission, plain Enter newlines, permanent deletion, focus recovery and reloads
+in desktop/mobile layouts and both themes.
+Comment screenshots are review artifacts; no real notes or provider calls enter these tests.

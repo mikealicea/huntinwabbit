@@ -91,7 +91,7 @@ export type UpdateMessage = z.infer<typeof updateMessageSchema>;
 export type ParseUpdates = (
   input: {
     text: string;
-    current: z.infer<typeof editableFieldsSchema>;
+    current: Omit<z.infer<typeof editableFieldsSchema>, 'notes'>;
     history: UpdateEntry[];
     today: string;
   },
