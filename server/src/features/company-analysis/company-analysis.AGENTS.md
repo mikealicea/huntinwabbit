@@ -95,6 +95,9 @@ cleanup, model evidence, malformed merges, ownership, schedule postponement and 
 without duplicate work. Regressions also verify readable failed status responses, diagnostic
 redaction and specific model validation codes while retaining strict evidence checks and explicit
 paid retries. Tests inject storage and model boundaries; ordinary tests never call Redpill.
+The server and web suites each validate the shared
+[analysis fixtures](../../../../web/src/features/job-api/job-api.analysis.fixture.json) with their
+local schemas. Share fixture data, not cross-app source imports, so web builds require only web dependencies.
 Run server gates/build, storage/native packaging checks,
 web/browser gates and root documentation checks. Fake storage does not prove deployed IAM, stream
 scheduling, or model quality; live evaluations need a separately authorized target.

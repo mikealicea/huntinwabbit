@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
 import { TransactWriteCommand } from '@aws-sdk/lib-dynamodb';
 import request from 'supertest';
 import { describe, expect, it, vi } from 'vitest';
@@ -856,4 +857,21 @@ it('survives lost completion acknowledgement without repeating inference', async
   } finally {
     log.mockRestore();
   }
+});
+
+it('accepts the shared frontend analysis fixtures against the public contract', async () => {
+  const fixtures: unknown = JSON.parse(
+    await readFile(
+      new URL(
+        '../../../../web/src/features/job-api/job-api.analysis.fixture.json',
+        import.meta.url,
+      ),
+      'utf8',
+    ),
+  );
+  if (!fixtures || typeof fixtures !== 'object')
+    throw new Error('Invalid analysis fixtures');
+  expect(Object.keys(fixtures).sort()).toEqual(['complete', 'scheduled']);
+  for (const response of Object.values(fixtures))
+    expect(analysisResponseSchema.parse(response)).toEqual(response);
 });

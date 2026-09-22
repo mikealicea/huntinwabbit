@@ -80,7 +80,10 @@ results while legacy responses remain readable. See the [parsing boundary](../..
 for coordinated rollout and rollback requirements.
 
 Company analysis adds authenticated GET/POST paths under each company, validated by the
-[analysis contracts](job-api.analysis.contracts.ts). The server schemas remain authoritative. An
+[analysis contracts](job-api.analysis.contracts.ts). The server schemas remain authoritative.
+Both apps validate the same [analysis fixtures](job-api.analysis.fixture.json) against their own
+schemas. Web tests must not import server source: each app installs dependencies independently,
+and Next type-checks web tests during production builds. An
 idempotent ensure command runs from the query cache lifecycle only for uninitialized companies;
 its mutation state is shared with the analysis container for error feedback. Result refetches restart
 pagination to avoid mixing generations. Refresh requests retain operation IDs for explicit retries,

@@ -4,40 +4,18 @@ vi.mock('server-only', () => ({}));
 
 import { makeStore } from '@/state/state.store';
 import { analysisResponseSchema } from './job-api.analysis.contracts';
+import fixtures from './job-api.analysis.fixture.json';
 import { createApiBridge } from './job-api.bridge';
 import { postingApi } from './job-api.client';
 import { mockPostingApi } from './job-api.test-support';
 
 const id = '00000000-0000-4000-8000-000000000050';
-const response = {
-  schemaVersion: 1,
-  status: 'complete',
-  generation: id,
-  stale: false,
-  totalRoles: 2,
-  analyzedRoles: 2,
-  completedAt: '2026-09-22T12:00:00Z',
-  progress: 4,
-  error: null,
-  items: [],
-  nextCursor: null,
-};
+const response = fixtures.complete;
 afterEach(() => vi.unstubAllGlobals());
 it('validates the shared wire contract and bridges analysis reads and requests', async () => {
-  const server = await import(
-    '../../../../server/src/features/company-analysis/company-analysis.schemas'
-  );
-  expect(server.analysisResponseSchema.parse(response)).toEqual(
-    analysisResponseSchema.parse(response),
-  );
-  const scheduled = {
-    ...response,
-    status: 'scheduled',
-    scheduledFor: '2026-09-22T12:01:00.000Z',
-  };
-  expect(server.analysisResponseSchema.parse(scheduled)).toEqual(
-    analysisResponseSchema.parse(scheduled),
-  );
+  expect(analysisResponseSchema.parse(response)).toEqual(response);
+  const scheduled = fixtures.scheduled;
+  expect(analysisResponseSchema.parse(scheduled)).toEqual(scheduled);
   expect(
     analysisResponseSchema.safeParse({ ...scheduled, scheduledFor: 'soon' })
       .success,
