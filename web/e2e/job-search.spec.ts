@@ -1208,3 +1208,51 @@ for (const scheme of ['light', 'dark'] as const) {
     ).toHaveValue('');
   });
 }
+
+for (const scheme of ['light', 'dark'] as const) {
+  test(`source guidance opens without stealing focus in ${scheme}`, async ({
+    page,
+  }, testInfo) => {
+    await page.emulateMedia({ colorScheme: scheme });
+    await page.getByRole('button', { name: 'Add job links' }).click();
+    const input = page.getByRole('textbox', {
+      name: 'Job link 1',
+      exact: true,
+    });
+    await input.fill('https://www.indeed.com/viewjob?jk=fictional-guidance');
+    const editor = page.getByRole('textbox', {
+      name: 'Page text for job link 1',
+      exact: true,
+    });
+    await expect(editor).toBeVisible();
+    await expect(input).toBeFocused();
+    await expect(
+      page.getByText('This site may block scanning.', { exact: false }),
+    ).toBeVisible();
+    for (const width of [1440, 390]) {
+      await page.setViewportSize({ width, height: 1000 });
+      await expect(editor).toBeVisible();
+      await expect(input).toBeFocused();
+      await page.screenshot({
+        path: testInfo.outputPath(`source-guidance-${scheme}-${width}.png`),
+        fullPage: true,
+      });
+    }
+    await input.press('Tab');
+    await expect(
+      page.getByRole('combobox', { name: /Interest.*for job link 1/ }),
+    ).toBeFocused();
+    await editor.fill('Fictional job description for browser verification.');
+    await page
+      .getByRole('button', { name: 'Done with pasted text for job link 1' })
+      .click();
+    await expect(editor).not.toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Edit page text for job link 1' }),
+    ).toBeFocused();
+    await input.fill('https://indeed.com/viewjob?jk=fictional-guidance-two');
+    await expect(editor).not.toBeVisible();
+    await page.getByRole('button', { name: 'Save to Collected' }).click();
+    await expect(page.getByText(/1 saved\. 0 already saved/)).toBeVisible();
+  });
+}

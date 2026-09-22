@@ -30,6 +30,7 @@ import {
   updateHistorySchema,
   updateResultSchema,
 } from './job-api.contracts';
+import { guidanceResponseSchema } from './job-api.guidance.contracts';
 
 const transport = fetchBaseQuery({
   baseUrl: '/api/job-postings',
@@ -62,36 +63,38 @@ const validatedQuery: BaseQueryFn<
           },
         };
   const schema =
-    api.endpoint === 'sourceText'
-      ? sourceTextResponseSchema
-      : ['companyAnalysis', 'requestCompanyAnalysis'].includes(api.endpoint)
-        ? analysisResponseSchema
-        : ['roleNotes', 'companyNotes'].includes(api.endpoint)
-          ? notesPageSchema
-          : [
-                'createNote',
-                'editNote',
-                'createCompanyNote',
-                'editCompanyNote',
-              ].includes(api.endpoint)
-            ? noteResultSchema
-            : api.endpoint === 'company'
-              ? companyResponseSchema
-              : api.endpoint === 'companies'
-                ? companiesResponseSchema
-                : api.endpoint === 'companyRoles'
-                  ? listResponseSchema
-                  : api.endpoint === 'roleUpdates'
-                    ? updateHistorySchema
-                    : ['sendRoleUpdate', 'undoRoleUpdate'].includes(
-                          api.endpoint,
-                        )
-                      ? updateResultSchema
-                      : api.endpoint === 'postings'
-                        ? listResponseSchema
-                        : api.endpoint === 'savePosting'
-                          ? saveResponseSchema
-                          : itemResponseSchema;
+    api.endpoint === 'sourceGuidance'
+      ? guidanceResponseSchema
+      : api.endpoint === 'sourceText'
+        ? sourceTextResponseSchema
+        : ['companyAnalysis', 'requestCompanyAnalysis'].includes(api.endpoint)
+          ? analysisResponseSchema
+          : ['roleNotes', 'companyNotes'].includes(api.endpoint)
+            ? notesPageSchema
+            : [
+                  'createNote',
+                  'editNote',
+                  'createCompanyNote',
+                  'editCompanyNote',
+                ].includes(api.endpoint)
+              ? noteResultSchema
+              : api.endpoint === 'company'
+                ? companyResponseSchema
+                : api.endpoint === 'companies'
+                  ? companiesResponseSchema
+                  : api.endpoint === 'companyRoles'
+                    ? listResponseSchema
+                    : api.endpoint === 'roleUpdates'
+                      ? updateHistorySchema
+                      : ['sendRoleUpdate', 'undoRoleUpdate'].includes(
+                            api.endpoint,
+                          )
+                        ? updateResultSchema
+                        : api.endpoint === 'postings'
+                          ? listResponseSchema
+                          : api.endpoint === 'savePosting'
+                            ? saveResponseSchema
+                            : itemResponseSchema;
   const parsed = schema.safeParse(result.data);
   return parsed.success
     ? { data: parsed.data }
@@ -107,6 +110,17 @@ export const postingApi = createApi({
   baseQuery: validatedQuery,
   tagTypes: ['Posting', 'Updates', 'Notes', 'CompanyNotes', 'Analysis'],
   endpoints: (build) => ({
+    sourceGuidance: build.query<
+      ReturnType<typeof guidanceResponseSchema.parse>,
+      string
+    >({
+      query: (hostname) => ({
+        url: '/source-guidance',
+        method: 'POST',
+        body: { hostname },
+      }),
+      keepUnusedDataFor: 60,
+    }),
     sourceText: build.query<
       ReturnType<typeof sourceTextResponseSchema.parse>,
       string
@@ -526,6 +540,7 @@ export const postingApi = createApi({
   }),
 });
 export const {
+  useSourceGuidanceQuery,
   useSourceTextQuery,
   useCompanyAnalysisInfiniteQuery,
   useRequestCompanyAnalysisMutation,

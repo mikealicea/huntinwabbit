@@ -22,6 +22,7 @@ export {
   useSavePostingMutation,
   useSelectCompanyMutation,
   useSendRoleUpdateMutation,
+  useSourceGuidanceQuery,
   useSourceTextQuery,
   useUndoRoleUpdateMutation,
   useUpdatePostingMutation,

@@ -162,4 +162,4 @@ it('keeps the application within its architecture boundaries', () => {
   );
   const program = ts.createProgram(parsed.fileNames, parsed.options);
   expect(checkArchitecture(program, path.resolve('src'))).toEqual([]);
-}, 20_000);
+}, 60_000);

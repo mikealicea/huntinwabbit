@@ -107,6 +107,7 @@ uses erasable syntax, so avoid enums, namespaces and constructor parameter prope
 | Company analysis | [company-analysis.AGENTS.md](src/features/company-analysis/company-analysis.AGENTS.md) |
 | Saved companies | [companies.AGENTS.md](src/features/companies/companies.AGENTS.md) |
 | Saved job postings | [job-postings.AGENTS.md](src/features/job-postings/job-postings.AGENTS.md) |
+| Shared source guidance | [source-guidance.AGENTS.md](src/features/source-guidance/source-guidance.AGENTS.md) |
 | Job URL parsing | [job-parsing.AGENTS.md](src/features/job-parsing/job-parsing.AGENTS.md) |
 | Package verification scripts | [scripts.AGENTS.md](scripts/scripts.AGENTS.md) |
 | Protected hello endpoint | [hello.AGENTS.md](src/features/hello/hello.AGENTS.md) |

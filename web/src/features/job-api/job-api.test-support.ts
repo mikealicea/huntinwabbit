@@ -44,6 +44,13 @@ export function mockPostingApi(initial = postingFixtures()) {
       const id = parts[companyScope ? 4 : 3];
       const json = (body: unknown, status = 200) =>
         Response.json(body, { status });
+      if (url.pathname.endsWith('/source-guidance')) {
+        const { hostname } = await request.json();
+        return json({
+          hostname,
+          recommendSourceText: hostname === 'indeed.com',
+        });
+      }
       if (url.pathname.endsWith('/source-text')) {
         const item = records.get(id);
         return item

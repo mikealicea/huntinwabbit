@@ -17,7 +17,11 @@ Framework route files and the existing Nextra MDX integration have naming except
 [architecture.test.ts](architecture.test.ts) runs the checker against the real application and
 isolated fixtures for aliases, barrels, external adapters, local hooks, dynamic imports and naming.
 Fixtures use temporary directories removed in `finally`. `npm run test:architecture` runs these tests;
-`npm test` also includes them. No new runtime dependency or build plugin is needed.
+`npm test` also includes them. The full-program audit allows 60 seconds for TypeScript scanning,
+including coverage instrumentation; this is not a product latency assertion. On constrained machines,
+run state coverage serially with `npm run test:state -- --maxWorkers=1 --testTimeout=60000`
+to give instrumented fixture checks the same allowance. All assertions and coverage thresholds remain active.
+No new runtime dependency or build plugin is needed.
 
 This is an import/convention guard, not a security boundary or a proof of purity. It cannot judge
 component size, appropriate state lifetime, arbitrary runtime indirection or all effects hidden in

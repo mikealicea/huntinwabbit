@@ -8,6 +8,7 @@ Saved job persistence belongs to the [job-postings feature](../features/job-post
 There is no telemetry SDK or durable worker system.
 
 [app.ts](../app.ts) constructs Express, installs request logging, adds public health, authentication,
+the authenticated [source-guidance router](../features/source-guidance/source-guidance.AGENTS.md) before saved-role ID matching,
 the saved-posting router with its own bounded JSON parser, then smaller JSON parsing, the hello router and the [job parsing router](../features/job-parsing/job-parsing.router.ts),
 then installs final error middleware. [runtime.ts](../runtime.ts) validates auth, storage and parsing configuration
 and chooses the concrete adapters. [local.ts](../local.ts) owns the

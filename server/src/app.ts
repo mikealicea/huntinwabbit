@@ -27,12 +27,17 @@ import {
   type RoleNotes,
   type RoleUpdates,
 } from './features/job-postings/job-postings.index.ts';
+import {
+  createSourceGuidanceRouter,
+  type SourceGuidance,
+} from './features/source-guidance/source-guidance.index.ts';
 import { errorMiddleware } from './shared/shared.errors.ts';
 import { requestLogging } from './shared/shared.middleware.ts';
 import { createNotesRouter } from './shared/shared.notes.router.ts';
 
 export function buildApp(dependencies: {
   verifyAccessToken: VerifyAccessToken;
+  sourceGuidance?: SourceGuidance;
   parsePosting?: ParsePosting;
   jobPostings?: JobPostings;
   roleUpdates?: RoleUpdates;
@@ -65,6 +70,7 @@ export function buildApp(dependencies: {
       dependencies.companyNotes,
     ),
   );
+  app.use(createSourceGuidanceRouter(dependencies.sourceGuidance));
   app.use(createRoleNotesRouter(dependencies.roleNotes));
   app.use(createRoleUpdatesRouter(dependencies.roleUpdates));
   app.use(createJobPostingsRouter(dependencies.jobPostings));
