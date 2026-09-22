@@ -3,7 +3,11 @@
 import { type FormEvent, useEffect, useId, useRef, useState } from 'react';
 import { useSavePostingMutation } from '@/features/job-api/job-api.index';
 import { JobCapture } from './JobCapture.component';
-import { type CaptureRow, validateCapture } from './job-capture.validation';
+import {
+  type CaptureRow,
+  pageTextError,
+  validateCapture,
+} from './job-capture.validation';
 
 export function JobCaptureContainer() {
   const [savePosting] = useSavePostingMutation();
@@ -13,6 +17,11 @@ export function JobCaptureContainer() {
     { id: 0, url: '', interest: 'not-set' },
   ]);
   const [errors, setErrors] = useState<Record<number, string>>({});
+  const [expandedRow, setExpandedRow] = useState<number | null>(null);
+  const texts = useRef(new Map<number, HTMLTextAreaElement>());
+  useEffect(() => {
+    if (expandedRow !== null) texts.current.get(expandedRow)?.focus();
+  }, [expandedRow]);
   const [notice, setNotice] = useState('');
   const rowSequence = useRef(1);
   const inputs = useRef(new Map<number, HTMLInputElement>());
@@ -33,7 +42,7 @@ export function JobCaptureContainer() {
     const newRowId = rowSequence.current++;
     setRows((current) => {
       const updated = current.map((row) =>
-        row.id === rowId ? { ...row, url } : row,
+        row.id === rowId ? { ...row, url, existingId: undefined } : row,
       );
       if (url.trim() && current.at(-1)?.id === rowId)
         updated.push({ id: newRowId, url: '', interest: 'not-set' });
@@ -48,7 +57,10 @@ export function JobCaptureContainer() {
     setErrors(result.errors);
     const firstInvalid = rows.find((row) => result.errors[row.id]);
     if (firstInvalid) {
-      inputs.current.get(firstInvalid.id)?.focus();
+      if (pageTextError(firstInvalid.sourceText ?? '')) {
+        setExpandedRow(firstInvalid.id);
+        texts.current.get(firstInvalid.id)?.focus();
+      } else inputs.current.get(firstInvalid.id)?.focus();
       return;
     }
     setSaving(true);
@@ -56,6 +68,7 @@ export function JobCaptureContainer() {
     let duplicates = 0;
     const succeeded = new Set<number>();
     const failures: Record<number, string> = {};
+    const existing = new Map<number, string>();
     for (const row of rows.filter((row) => row.url.trim())) {
       setNotice(
         `Saving link ${saved + duplicates + Object.keys(failures).length + 1} of ${result.links.length}…`,
@@ -65,16 +78,28 @@ export function JobCaptureContainer() {
           url: row.url,
           application: { interest: row.interest },
           extract: true,
+          ...(row.sourceText?.trim() ? { sourceText: row.sourceText } : {}),
         }).unwrap();
         if (response.created) saved++;
         else duplicates++;
-        succeeded.add(row.id);
+        if (!response.created && row.sourceText?.trim()) {
+          existing.set(row.id, response.item.id);
+        } else succeeded.add(row.id);
       } catch {
         failures[row.id] =
           'This link could not be saved. Try again; repeated saves do not create duplicates.';
       }
     }
-    setRows((current) => current.filter((row) => !succeeded.has(row.id)));
+    setRows((current) =>
+      current
+        .filter((row) => !succeeded.has(row.id))
+        .map((row) =>
+          existing.has(row.id)
+            ? { ...row, existingId: existing.get(row.id) }
+            : row,
+        ),
+    );
+    setExpandedRow(null);
     setErrors(failures);
     setNotice(
       `${saved} saved. ${duplicates} already saved.${Object.keys(failures).length ? ' Some links need another try.' : ' Posting details will appear as extraction finishes.'}`,
@@ -85,6 +110,24 @@ export function JobCaptureContainer() {
   return (
     <JobCapture
       saving={saving}
+      expandedRow={expandedRow}
+      onExpandedRowChange={setExpandedRow}
+      registerText={(rowId, element) => {
+        if (element) texts.current.set(rowId, element);
+        else texts.current.delete(rowId);
+      }}
+      onSourceTextChange={(rowId, sourceText) => {
+        setErrors((current) => {
+          const next = { ...current };
+          delete next[rowId];
+          return next;
+        });
+        setRows((current) =>
+          current.map((row) =>
+            row.id === rowId ? { ...row, sourceText } : row,
+          ),
+        );
+      }}
       isOpen={isOpen}
       rows={rows}
       errors={errors}

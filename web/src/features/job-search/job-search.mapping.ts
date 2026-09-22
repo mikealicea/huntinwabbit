@@ -43,8 +43,10 @@ export function toOpportunity(item: SavedPosting): Opportunity {
   return {
     id: item.id,
     sourceUrl: item.sourceUrl,
-    companyId: null,
-    companyName: job?.company.name ?? null,
+    companyId: item.companyAssociation?.company?.id ?? null,
+    companyName: item.companyAssociation
+      ? (item.companyAssociation.company?.name ?? null)
+      : (job?.company.name ?? null),
     ...item.application,
     saved: item,
     jobDetails: job,

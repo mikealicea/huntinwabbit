@@ -32,3 +32,13 @@ It scans legacy posting rows and conditionally backfills ID pointers without mod
 Run with operator credentials and `JOB_POSTINGS_TABLE` set to the explicit dev table only. It reports
 only a count. Runtime roles have no Scan permission. Repeating the migration is safe; conflicting
 pointers fail rather than overwrite another target.
+
+[migrate-companies.ts](migrate-companies.ts) performs explicit, account/region/table/user-scoped
+company backfill. It defaults to dry-run, checks AWS account identity, checkpoints completed pages,
+and uses conditional association writes. It never calls inference or fetches postings. The
+[runbook](../../docs/runbooks/company-backfill.md) owns target selection, replay and rollout order.
+
+Storage package checks also verify company-analysis handler/stream configuration and transactional
+update/condition permissions. Company backfill invalidates analysis revisions transactionally; if
+analysis workers are enabled, applied membership changes can schedule paid analysis. Keep analysis
+disabled during an association-only migration. Dry-run remains read-only.

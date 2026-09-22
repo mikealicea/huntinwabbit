@@ -36,7 +36,11 @@ accepts supplied parse responses and owns durable extraction jobs whose worker c
 - [Redpill adapter](job-parsing.redpill.ts) exposes a bounded JSON-completion transport reused by
   saved-role updates. The URL extractor sends extracted page text with a schema-oriented prompt
   using JSON object mode with reasoning disabled. Source text is untrusted, tools are unavailable, output is bounded, and
-  the completion envelope, finish reason, JSON and job schema must all validate. Prompt isolation
+  the completion envelope, finish reason, JSON and job schema must all validate. New completions must
+  include explicitly named technologies with source qualifiers; older saved parse responses may omit
+  that field. The same completion formats the full description as Markdown headings, paragraphs and
+  lists, with instructions to retain substantive wording and detail, including content summarized
+  elsewhere. There is no separate formatting call. Prompt isolation
   reduces instruction confusion; schema validation does not prove factual accuracy.
 
 ## Lifetimes, failure and recovery
@@ -54,8 +58,8 @@ provider stops computing. A lost response has no durable recovery; an explicit c
 incur another charge. No user content or per-user result survives intentionally after a request.
 
 [Errors](job-parsing.errors.ts) own safe status/code/message mappings. Malformed or incomplete model
-output is a provider failure, never a fabricated job. Oversize sources fail instead of being silently
-truncated. The shared middleware maps malformed JSON and oversized bodies without exposing them;
+output is a provider failure, never a fabricated job. Oversize sources are never silently truncated; oversize fetched content may fall back to supplied
+pasted text. The shared middleware maps malformed JSON and oversized bodies without exposing them;
 existing unrelated errors retain their previous envelope. Authentication runs before body parsing,
 and all protected responses prohibit caching.
 
@@ -98,3 +102,30 @@ the actual archive in a network-disabled AWS Linux runtime image. The opt-in
 and potentially paid inference. It records safe outcomes and accepts documented source failures;
 passing it does not mean every site parsed, or prove deployed authentication. See the
 [E2E guide](../../../e2e/e2e.AGENTS.md) before running it.
+
+## Company matching context
+
+Durable callers may supply owner-scoped candidates after fetching text. The same extraction call
+receives at most twenty temporary references, bounded names and website hostnames. A validated
+selection returns through the internal callback, outside the public parse-response contract. Invalid
+matching metadata is ignored without discarding valid posting facts. The synchronous parse endpoint
+has no company context. No company data enters posting fetch requests. See the
+[company barrel](../companies/companies.AGENTS.md) for ranking, persistence and correction semantics.
+
+## Combined fetched and pasted sources
+
+Durable callers may pass retained page text as a second internal source; the synchronous public
+URL-only request remains unchanged. Fetching is still attempted within the existing budget. A fetch
+failure, including oversize retrieval, can fall back to pasted text unless the caller aborted.
+The extractor receives independently bounded, separately labeled untrusted sources in one completion.
+Its prompt prefers pasted facts on conflict, uses same-role fetched facts to fill gaps, excludes page
+clutter, and avoids duplicating overlapping description passages. A blocked/expired/unrelated fetched
+page does not override a usable pasted posting. These are extraction instructions, not fidelity guarantees.
+
+The internal model response validates fetched-page usability. Public optional provenance records
+the supplied paste, fetched-page usability and safe fetch warnings; pasted-only results allow a null fetch timestamp
+and carry an extraction timestamp. Company shortlisting uses the available text from both sources.
+The parser remains stateless; [saved postings](../job-postings/job-postings.AGENTS.md) own raw pasted
+text retention, explicit replacements and deletion. No fetched page archive or second model call is
+introduced. [Source tests](job-parsing.source.test.ts) cover fallback, source separation, provenance,
+cancellation and prompt boundaries without contacting providers.

@@ -9,6 +9,7 @@ application tracking and background posting extraction. No sample dataset is loa
 - Six-stage board with saved roles, salary, interest, priority and follow-up dates.
 - Batch link capture: save immediately, then extract details in a durable backend worker.
 - Direct role workspaces with persistent stage, interest, priority, follow-up and explicit note saving.
+- Add Markdown comments with preview, timestamps, editing and deletion in each role’s Notes panel.
 - Refresh extracted details or retry failures while retaining notes and tracking choices.
 - Confirm permanent deletion from the role workspace; deleted links can be saved again.
 - Drag handles and a stage selector; responsive layouts and light/dark themes.

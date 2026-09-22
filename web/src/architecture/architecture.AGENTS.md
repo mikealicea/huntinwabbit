@@ -9,7 +9,9 @@ symbol aliases to check JSX-owner filenames and container function names. Presen
 traversal follows named imports through re-exports to executable owners and follows local helpers.
 Type-only dependencies are ignored; namespace/dynamic dependencies inspect the module's exports.
 The checker rejects coordination modules and external adapters from presentation graphs and limits
-React runtime imports to UI hooks/helpers. Next Link/Image are explicit declarative UI exceptions.
+React runtime imports to UI hooks/helpers. Next Link/Image and react-markdown are explicit declarative
+UI exceptions. Markdown renders supplied text; content fetching, state and service coordination still
+belong outside presentation. This exception does not allow arbitrary Markdown plugins or MDX execution.
 Framework route files and the existing Nextra MDX integration have naming exceptions.
 
 [architecture.test.ts](architecture.test.ts) runs the checker against the real application and

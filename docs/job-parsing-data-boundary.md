@@ -2,8 +2,8 @@
 
 The backend parses public job postings on demand. The [feature barrel](../server/src/features/job-parsing/job-parsing.AGENTS.md)
 owns current behavior and limitations; its linked schemas and adapters are the executable contracts.
-Web capture integration is not implemented. A separate explicit
-[saved-posting API](job-postings-data-boundary.md) can persist supplied parsing results.
+The [saved-posting API](job-postings-data-boundary.md) owns web capture persistence and durable
+extraction jobs; its worker calls this parser and stores the validated result.
 
 ## Data flow
 
@@ -14,7 +14,7 @@ Web capture integration is not implemented. A separate explicit
    receive ordinary retrieval traffic, including the submitted path/query and the server's network
    address. No user-supplied browser cookies or credentials are supported. Agent-fetch is a local
    library, not a hosted parsing service.
-3. The backend sends extracted posting text, including its embedded links or contact details, to
+3. The backend sends extracted posting text and any retained user-pasted page text, including their embedded links or contact details, to
    Redpill with a fixed extraction prompt and schema. The Redpill key authenticates only that trusted
    API request. Resumes, application notes, interest, priority and Supabase credentials are not inputs.
 4. Schema-validated job facts return to the caller. This parsing operation does not persist URLs, raw pages,
@@ -54,3 +54,52 @@ Requests have no durable ledger or idempotency guarantee. A retry can repeat pai
 cancellation does not establish cancellation or refund at the provider. Transport hardening and
 distributed usage limits remain separate work. There is no feature-owned stored dataset to delete
 or retention migration to run.
+
+## Readability and compatibility
+
+The existing model completion extracts explicitly named technologies and formats the complete
+substantive description using Markdown headings, paragraphs and lists. It is instructed to preserve
+source wording and qualifications rather than summarize; schema validation cannot establish fidelity.
+The frontend renders Markdown without evaluating HTML or MDX, blocks embedded images, and restricts
+description links to credential-free HTTP(S) URLs. This introduces no additional processor or model call.
+
+Existing records keep their descriptions and may lack a technology list. Reading them does not trigger
+inference. Manual refresh replaces generated content only on success, retaining user corrections;
+there is no automatic or bulk reprocessing. Descriptions remain in the same editable string field.
+
+Deploy the updated frontend readers before enabling the new backend extraction contract: older strict
+frontend validators reject job payloads containing technologies. The version-one response envelope is
+unchanged, and the updated readers accept both old and new records. API and extraction workers must
+use matching updated schemas. Once new records or overrides are stored, rolling either application
+back requires readers that still accept technologies; do not drop saved facts to enable a rollback.
+
+## Saved company matching
+
+Durable extraction additionally sends a ranked shortlist of saved company names and employer website
+hostnames to Redpill in the existing completion. The shortlist is account-scoped and bounded; only
+temporary candidate references leave the server, not stored company IDs, account IDs, notes or
+application history. Candidate website paths are excluded. Matching adds no second model call.
+This expands provider input to include saved company identity information; existing provider retention
+limitations still apply. Manual selection and existing-role backfill use no model.
+The [company barrel](../server/src/features/companies/companies.AGENTS.md) owns matching behavior.
+
+## Retained pasted webpage text
+
+Capture and saved-role refresh can supply copied visible webpage text. The backend still attempts
+retrieval, then sends labeled fetched and pasted sources in one existing Redpill completion. Pasted
+facts take precedence by extraction instruction; usable fetched facts can fill gaps. Page navigation
+and embedded instructions are untrusted input. No new processor or browser-cookie forwarding is added.
+Pastes can contain personal content present on the copied page; that content crosses the same provider
+boundary. Existing provider-retention limitations still apply.
+
+The parser itself retains nothing. The saved-postings feature retains the latest paste until explicitly
+replaced, removed or the role is deleted; ordinary refresh reuses it. Raw fetched text remains transient.
+Public provenance distinguishes pasted sources and safe fetch failures, and a failed retrieval has no
+fetch timestamp. A schema-valid merged result does not prove factual agreement or complete fidelity.
+
+The preparatory web-contract commit can ship on its own with the existing UI. Release those compatible
+web response readers before the API and extraction/recovery workers emit the new
+provenance or null fetch timestamp; enable capture and source-edit controls after that backend release.
+Old request shapes and stored records remain supported without backfill. Rollback readers must retain
+support for the new response shapes once such facts exist. Do not drop saved sources or facts to make
+an older release readable. Deployment and paid live inference checks are separate authorized actions.

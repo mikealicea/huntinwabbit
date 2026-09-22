@@ -44,7 +44,9 @@ The native Node worker reuses the existing agent-fetch/Redpill adapters. Parsing
 inside a 90-second Lambda. Provider failures become safe saved failure codes; no automatic paid retry
 or model repair occurs. Explicit user retry or refresh of completed details creates a new generation.
 Refresh retains previous generated facts until a successful replacement; user overrides are applied
-separately and survive replacement. Failure keeps the last good result and tracking fields. Active requests return the pending generation; stale terminal requests
+separately and survive replacement. This includes technology lists and formatted description corrections.
+Older records and pending update baselines can omit technologies; no default list is injected into
+saved overrides. Refresh is explicit, with no bulk backfill. Failure keeps the last good result and tracking fields. Active requests return the pending generation; stale terminal requests
 conflict. Completing inference without
 persisting its result is an uncertain outcome, not permission to repeat the model request.
 
@@ -69,7 +71,7 @@ record. A lost acknowledgement is recovered through a strong ID-pointer read. Th
 be saved again with a new ID. Existing legacy records still require the documented ID-pointer backfill.
 
 [Cleanup](job-postings.cleanup.ts) runs through scheduled recovery and the existing pending index. It
-queries one bounded page of the owner's job keys per marker per pass, deleting only rows with the
+queries bounded job and role-note pages per marker per pass, deleting only rows with the
 original record key. Deletions and cursor progress commit atomically; concurrent/replayed cleanup
 checks the marker revision. Interrupted cleanup remains durable without a TTL and is exposed by the
 recovery error alarm. Older job metadata persists until cleanup succeeds; no source URL or notes enter
@@ -101,7 +103,7 @@ ordinary tests never write hosted records or call paid providers.
 The [update router](job-postings.updates.router.ts) accepts text and returns a durable operation,
 with owner-scoped paginated history and explicit Undo. [Update schemas](job-postings.updates.schemas.ts)
 own request, history, model and stored-job contracts; [posting schemas](job-postings.schemas.ts)
-own editable fields, overrides and revision stamps. Internal metadata and unimplemented materials,
+own editable fields, overrides and revision stamps. Internal metadata, notes/comments and unimplemented materials,
 tasks and shared company research are not editable. Company changes affect only this saved role.
 
 [Update operations](job-postings.updates.ts) atomically persist a message, idempotency pointer and
@@ -140,3 +142,76 @@ describes the newly included personal text and notes.
 [Update tests](job-postings.updates.test.ts) cover edits, overrides, partial results, undo, conflicts,
 replay, uncertain claims, recovery, history, source identity, deletion and authenticated routes.
 Run server/build, documentation and package gates; fake storage does not prove AWS IAM or scheduling.
+
+## Company associations
+
+[Posting-company coordination](job-postings.companies.ts) owns versioned selection, membership reads
+and association backfill. Backfill invalidation can schedule paid company analysis when enabled. [Companies](../companies/companies.AGENTS.md) own identity and matching.
+Save/extraction/chat commits maintain membership transactionally with posting data; deletion removes
+membership but retains the company. Manual assignment/clear survives extraction. Chat company-name
+edits can reassign only this role, with association snapshots/revisions protecting Undo and newer
+manual selections. Generated employer facts are never rewritten merely to change membership.
+## Role comments
+
+[Note schemas](job-postings.notes.schemas.ts) and [router](job-postings.notes.router.ts) own direct
+create/list/edit/delete contracts; [operations](job-postings.notes.ts) enforce ownership and bounded
+storage access using the existing table. Notes are not posting extraction jobs. When company analysis is enabled, comment changes invalidate and schedule that company’s analysis.
+The timeline is independently paginated, newest first, with owner/role-bound cursors. Stored entries
+and lookup pointers are validated. Missing and other-owner roles share the same unavailable response.
+
+Separate chronological rows hold Markdown bodies, timestamps and per-note revisions. ID pointers
+hold the original submission hash for replay checks. Deleted entries leave pointers without body
+content, preventing delayed create retries from resurrecting them. There is no comment trash or Undo.
+Edits and deletes compare note revisions. A repeated edit can recover only the exact next revision
+and body; other conflicts require review. Body whitespace is preserved, but blank entries are rejected.
+
+Each mutation conditionally updates the parent posting and advances its application/record versions.
+Unrelated role changes can be rebased; role deletion fences late writes. A deletion confirmation
+reviewed before a comment mutation therefore conflicts. Cleanup markers advance from historical jobs
+to role-specific note rows and pointers, with paginated progress committed atomically. Old markers
+without a phase start with jobs; the existing recovery error alarm covers failed cleanup.
+
+The legacy application notes field remains decodable and compatible with the old tracking API but
+is not displayed by the timeline. No migration is required. Role-update AI input excludes this field and historical
+receipts that changed it; new model output cannot change it. Legacy receipts remain readable, but
+Undo containing a notes change is refused as a whole. Comments remain excluded from role-update AI input. The separately enabled [company analysis](../company-analysis/company-analysis.AGENTS.md) includes comments and history.
+[Notes tests](job-postings.notes.test.ts) cover ownership, replay, conflicts, pagination and cleanup.
+Ship the API and extraction/recovery workers together before enabling the notes frontend. Follow the
+[company rollout](../../../../docs/runbooks/company-backfill.md) when also introducing associations. No new infrastructure
+or processor is introduced; packaging and deployed IAM verification remain separate from local tests.
+
+## Retained posting source
+
+[Source operations](job-postings.source.ts) retain the latest optional pasted page text in a separate
+owner-scoped table row, avoiding competition with generated facts for the posting record byte budget.
+The source is bound to the posting ID, record key, normalized URL and a revision. The authenticated
+source read returns text on demand; ordinary posting list/detail responses exclude it. Existing
+records have no source row and need no migration.
+
+Save persists text with the posting transaction. Explicit source replacement/removal and its new
+extraction generation also commit together, incrementing the application version so stale source edits
+and deletion reviews conflict. Input omission reuses retained text; URL mismatches require replacement
+or removal. Parsing-disabled source changes remain durable without publishing inference work.
+Pending work cannot accept competing source changes. Generation jobs pin a source revision; workers
+validate it before parsing and retain the usual claim and result fencing.
+
+Content-free operation receipts retain input hashes under a distinct JOB prefix, until role deletion.
+They recover exact submissions after uncertain acknowledgements, reject changed input under a reused
+ID, and never trigger inference. The worker skips receipt inserts; existing durable cleanup removes
+receipts. Raw source text is never copied into historical jobs. Removal and role deletion erase the
+live source row transactionally; table backups retain their existing lifecycle.
+
+[Source tests](job-postings.source.test.ts) exercise source isolation, duplicate saves, replay, uncertain
+writes, replacement/removal, disabled parsing, version and URL conflicts, worker revision fences,
+authentication, payload bounds and deletion cleanup. Existing lifecycle tests continue to cover
+concurrent tracking updates, uncertain claims and late results.
+
+## Company analysis coordination
+
+[Analysis adapter](job-postings.analysis.ts) decorates posting transactions with atomic company source
+revision changes. Runtime and worker composition install it; do not bypass it for new mutation paths.
+The same module paginates validated role, comment and update-history inputs through a narrow reader
+interface. [Company analysis](../company-analysis/company-analysis.AGENTS.md) owns paid work, stale
+results, deletion invalidation and cleanup. Test mutation effects through the decorated transport.
+The [storage fake](job-postings.test-support.ts) rejects unaliased `hidden` in update expressions,
+matching DynamoDB's reserved-word constraint for analysis invalidation and publication.

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { type ReactNode, useState } from 'react';
+import type { ReactNode } from 'react';
 import {
   type ApplicationFields,
   getSourceHost,
@@ -14,7 +14,6 @@ import {
   STAGES,
   type Stage,
 } from '@/features/job-search/job-search.index';
-import { LoadingPulse } from '@/shared/shared.index';
 import type { DeleteOutcome } from './DeletePosting.component';
 import { JobDetails } from './JobDetails.component';
 import { PostingActions } from './PostingActions.component';
@@ -22,6 +21,7 @@ export interface RoleWorkspaceProps {
   role: Opportunity;
   roleName: string;
   companyLabel: string;
+  companyControl?: ReactNode;
   nextActionLabel: string;
   onApplicationChange: (changes: Partial<ApplicationFields>) => unknown;
   saving?: boolean;
@@ -31,7 +31,11 @@ export interface RoleWorkspaceProps {
   extracting?: boolean;
   onExtract?: () => void;
   onTaskCompletionChange: (taskId: string, completed: boolean) => void;
+  status?: ReactNode;
+  sourceEditor?: ReactNode;
+  onManageSource?: () => void;
   updates?: ReactNode;
+  notes?: ReactNode;
   materials: ReactNode;
   company: ReactNode;
 }
@@ -45,25 +49,39 @@ export function RoleWorkspace({
   role,
   roleName,
   companyLabel,
+  companyControl,
   nextActionLabel,
   onApplicationChange,
   onTaskCompletionChange,
+  status,
+  sourceEditor,
+  onManageSource,
   updates,
+  notes,
   materials,
   company,
 }: RoleWorkspaceProps) {
-  const [notes, setNotes] = useState<string | null>(null);
-  const [savedNotice, setSavedNotice] = useState(false);
   return (
     <div className="mx-auto max-w-6xl">
       <Link href="/app" className="btn btn-ghost -ml-3 mb-5 min-h-11">
         <span aria-hidden="true">←</span> Search board
       </Link>
       <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0">
-          <p className="mb-2 text-sm font-medium text-base-content/75">
-            {companyLabel}
-          </p>
+        <div className="min-w-0 max-w-full">
+          <div className="mb-2 flex items-center gap-1 text-sm font-medium text-base-content/75">
+            {role.companyId ? (
+              <Link
+                className="inline-flex min-h-11 min-w-0 items-center break-words hover:underline"
+                href={`/app/companies/${role.companyId}`}
+                aria-label={`View ${companyLabel} company`}
+              >
+                {companyLabel}
+              </Link>
+            ) : (
+              <span className="min-w-0 break-words">{companyLabel}</span>
+            )}
+            {companyControl}
+          </div>
           <h1 className="break-words text-3xl font-bold tracking-tight sm:text-4xl">
             {roleName}
           </h1>
@@ -82,14 +100,17 @@ export function RoleWorkspace({
               roleName={roleName}
               role={role}
               onExtract={onExtract}
+              onManageSource={onManageSource}
               extracting={extracting && !deleting}
               deleting={deleting}
               deleteDisabled={deleteDisabled}
               onDelete={onDelete}
             />
           )}
+          {status}
         </div>
       </div>
+      {sourceEditor}
       <div className="mb-7 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="fieldset p-0">
           <label htmlFor="role-stage" className="fieldset-legend py-1">
@@ -154,7 +175,7 @@ export function RoleWorkspace({
       </div>
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
         <div className="min-w-0 space-y-5">
-          <JobDetails role={role} extracting={extracting && !deleting} />
+          <JobDetails role={role} />
           <section
             className="card border border-base-300 bg-base-100 shadow-sm"
             aria-labelledby="tasks-title"
@@ -165,7 +186,7 @@ export function RoleWorkspace({
               </p>
               <div>
                 <h2 id="tasks-title" className="card-title">
-                  Follow-up & notes
+                  Follow-up
                 </h2>
                 <p className="mt-2 text-sm text-base-content/75">
                   Next: {nextActionLabel}
@@ -214,58 +235,11 @@ export function RoleWorkspace({
                   }
                 />
               </div>
-              <div className="fieldset p-0">
-                <label htmlFor="role-notes" className="fieldset-legend py-1">
-                  Prep & interview notes
-                </label>
-                <textarea
-                  disabled={saving}
-                  id="role-notes"
-                  className="textarea min-h-40 w-full text-base leading-relaxed"
-                  placeholder="Rounds, questions, things to prepare…"
-                  maxLength={20000}
-                  value={notes ?? role.notes}
-                  onChange={(event) => {
-                    setNotes(event.target.value);
-                    setSavedNotice(false);
-                  }}
-                />
-                <button
-                  type="button"
-                  className="btn btn-primary mt-2"
-                  disabled={saving || notes === null}
-                  onClick={async () => {
-                    const draft = notes;
-                    const success = await onApplicationChange({
-                      notes: draft ?? role.notes,
-                    });
-                    if (success !== false) {
-                      setNotes((current) =>
-                        current === draft ? null : current,
-                      );
-                      setSavedNotice(true);
-                    }
-                  }}
-                >
-                  Save notes
-                </button>
-                <p role="status" className="mt-1 text-sm text-base-content/75">
-                  {saving && !deleting && <LoadingPulse />}
-                  {saving
-                    ? deleting
-                      ? 'Deleting…'
-                      : 'Saving…'
-                    : notes !== null
-                      ? 'You have unsaved notes.'
-                      : savedNotice
-                        ? 'Notes saved.'
-                        : 'Notes are saved to this role.'}
-                </p>
-              </div>
             </div>
           </section>
         </div>
         <div className="contents min-w-0 space-y-5 lg:block">
+          {notes}
           {updates}
           {materials}
           {company}

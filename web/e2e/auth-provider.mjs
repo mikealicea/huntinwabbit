@@ -7,7 +7,11 @@ const initialPostings = JSON.parse(
   readFileSync(new URL('./postings.fixture.json', import.meta.url), 'utf8'),
 );
 const postings = new Map();
+const companies = new Map();
+const companyAnalyses = new Map();
 const updateHistories = new Map();
+const roleNotes = new Map();
+const sources = new Map();
 let postingSequence = 100;
 
 const accounts = new Map();
@@ -77,7 +81,10 @@ const server = createServer(async (request, response) => {
   const token = request.headers.authorization?.replace('Bearer ', '');
   const active = sessions.get(token);
   if (url.pathname === '/health') return send(200, { ready: true });
-  if (url.pathname.startsWith('/job-postings')) {
+  if (
+    url.pathname.startsWith('/job-postings') ||
+    url.pathname.startsWith('/companies')
+  ) {
     if (!active) return error(401, 'unauthorized');
     const owner = active.account.id;
     if (!postings.has(owner))
@@ -88,7 +95,219 @@ const server = createServer(async (request, response) => {
         ),
       );
     const records = postings.get(owner);
+    if (!companies.has(owner)) {
+      const saved = new Map();
+      for (const item of records.values()) {
+        const name = item.parsedPosting?.job.company.name;
+        if (!name) continue;
+        let company = [...saved.values()].find(
+          (company) => company.name === name,
+        );
+        if (!company) {
+          company = {
+            id: randomUUID(),
+            name,
+            website: item.parsedPosting.job.company.website,
+            createdAt: item.createdAt,
+            updatedAt: item.updatedAt,
+          };
+          saved.set(company.id, company);
+        }
+        item.companyAssociation = {
+          company: {
+            id: company.id,
+            name: company.name,
+            website: company.website,
+          },
+          mode: 'automatic',
+          revision: 0,
+        };
+      }
+      companies.set(owner, saved);
+    }
+    const companyRecords = companies.get(owner);
+    if (url.pathname.startsWith('/companies')) {
+      const [, , companyId, child] = url.pathname.split('/');
+      if (child === 'analysis') {
+        if (!companyRecords.has(companyId)) return error(404, 'not_found');
+        const key = `${owner}:${companyId}`;
+        let state = companyAnalyses.get(key);
+        if (request.method === 'POST') {
+          state = {
+            generation: randomUUID(),
+            readyAt: Date.now() + 200,
+            operationId: body.operationId,
+          };
+          companyAnalyses.set(key, state);
+        } else if (request.method !== 'GET')
+          return error(405, 'method_not_allowed');
+        const roles = [...records.values()].filter(
+          (item) => item.companyAssociation?.company?.id === companyId,
+        );
+        const complete = state && Date.now() >= state.readyAt;
+        return send(request.method === 'POST' ? 202 : 200, {
+          schemaVersion: 1,
+          status: !state ? 'not-started' : complete ? 'complete' : 'processing',
+          generation: state?.generation ?? null,
+          stale: false,
+          totalRoles: roles.length,
+          analyzedRoles: roles.length,
+          completedAt: complete ? '2026-09-22T12:00:00.000Z' : null,
+          progress: complete ? 3 : 0,
+          error: null,
+          nextCursor: null,
+          items:
+            complete && roles.length
+              ? [
+                  {
+                    category: 'requirement',
+                    label: 'Cross-functional collaboration',
+                    qualifier: 'required',
+                    explanation: 'Work with teammates across disciplines.',
+                    evidence: roles.map((item) => ({
+                      roleId: item.id,
+                      roleTitle: item.parsedPosting?.job.title ?? 'Saved role',
+                      source: 'posting',
+                      excerpt: 'Work with the team.',
+                    })),
+                  },
+                  {
+                    category: 'technology',
+                    label: 'TypeScript',
+                    qualifier: 'used',
+                    explanation: 'Named in the saved role details.',
+                    evidence: roles.map((item) => ({
+                      roleId: item.id,
+                      roleTitle: item.parsedPosting?.job.title ?? 'Saved role',
+                      source: 'posting',
+                      excerpt: 'TypeScript',
+                    })),
+                  },
+                ]
+              : [],
+        });
+      }
+      if (request.method !== 'GET') return error(405, 'method_not_allowed');
+      if (!companyId)
+        return send(200, {
+          schemaVersion: 1,
+          items: [...companyRecords.values()].filter((c) =>
+            c.name
+              .toLowerCase()
+              .includes((url.searchParams.get('q') ?? '').toLowerCase()),
+          ),
+          nextCursor: null,
+        });
+      const company = companyRecords.get(companyId);
+      if (!company) return error(404, 'not_found');
+      if (child === 'roles')
+        return send(200, {
+          schemaVersion: 1,
+          items: [...records.values()]
+            .filter(
+              (item) => item.companyAssociation?.company?.id === companyId,
+            )
+            .sort(
+              (a, b) =>
+                b.createdAt.localeCompare(a.createdAt) ||
+                b.id.localeCompare(a.id),
+            ),
+          nextCursor: null,
+        });
+      return send(200, { schemaVersion: 1, item: company });
+    }
     const [, , id, operation] = url.pathname.split('/');
+    if (operation === 'company' && request.method === 'PATCH') {
+      const item = records.get(id);
+      if (!item) return error(404, 'not_found');
+      if (item.recordVersion !== body.expectedRecordVersion)
+        return error(409, 'conflict');
+      let company = null;
+      if (body.selection?.id) {
+        company = companyRecords.get(body.selection.id);
+        if (!company) return error(404, 'not_found');
+      }
+      if (body.selection?.create) {
+        company = [...companyRecords.values()].find(
+          (c) =>
+            c.name.toLowerCase() === body.selection.create.name.toLowerCase(),
+        );
+        if (!company) {
+          company = {
+            id: randomUUID(),
+            ...body.selection.create,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+          companyRecords.set(company.id, company);
+        }
+      }
+      item.companyAssociation = {
+        company: company
+          ? { id: company.id, name: company.name, website: company.website }
+          : null,
+        mode: 'manual',
+        revision: (item.companyAssociation?.revision ?? 0) + 1,
+      };
+      item.recordVersion++;
+      item.applicationVersion++;
+      return send(200, { schemaVersion: 1, item });
+    }
+    if (operation === 'notes') {
+      const role = records.get(id);
+      if (!role) return error(404, 'not_found');
+      const key = `${owner}:${id}`;
+      const list = roleNotes.get(key) ?? [];
+      roleNotes.set(key, list);
+      if (request.method === 'GET') {
+        const after = Number(url.searchParams.get('cursor') ?? 0);
+        return send(200, {
+          schemaVersion: 1,
+          items: list.slice(after, after + 20),
+          nextCursor: list.length > after + 20 ? String(after + 20) : null,
+        });
+      }
+      const noteId = url.pathname.split('/')[4] ?? body.id;
+      const note = list.find((item) => item.id === noteId);
+      if (request.method === 'POST') {
+        if (note)
+          return note.body === body.body
+            ? send(200, { schemaVersion: 1, note })
+            : error(409, 'conflict');
+        const timestamp = new Date().toISOString();
+        const created = {
+          id: noteId,
+          body: body.body,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+          revision: 1,
+        };
+        list.unshift(created);
+        role.applicationVersion++;
+        role.recordVersion++;
+        return send(201, { schemaVersion: 1, note: created });
+      }
+      if (!note) return error(404, 'not_found');
+      if (note.revision !== body.expectedRevision)
+        return error(409, 'conflict');
+      role.applicationVersion++;
+      role.recordVersion++;
+      if (request.method === 'DELETE') {
+        roleNotes.set(
+          key,
+          list.filter((item) => item.id !== noteId),
+        );
+        response.writeHead(204);
+        response.end();
+        return;
+      }
+      Object.assign(note, {
+        body: body.body,
+        revision: note.revision + 1,
+        updatedAt: new Date().toISOString(),
+      });
+      return send(200, { schemaVersion: 1, note });
+    }
     if (operation === 'updates') {
       const role = records.get(id);
       if (!role) return error(404, 'not_found');
@@ -172,6 +391,17 @@ const server = createServer(async (request, response) => {
       return send(202, { schemaVersion: 1, entry });
     }
 
+    if (request.method === 'GET' && operation === 'source-text') {
+      const item = records.get(id);
+      return item
+        ? send(200, {
+            schemaVersion: 1,
+            source: sources.get(`${owner}:${id}`) ?? null,
+            applicationVersion: item.applicationVersion,
+            generation: item.extraction.generation,
+          })
+        : error(404, 'not_found');
+    }
     if (request.method === 'GET')
       return id
         ? records.has(id)
@@ -209,6 +439,13 @@ const server = createServer(async (request, response) => {
         extraction: { status: 'disabled', generation: null, error: null },
       };
       records.set(item.id, item);
+      if (body.sourceText?.trim())
+        sources.set(`${owner}:${item.id}`, {
+          text: body.sourceText,
+          sourceUrl,
+          revision: randomUUID(),
+          updatedAt: item.updatedAt,
+        });
       return send(201, { schemaVersion: 1, item, created: true });
     }
     const item = records.get(id);
@@ -217,6 +454,7 @@ const server = createServer(async (request, response) => {
         return error(409, 'conflict');
       records.delete(id);
       updateHistories.delete(`${owner}:${id}`);
+      sources.delete(`${owner}:${id}`);
       response.writeHead(204);
       return response.end();
     }
@@ -238,7 +476,24 @@ const server = createServer(async (request, response) => {
         return send(202, { schemaVersion: 1, item });
       if (body.expectedGeneration !== item.extraction.generation)
         return error(409, 'conflict');
-      const shouldFail = item.extraction.status !== 'failed';
+      if (body.sourceText !== undefined) {
+        if (body.expectedApplicationVersion !== item.applicationVersion)
+          return error(409, 'conflict');
+        if (body.sourceText?.trim())
+          sources.set(`${owner}:${id}`, {
+            text: body.sourceText,
+            sourceUrl: item.sourceUrl,
+            revision: randomUUID(),
+            updatedAt: item.updatedAt,
+          });
+        else sources.delete(`${owner}:${id}`);
+        item.applicationVersion++;
+      }
+      const pasted = sources.get(`${owner}:${id}`);
+      const shouldFail =
+        body.sourceText === undefined &&
+        !pasted &&
+        item.extraction.status !== 'failed';
       const generation = randomUUID();
       const next = {
         ...item,
@@ -259,6 +514,13 @@ const server = createServer(async (request, response) => {
                 source: {
                   ...initialPostings[0].parsedPosting.source,
                   normalizedUrl: current.sourceUrl,
+                  ...(pasted
+                    ? {
+                        fetchedAt: null,
+                        inputs: ['pasted-text'],
+                        fetchWarning: 'FETCH_UNAVAILABLE',
+                      }
+                    : {}),
                 },
                 job: {
                   ...(current.parsedPosting ?? initialPostings[0].parsedPosting)

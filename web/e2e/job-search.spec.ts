@@ -54,6 +54,80 @@ async function moveProductRole(page: Page, targetStage: string) {
   await expect(handle).toHaveAttribute('aria-pressed', 'false');
 }
 
+for (const scheme of ['light', 'dark'] as const) {
+  test(`job details are ordered and readable on desktop and mobile in ${scheme}`, async ({
+    page,
+  }, testInfo) => {
+    await page.emulateMedia({ colorScheme: scheme });
+    await page
+      .getByRole('link', { name: 'Open Senior Product Engineer at Northstar' })
+      .click();
+    const details = page.getByRole('region', {
+      name: 'Job details',
+      exact: true,
+    });
+    const overview = details.getByLabel('Job overview');
+    await expect(overview).toContainText('170,000–210,000 USD / year');
+    await expect(overview).toContainText('Full time');
+    await expect(overview).toContainText('Remote');
+    await expect(details.getByRole('heading', { level: 3 })).toHaveText([
+      'Requirements',
+      'Tech stack',
+      'Responsibilities',
+      'Full job details',
+      'Compensation details',
+    ]);
+    await expect(
+      details.getByRole('heading', { name: 'About the role', level: 4 }),
+    ).toBeVisible();
+    await expect(
+      details.getByText('TypeScript (required)', { exact: true }),
+    ).toBeVisible();
+    await expect(
+      details.getByText('PostgreSQL (preferred)', { exact: true }),
+    ).toBeVisible();
+    for (const [name, width] of [
+      ['desktop', 1280],
+      ['mobile', 390],
+    ] as const) {
+      await page.setViewportSize({ width, height: 900 });
+      await expect(page.locator('html')).toHaveAttribute(
+        'data-theme',
+        scheme === 'dark' ? 'forest' : 'emerald',
+      );
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= window.innerWidth,
+        ),
+      ).toBe(true);
+      await page.screenshot({
+        path: testInfo.outputPath(`job-details-${name}-${scheme}.png`),
+        fullPage: true,
+      });
+    }
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.evaluate(() => {
+      document.documentElement.style.zoom = '2';
+    });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
+    await page.screenshot({
+      path: testInfo.outputPath(`job-details-zoom-${scheme}.png`),
+      fullPage: true,
+    });
+    await page.evaluate(() => {
+      document.documentElement.style.zoom = '';
+    });
+    await page.reload();
+    await expect(
+      details.getByRole('heading', { name: 'About the role' }),
+    ).toBeVisible();
+  });
+}
+
 test('landing entry, capture, role editing, navigation, and reload recovery', async ({
   page,
 }, testInfo) => {
@@ -110,10 +184,10 @@ test('landing entry, capture, role editing, navigation, and reload recovery', as
     .getByRole('combobox', { name: 'Priority', exact: true })
     .selectOption('high');
   await page
-    .getByRole('textbox', { name: 'Prep & interview notes' })
+    .getByRole('textbox', { name: 'Add a note' })
     .fill('Questions for the recruiter.');
-  await page.getByRole('button', { name: 'Save notes' }).click();
-  await expect(page.getByText('Notes saved.', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Add comment' }).click();
+  await expect(page.getByText('Comment saved.', { exact: true })).toBeVisible();
   await page.getByLabel('Next follow-up').fill('2026-10-01');
   await expect(page.getByLabel('Next follow-up')).toBeEnabled();
   await page.getByRole('link', { name: 'Search board', exact: true }).click();
@@ -123,13 +197,19 @@ test('landing entry, capture, role editing, navigation, and reload recovery', as
   await expect(moved).toBeVisible();
   await expect(moved).toContainText('Oct 1, 2026');
   await page.goBack();
+  await expect(page.getByRole('textbox', { name: 'Add a note' })).toHaveValue(
+    '',
+  );
   await expect(
-    page.getByRole('textbox', { name: 'Prep & interview notes' }),
-  ).toHaveValue('Questions for the recruiter.');
+    page.getByRole('article', { name: 'Comment', exact: true }),
+  ).toContainText('Questions for the recruiter.');
   await page.reload();
+  await expect(page.getByRole('textbox', { name: 'Add a note' })).toHaveValue(
+    '',
+  );
   await expect(
-    page.getByRole('textbox', { name: 'Prep & interview notes' }),
-  ).toHaveValue('Questions for the recruiter.');
+    page.getByRole('article', { name: 'Comment', exact: true }),
+  ).toContainText('Questions for the recruiter.');
   expect(page.url()).toBe(temporaryRoleUrl);
   await expect(
     page.getByRole('combobox', { name: 'Stage', exact: true }),
@@ -329,11 +409,14 @@ test('refresh retains facts and drafts on failure, then replaces facts on explic
   await page
     .getByRole('link', { name: 'Open Senior Product Engineer at Northstar' })
     .click();
-  const notes = page.getByRole('textbox', { name: 'Prep & interview notes' });
+  const notes = page.getByRole('textbox', { name: 'Add a note' });
   await notes.fill('Keep my unsaved preparation');
   await page.getByLabel('Posting actions').click();
   await page
     .getByRole('button', { name: 'Refresh posting', exact: true })
+    .click();
+  await page
+    .getByRole('button', { name: /Updating role.*Show details/ })
     .click();
   await expect(
     page.getByText('Waiting to refresh posting details…'),
@@ -354,10 +437,13 @@ test('refresh retains facts and drafts on failure, then replaces facts on explic
     { timeout: 10000 },
   );
   await expect(notes).toHaveValue('Keep my unsaved preparation');
-  await page.getByRole('button', { name: 'Save notes' }).click();
-  await expect(page.getByText('Notes saved.', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Add comment' }).click();
+  await expect(page.getByText('Comment saved.', { exact: true })).toBeVisible();
   await page.reload();
-  await expect(notes).toHaveValue('Keep my unsaved preparation');
+  await expect(notes).toHaveValue('');
+  await expect(
+    page.getByRole('article', { name: 'Comment', exact: true }),
+  ).toContainText('Keep my unsaved preparation');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(
     'Refreshed Product Engineer',
   );
@@ -395,6 +481,10 @@ test('delete confirmation works by keyboard and removes the posting across reloa
     animations: 'disabled',
   });
   await page.keyboard.press('Tab');
+  await page.keyboard.press('Tab');
+  await expect(
+    page.getByRole('button', { name: 'Manage pasted text', exact: true }),
+  ).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(deleteAction).toBeFocused();
   await page.keyboard.press('Enter');
@@ -516,6 +606,15 @@ for (const theme of ['light', 'dark']) {
         exact: true,
       }),
     ).toBeVisible();
+    const historyToggle = chat.getByRole('button', { name: 'Update history' });
+    await expect(historyToggle).toHaveAttribute('aria-expanded', 'false');
+    await expect(chat.getByRole('log')).toBeHidden();
+    await page.screenshot({
+      path: testInfo.outputPath(`role-collapsed-${theme}.png`),
+      fullPage: true,
+    });
+    await historyToggle.focus();
+    await page.keyboard.press('Enter');
     await expect(chat.getByText('Some changes saved')).toBeVisible();
     await expect(
       chat.getByText('Not changed: The salary is unclear.'),
@@ -523,6 +622,9 @@ for (const theme of ['light', 'dark']) {
     await page.getByLabel('Posting actions').click();
     await page
       .getByRole('button', { name: 'Refresh posting', exact: true })
+      .click();
+    await page
+      .getByRole('button', { name: /Role request failed.*Show details/ })
       .click();
     await expect(
       page.getByText(
@@ -532,6 +634,9 @@ for (const theme of ['light', 'dark']) {
     await page.getByLabel('Posting actions').click();
     await page
       .getByRole('button', { name: 'Retry extraction', exact: true })
+      .click();
+    await page
+      .getByRole('button', { name: /Role up to date.*Show details/ })
       .click();
     await expect(
       page.getByText(
@@ -551,6 +656,7 @@ for (const theme of ['light', 'dark']) {
     await chat.getByRole('button', { name: 'Undo changes' }).click();
     await expect(chat.getByText('Changes undone')).toBeVisible();
     await page.reload();
+    await chat.getByRole('button', { name: 'Update history' }).click();
     await expect(chat.getByText('Changes undone')).toBeVisible();
   });
   test(`mobile role chat supports keyboard, retry and close in ${theme}`, async ({
@@ -574,9 +680,11 @@ for (const theme of ['light', 'dark']) {
     const input = dialog.getByRole('textbox', { name: 'Your update' });
     await expect(input).toBeFocused();
     await input.fill('simulate failure');
-    await input.press('Shift+Enter');
-    await expect(input).toHaveValue('simulate failure\n');
+    await expect(dialog.getByRole('log')).toBeHidden();
     await input.press('Enter');
+    await expect(input).toHaveValue('simulate failure\n');
+    await input.press('Meta+Enter');
+    await dialog.getByRole('button', { name: 'Update history' }).click();
     await expect(
       dialog.getByText('Update failed', { exact: true }),
     ).toBeVisible();
@@ -593,6 +701,7 @@ for (const theme of ['light', 'dark']) {
     await expect(opener).toBeFocused();
     await page.reload();
     await opener.click();
+    await dialog.getByRole('button', { name: 'Update history' }).click();
     await expect(
       dialog.getByText('Changes saved', { exact: true }),
     ).toBeVisible();
@@ -796,5 +905,306 @@ for (const viewport of [
       ).toHaveText('Board up to date');
       expect(await positions()).toEqual(pendingPositions);
     }
+  });
+}
+
+for (const scheme of ['light', 'dark'] as const) {
+  test(`notes support Markdown, editing and deletion on desktop and mobile in ${scheme}`, async ({
+    page,
+  }, testInfo) => {
+    await page.emulateMedia({ colorScheme: scheme });
+    await page
+      .getByRole('link', { name: 'Open Senior Product Engineer at Northstar' })
+      .click();
+    const section = page.getByRole('region', { name: 'Notes', exact: true });
+    await expect(
+      section.getByText('No comments yet. Add your first note above.'),
+    ).toBeVisible();
+    await section
+      .getByRole('textbox', { name: 'Add a note' })
+      .fill(
+        '## Interview prep\n\n- **Ask about the team**\n- Review the [role](https://example.com/role)\n\n<script>inert</script>\n![blocked](https://example.com/image.png)',
+      );
+    await section.getByRole('button', { name: 'Preview', exact: true }).click();
+    await expect(
+      section.getByRole('region', { name: 'Add a note preview' }),
+    ).toContainText('Ask about the team');
+    await expect(section.locator('img')).toHaveCount(0);
+    await section.getByRole('button', { name: 'Write', exact: true }).click();
+    const composer = section.getByRole('textbox', { name: 'Add a note' });
+    const draft = await composer.inputValue();
+    await composer.press('ControlOrMeta+End');
+    await composer.press('Enter');
+    await expect(composer).toHaveValue(`${draft}\n`);
+    await expect(
+      section.getByRole('article', { name: 'Comment', exact: true }),
+    ).toHaveCount(0);
+    await composer.press('Meta+Enter');
+    await expect(
+      section.getByText('Comment saved.', { exact: true }),
+    ).toBeVisible();
+    await expect(
+      section.getByRole('textbox', { name: 'Add a note' }),
+    ).toHaveValue('');
+    await page.reload();
+    const entry = section.getByRole('article', {
+      name: 'Comment',
+      exact: true,
+    });
+    await expect(entry).toContainText('Interview prep');
+    await entry.getByRole('button', { name: 'Edit comment' }).click();
+    await entry
+      .getByRole('textbox', { name: 'Edit comment' })
+      .fill(
+        'Updated **interview prep**\n\n' +
+          'Long fictional preparation text. '.repeat(10),
+      );
+    await entry
+      .getByRole('textbox', { name: 'Edit comment' })
+      .press('Meta+Enter');
+    await expect(entry).toContainText('Edited');
+    await page.screenshot({
+      path: testInfo.outputPath(`notes-desktop-${scheme}.png`),
+      fullPage: true,
+    });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await section.scrollIntoViewIfNeeded();
+    await page.screenshot({
+      path: testInfo.outputPath(`notes-mobile-${scheme}.png`),
+      fullPage: true,
+    });
+    await page.evaluate(() => {
+      document.documentElement.style.zoom = '2';
+    });
+    await expect(
+      section.getByRole('button', { name: 'Add comment' }),
+    ).toBeVisible();
+    await page.evaluate(() => {
+      document.documentElement.style.zoom = '';
+    });
+    await entry.getByRole('button', { name: 'Delete comment' }).click();
+    await expect(
+      entry.getByRole('button', { name: 'Cancel deletion' }),
+    ).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(
+      entry.getByRole('button', { name: 'Delete comment' }),
+    ).toBeFocused();
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Enter');
+    await expect(entry).toHaveCount(0);
+    await page.reload();
+    await expect(
+      section.getByText('No comments yet. Add your first note above.'),
+    ).toBeVisible();
+  });
+}
+
+for (const viewport of [
+  { name: 'desktop', width: 1440, height: 1000, theme: 'light' as const },
+  { name: 'mobile', width: 390, height: 844, theme: 'dark' as const },
+]) {
+  test(`role header status supports failure recovery on ${viewport.name}`, async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize(viewport);
+    await page.emulateMedia({ colorScheme: viewport.theme });
+    await page
+      .getByRole('link', { name: 'Open Senior Product Engineer at Northstar' })
+      .click();
+    const heading = page.getByRole('heading', {
+      name: 'Senior Product Engineer',
+      level: 1,
+    });
+    await expect(heading).toBeVisible();
+    const stage = page.getByRole('combobox', { name: 'Stage', exact: true });
+    const originalStage = await stage.inputValue();
+    const position = await heading.boundingBox();
+    await page.route('**/api/job-postings/*', async (route) => {
+      if (route.request().method() === 'PATCH') {
+        await route.fulfill({ status: 503, json: {} });
+      } else await route.continue();
+    });
+    await page
+      .getByRole('combobox', { name: 'Stage', exact: true })
+      .selectOption('offer');
+    const status = page.getByRole('status', { name: 'Role status' });
+    await expect(status).toHaveText('Role request failed');
+    expect(await heading.boundingBox()).toEqual(position);
+    const trigger = page.getByRole('button', {
+      name: 'Role request failed. Show details',
+    });
+    await trigger.focus();
+    await page.keyboard.press('Enter');
+    const requestError = page
+      .getByRole('alert')
+      .filter({ hasText: 'We could not complete that request' });
+    await expect(requestError).toBeVisible();
+    await page.screenshot({
+      path: testInfo.outputPath('role-status-error.png'),
+      fullPage: false,
+    });
+    await page.keyboard.press('Escape');
+    await expect(trigger).toBeFocused();
+    await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    await trigger.click();
+    await page.getByRole('button', { name: 'Try again', exact: true }).click();
+    await expect(status).toHaveText('Role up to date');
+    await expect(requestError).toBeHidden();
+    await expect(
+      page.getByRole('combobox', { name: 'Stage', exact: true }),
+    ).toHaveValue(originalStage);
+    await expect(
+      page.getByText(
+        'Details extracted from the posting. Review them against the original.',
+      ),
+    ).toBeVisible();
+    await page
+      .getByRole('heading', { name: 'Job details', exact: true })
+      .click();
+    await expect(
+      page.getByRole('button', { name: 'Role up to date. Show details' }),
+    ).toHaveAttribute('aria-expanded', 'false');
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
+  });
+}
+
+for (const scheme of ['light', 'dark'] as const) {
+  test(`pasted text folds during capture and persists through saved-role refresh in ${scheme}`, async ({
+    page,
+  }, testInfo) => {
+    await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
+    await page.getByRole('button', { name: 'Add job links' }).click();
+    await page
+      .getByRole('textbox', { name: 'Job link 1', exact: true })
+      .fill('https://example.test/pasted');
+    const disclosure = page.getByRole('button', {
+      name: 'Paste page text for job link 1',
+      exact: true,
+    });
+    await expect(disclosure).toHaveAttribute('aria-expanded', 'false');
+    for (const [name, width] of [
+      ['desktop', 1280],
+      ['mobile', 390],
+    ] as const) {
+      await page.setViewportSize({ width, height: 900 });
+      await page
+        .getByRole('button', {
+          name: /(?:Paste|Edit) page text for job link 1/,
+        })
+        .click();
+      await page
+        .getByRole('textbox', { name: 'Page text for job link 1', exact: true })
+        .fill(
+          'Fictional software engineer.\nBuild reliable tools.\n'.repeat(20),
+        );
+      await page.screenshot({
+        path: testInfo.outputPath(`paste-expanded-${name}-${scheme}.png`),
+        fullPage: true,
+      });
+      await page
+        .getByRole('button', { name: 'Done with pasted text for job link 1' })
+        .click();
+      await expect(
+        page.getByRole('button', { name: 'Edit page text for job link 1' }),
+      ).toBeFocused();
+      await expect(
+        page.getByRole('textbox', {
+          name: 'Page text for job link 1',
+          exact: true,
+        }),
+      ).toBeHidden();
+      await page.screenshot({
+        path: testInfo.outputPath(`paste-collapsed-${name}-${scheme}.png`),
+        fullPage: true,
+      });
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+    }
+    await page
+      .getByRole('button', { name: 'Edit page text for job link 1' })
+      .click();
+    await page
+      .getByRole('textbox', { name: 'Job link 2', exact: true })
+      .fill('https://example.test/second');
+    await expect(
+      page.getByRole('textbox', {
+        name: 'Page text for job link 1',
+        exact: true,
+      }),
+    ).toBeHidden();
+    await page.getByRole('button', { name: 'Save to Collected' }).click();
+    await expect(page.getByText(/2 saved/)).toBeVisible();
+    await page
+      .getByRole('link', {
+        name: 'Open Saved opening at Company unknown',
+        exact: true,
+      })
+      .first()
+      .click();
+    await expect(page).toHaveURL(/\/app\/roles\//);
+    await expect(
+      page.getByRole('heading', { name: 'Saved opening', exact: true }),
+    ).toBeVisible();
+    await page.getByLabel('Posting actions').click();
+    await page
+      .getByRole('button', { name: 'Manage pasted text', exact: true })
+      .click();
+    const dialog = page.getByRole('dialog', { name: 'Manage pasted text' });
+    await expect(
+      dialog.getByRole('textbox', { name: 'Page text', exact: true }),
+    ).toHaveValue(
+      'Fictional software engineer.\nBuild reliable tools.\n'.repeat(20),
+    );
+    await dialog
+      .getByRole('textbox', { name: 'Page text', exact: true })
+      .fill('Updated fictional engineer posting');
+    await page.screenshot({
+      path: testInfo.outputPath(`paste-role-${scheme}.png`),
+      fullPage: true,
+    });
+    await dialog.getByRole('button', { name: 'Save and refresh' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(
+      page.getByRole('heading', {
+        name: 'Refreshed Product Engineer',
+        exact: true,
+      }),
+    ).toBeVisible();
+    await page.reload();
+    await page.getByLabel('Posting actions').click();
+    await page
+      .getByRole('button', { name: 'Manage pasted text', exact: true })
+      .click();
+    await expect(
+      dialog.getByRole('textbox', { name: 'Page text', exact: true }),
+    ).toHaveValue('Updated fictional engineer posting');
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+    await expect(page.getByLabel('Posting actions')).toBeFocused();
+    await page.getByLabel('Posting actions').click();
+    await page
+      .getByRole('button', { name: 'Manage pasted text', exact: true })
+      .click();
+    await dialog
+      .getByRole('button', { name: 'Remove text and refresh' })
+      .click();
+    await expect(dialog).toBeHidden();
+    await page.reload();
+    await page.getByLabel('Posting actions').click();
+    await page
+      .getByRole('button', { name: 'Manage pasted text', exact: true })
+      .click();
+    await expect(
+      dialog.getByRole('textbox', { name: 'Page text', exact: true }),
+    ).toHaveValue('');
   });
 }

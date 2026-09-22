@@ -1,6 +1,7 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import { GetCommand, TransactWriteCommand } from '@aws-sdk/lib-dynamodb';
 import { z } from 'zod';
+import { companyMembershipWrites } from '../companies/companies.index.ts';
 import {
   type DynamoTransport,
   readRecord,
@@ -14,6 +15,10 @@ import {
   type SavedPosting,
   savedPostingSchema,
 } from './job-postings.schemas.ts';
+import {
+  requestSourceExtraction,
+  sourceResponse,
+} from './job-postings.source.ts';
 
 export function jobRow(pk: string, item: SavedPosting) {
   return {
@@ -120,6 +125,13 @@ export function createPostingOperations(
             await send(
               new TransactWriteCommand({
                 TransactItems: [
+                  ...companyMembershipWrites(
+                    table,
+                    pk,
+                    item,
+                    item.companyAssociation,
+                    undefined,
+                  ),
                   {
                     Delete: {
                       TableName: table,
@@ -127,6 +139,15 @@ export function createPostingOperations(
                       ConditionExpression: '#data = :previous',
                       ExpressionAttributeNames: { '#data': 'data' },
                       ExpressionAttributeValues: { ':previous': previous },
+                    },
+                  },
+                  {
+                    Delete: {
+                      TableName: table,
+                      Key: { pk, sk: `SOURCE#${id}` },
+                      ConditionExpression:
+                        'attribute_not_exists(pk) OR recordKey = :key',
+                      ExpressionAttributeValues: { ':key': key },
                     },
                   },
                   pointerDelete(`ID#${id}`),
@@ -235,50 +256,23 @@ export function createPostingOperations(
         }
         throw postingError('CONFLICT');
       }),
-    extract: (user, id, expectedGeneration, signal) =>
+    sourceText: (user, id, signal) =>
       storageOperation(signal, async () => {
-        for (let attempt = 0; attempt < 3; attempt++) {
-          const { pk, item, previous } = await lookup(user, id, signal);
-          if (['queued', 'processing'].includes(item.extraction.status))
-            return item;
-          if (item.extraction.generation !== expectedGeneration)
-            throw postingError('CONFLICT');
-          const next: SavedPosting = {
-            ...item,
-            recordVersion: item.recordVersion + 1,
-            updatedAt: new Date().toISOString(),
-            extraction: {
-              status: 'queued',
-              generation: randomUUID(),
-              error: null,
-            },
-          };
-          try {
-            await send(
-              new TransactWriteCommand({
-                ClientRequestToken: next.extraction.generation ?? undefined,
-                TransactItems: [
-                  postingPut(table, pk, next, previous),
-                  {
-                    Put: {
-                      TableName: table,
-                      Item: jobRow(pk, next),
-                      ConditionExpression: 'attribute_not_exists(pk)',
-                    },
-                  },
-                ],
-              }),
-              signal,
-            );
-            return next;
-          } catch (cause) {
-            const current = (await lookup(user, id, signal)).item;
-            if (['queued', 'processing'].includes(current.extraction.status))
-              return current;
-            if (current.recordVersion === item.recordVersion) throw cause;
-          }
-        }
-        throw postingError('CONFLICT');
+        const { pk, item } = await lookup(user, id, signal);
+        return sourceResponse(table, send, pk, item, signal);
       }),
+    extract: (user, id, expectedGeneration, signal, input, enabled = true) =>
+      storageOperation(signal, () =>
+        requestSourceExtraction(
+          table,
+          send,
+          lookup,
+          user,
+          id,
+          input ?? { expectedGeneration },
+          signal,
+          enabled,
+        ),
+      ),
   };
 }

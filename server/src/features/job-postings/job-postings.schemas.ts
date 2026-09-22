@@ -1,10 +1,37 @@
 import { z } from 'zod';
+import { companyAssociationSchema } from '../companies/companies.index.ts';
 import {
   jobSchema,
   parseResponseSchema,
 } from '../job-parsing/job-parsing.index.ts';
 
 export const MAX_RECORD_BYTES = 256 * 1024;
+export const sourceTextSchema = z
+  .string()
+  .max(100_000)
+  .refine(
+    (text) => new TextEncoder().encode(text).byteLength <= 256 * 1024,
+    'Page text must be at most 100,000 characters and 256 KiB.',
+  );
+export const sourceTextResponseSchema = z.strictObject({
+  schemaVersion: z.literal(1),
+  source: z
+    .strictObject({
+      text: sourceTextSchema,
+      sourceUrl: z.url(),
+      revision: z.uuid(),
+      updatedAt: z.iso.datetime(),
+    })
+    .nullable(),
+  applicationVersion: z.number().int().nonnegative(),
+  generation: z.uuid().nullable(),
+});
+export const sourceExtractionFields = {
+  sourceText: sourceTextSchema.nullable().optional(),
+  expectedApplicationVersion: z.number().int().nonnegative().optional(),
+  operationId: z.uuid().optional(),
+};
+
 export const applicationSchema = z.strictObject({
   stage: z.enum([
     'collected',
@@ -38,6 +65,7 @@ export const roleEditsSchema = z.strictObject({
   pending: z.string().nullable(),
 });
 export const saveRequestSchema = z.strictObject({
+  sourceText: sourceTextSchema.optional(),
   url: z.string().trim().min(1).max(8_192),
   extract: z.boolean().default(false),
   parsedPosting: parseResponseSchema.nullable().default(null),
@@ -76,6 +104,7 @@ export const extractionSchema = z.strictObject({
   error: z.string().nullable(),
 });
 export const savedPostingSchema = legacyPostingSchema.extend({
+  companyAssociation: companyAssociationSchema.optional(),
   edits: roleEditsSchema.optional(),
   applicationVersion: z.number().int().nonnegative(),
   recordVersion: z.number().int().nonnegative(),
@@ -105,11 +134,26 @@ export const updateRequestSchema = z.strictObject({
 export const deleteRequestSchema = z.strictObject({
   expectedApplicationVersion: z.number().int().nonnegative(),
 });
-export const extractionRequestSchema = z.strictObject({
-  expectedGeneration: z.uuid().nullable(),
-});
+export const extractionRequestSchema = z
+  .strictObject({
+    expectedGeneration: z.uuid().nullable(),
+    ...sourceExtractionFields,
+  })
+  .refine(
+    (input) =>
+      input.sourceText === undefined ||
+      (input.operationId !== undefined &&
+        input.expectedApplicationVersion !== undefined),
+  );
+export type SourceExtractionInput = z.infer<typeof extractionRequestSchema>;
+
 export type UpdateInput = z.infer<typeof updateRequestSchema>;
 export interface PostingOperations {
+  sourceText(
+    userId: string,
+    id: string,
+    signal: AbortSignal,
+  ): Promise<z.infer<typeof sourceTextResponseSchema>>;
   delete(
     userId: string,
     id: string,
@@ -128,6 +172,8 @@ export interface PostingOperations {
     id: string,
     generation: string | null,
     signal: AbortSignal,
+    input?: SourceExtractionInput,
+    enabled?: boolean,
   ): Promise<SavedPosting>;
 }
 export const listRequestSchema = z.strictObject({
@@ -156,6 +202,7 @@ export interface PostingStore extends PostingOperations {
     userId: string,
     item: SavedPosting,
     signal: AbortSignal,
+    sourceText?: string,
   ): Promise<{ item: SavedPosting; created: boolean }>;
   list(
     userId: string,

@@ -60,10 +60,12 @@ assert.equal(dataStatements.length, 2);
 assert.deepEqual(
   dataStatements.flatMap((statement) => statement.Action).sort(),
   [
+    'dynamodb:ConditionCheckItem',
     'dynamodb:DeleteItem',
     'dynamodb:GetItem',
     'dynamodb:PutItem',
     'dynamodb:Query',
+    'dynamodb:UpdateItem',
   ],
 );
 for (const statement of dataStatements) {
@@ -78,7 +80,7 @@ const writes = dataStatements.find((statement) =>
 assert.deepEqual(writes.Condition, {
   StringEquals: { 'dynamodb:EnclosingOperation': 'TransactWriteItems' },
 });
-for (const role of ['ExtractionRole', 'RecoveryRole']) {
+for (const role of ['ExtractionRole', 'RecoveryRole', 'AnalysisRole']) {
   const policies = template.Resources[role].Properties.Policies.flatMap(
     (policy) => policy.PolicyDocument.Statement,
   );
@@ -151,6 +153,29 @@ const archive = execFileSync('unzip', [
   '.serverless/huntinwabbit.zip',
 ]).toString();
 assert(archive.includes('src/extraction.js'));
+
+assert.equal(
+  template.Resources.AnalysisLambdaFunction.Properties.Handler,
+  'src/analysis.handler',
+);
+assert.equal(template.Resources.AnalysisLambdaFunction.Properties.Timeout, 90);
+assert.equal(
+  template.Resources.AnalysisRecoveryLambdaFunction.Properties.Handler,
+  'src/analysis.recover',
+);
+assert.equal(
+  template.Resources.AnalysisRecoveryLambdaFunction.Properties.Environment
+    .Variables.REDPILL_API_KEY,
+  undefined,
+);
+assert.equal(template.Resources.AnalysisMapping.Properties.BatchSize, 1);
+assert(
+  template.Resources.AnalysisMapping.Properties.FilterCriteria.Filters[0].Pattern.includes(
+    'CA-JOB#',
+  ),
+);
+assert(archive.includes('src/analysis.js'));
+
 console.log(
-  'Storage package: stage table, retention, recovery, runtime reference, scoped IAM, extraction/recovery resources and bundled SDK verified. No AWS calls or Docker.',
+  'Storage package: stage table, retention, recovery, runtime reference, scoped IAM, extraction/recovery/analysis resources and bundled SDK verified. No AWS calls or Docker.',
 );

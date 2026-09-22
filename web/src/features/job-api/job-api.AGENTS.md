@@ -21,7 +21,10 @@ fetch posting websites, run inference or own durable extraction. Those belong to
   caches are prohibited. Tokens never enter client props or Redux.
 - [contracts](job-api.contracts.ts) validate requests and bounded responses. The backend's public
   [schemas](../../../../server/src/features/job-postings/job-postings.schemas.ts) are authoritative;
-  both sides validate the fictional browser fixture in tests. Update both contracts together.
+  both sides validate the fictional browser fixture in tests. Update both contracts together. Technology
+  extraction is optional when reading older records, while new model output requires it. Descriptions
+  accept Markdown as well as legacy plain text. See the [parsing boundary](../../../../docs/job-parsing-data-boundary.md)
+  for frontend-first rollout requirements.
 - [client](job-api.client.ts) owns the RTK Query cache, page cursors, mutations and invalidation.
   A fresh account-keyed store isolates users. Transport failures and malformed responses become safe
   errors without serializing upstream content. No mutation or paid extraction is automatically retried.
@@ -36,8 +39,8 @@ later pages preserve earlier results. Individual pending roles poll every five s
 role details stop polling after terminal extraction. Reconnect/focus refresh is observational. Closing
 or reloading the browser cannot stop an accepted backend extraction job.
 
-Saving a link is idempotent by backend-normalized URL. Updates use application versions; conflicts
-retain note drafts for review. Successful writes invalidate lists and details. Extraction acknowledgements immediately update the
+Saving a link is idempotent by backend-normalized URL. Tracking updates use application versions. Comments use separate note revisions and retain drafts
+on conflicts. Successful writes invalidate lists and details. Extraction acknowledgements immediately update the
 detail cache so pending controls and polling start without waiting for a refetch. DELETE validates the
 expected application version and requires an empty 204 success; it removes the acknowledged ID from
 cached board pages before navigation. Failed deletions retain cached data. Deletion returns no response payload; upstream errors remain sanitized. The browser keeps no
@@ -57,3 +60,33 @@ origin rules. History remains in RTK Query rather than a duplicate product slice
 reads invalidate posting caches so durable results appear on the board and role. Submission carries
 a client operation ID for acknowledgement recovery; the server owns paid work and ordering.
 The [role workspace barrel](../role-workspace/role-workspace.AGENTS.md) owns interaction details.
+
+Company detail/search/membership queries and versioned role association changes share this cache and
+bridge. [Company contracts](job-api.companies.contracts.ts) mirror the server schemas. The bridge
+allowlists company paths under its existing local route and forwards to the protected company API.
+Successful selection and posting mutations invalidate company queries; acknowledged deletion also
+removes the role from cached company pages. Older roles may omit associations.
+Comments use allowlisted notes routes and independently paginated Notes cache tags. The API validates
+bodies and revisions on both sides of the bridge; delete requires an empty 204. Successful or uncertain
+mutations invalidate notes and posting caches so role deletion reviews current application versions.
+Create IDs are retained by the notes container for explicit retry; the backend prevents duplication.
+
+Retained page text uses an owner-scoped source read and optional input on save/extraction. The source
+query shares posting invalidation but raw text is not embedded in list/detail records. Relevant write
+bodies have a larger bounded bridge allowance for JSON escaping; unrelated limits are unchanged.
+Source-changing extraction carries a reviewed application version and operation ID; unchanged retries
+retain their original inputs. Nullable fetch timestamps and optional provenance support pasted-only
+results while legacy responses remain readable. See the [parsing boundary](../../../../docs/job-parsing-data-boundary.md)
+for coordinated rollout and rollback requirements.
+
+Company analysis adds authenticated GET/POST paths under each company, validated by the
+[analysis contracts](job-api.analysis.contracts.ts). The server schemas remain authoritative. An
+idempotent ensure command runs from the query cache lifecycle only for uninitialized companies;
+its mutation state is shared with the analysis container for error feedback. Result refetches restart
+pagination to avoid mixing generations. Refresh requests retain operation IDs for explicit retries,
+and no paid mutation is automatically retried. Posting invalidation also refreshes analysis state.
+
+Analysis responses optionally include the server scheduling deadline. Older servers remain readable
+without a countdown; deploy the accepting frontend before a backend that emits this new field because
+older frontend response contracts are strict. Analyze now uses the existing refresh intent and its
+operation receipt; no new paid-work endpoint or automatic client timer request is introduced.

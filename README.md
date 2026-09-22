@@ -9,7 +9,11 @@ one question: **Where does everything stand?**
 The web app implements a live board, batch link capture and saved-role workspace at `/app`.
 Saved links and tracking edits persist through the backend; posting details are extracted asynchronously
 with agent-fetch and Redpill. The role workspace also accepts natural-language edits with saved
-chat history, partial updates and Undo; user corrections survive posting refreshes. Tasks, resumes, submitted materials and shared company research remain
+chat history, partial updates and Undo. A Markdown notes composer saves timestamped comments with
+editing and deletion. User corrections survive posting refreshes. Company pages group saved roles
+under persistent company identities, with automatic matching and manual corrections. Optional background
+analysis finds shared requirements and technologies, with evidence from saved roles and personal context. Tasks, resumes,
+submitted materials and freeform company research remain
 unavailable. `/` currently links into the app. See the [web README](web/README.md) for setup.
 
 This is a public, self-hostable repository. Configure your own Supabase authentication project and
@@ -49,6 +53,9 @@ Adding opportunities should take almost no effort, even when collecting many at 
 
 - Paste a job-posting link into an individual field.
 - Optionally choose an interest level beside that link.
+- Expand Paste page text to add copied webpage text when a link may be inaccessible. The green check
+  folds the editor without saving; Save to Collected submits all rows. Retained pasted text takes
+  priority during extraction and can be replaced or removed from the saved role.
 - When the last link field is filled, another empty row appears with its own interest selector.
 - Save the entered roles to Collected; interest can always be added or changed later.
 
@@ -130,5 +137,5 @@ ends, a postmortem should help capture what happened and what to learn for the n
   — the original ramble that started the design discussion.
 
 The web app connects the board, role workspace and quick-add flows to live backend data.
-Dedicated company and resume-library experiences, detailed interview tracking, postmortems, and
+Shared company research and contacts, resume-library experiences, detailed interview tracking, postmortems, and
 referral discovery still need further design.

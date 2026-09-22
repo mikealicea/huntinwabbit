@@ -23,7 +23,7 @@ async function setup(override?: (send: DynamoTransport) => DynamoTransport) {
   const send = override ? override(db.send) : db.send;
   const postings = createJobPostings(
     createDynamoPostingStore('test', send),
-    undefined,
+    () => '2026-09-21T00:00:00.000Z',
     undefined,
     true,
   );
@@ -75,7 +75,6 @@ describe('natural language role updates', () => {
         changes: [
           { field: 'workArrangement', value: 'remote' },
           { field: 'priority', value: 'high' },
-          { field: 'notes', value: 'Recruiter confirmed the location.' },
         ],
         skipped: [],
       };
@@ -84,14 +83,13 @@ describe('natural language role updates', () => {
     expect(effectiveFields(await s.get())).toMatchObject({
       workArrangement: 'remote',
       priority: 'high',
-      notes: 'Recruiter confirmed the location.',
     });
     const history = await s.history();
     expect(history.items[0]).toMatchObject({
       status: 'applied',
       text: message.text,
     });
-    expect(history.items[0]?.changes).toHaveLength(3);
+    expect(history.items[0]?.changes).toHaveLength(2);
     await s.updates.undo('alice', s.item.id, entry.id);
     expect(effectiveFields(await s.get())).toEqual(effectiveFields(s.item));
     expect((await s.history()).items[0]?.undoneAt).not.toBeNull();
@@ -124,12 +122,19 @@ describe('natural language role updates', () => {
     const entry = await s.updates.submit(
       'alice',
       s.item.id,
-      s.input('Clear location and update title'),
+      s.input(
+        'Clear location and technologies, and update title and description',
+      ),
     );
     await s.run(async () => ({
       changes: [
         { field: 'locations', value: [] },
         { field: 'title', value: 'Corrected title' },
+        { field: 'technologies', value: [] },
+        {
+          field: 'description',
+          value: '## Corrected overview\n\nKeep my wording.',
+        },
       ],
       skipped: [],
     }));
@@ -143,6 +148,8 @@ describe('natural language role updates', () => {
     if (!replacement) throw new Error();
     replacement.job.title = 'New extracted title';
     replacement.job.locations = ['Boston'];
+    replacement.job.technologies = ['TypeScript (required)'];
+    replacement.job.description = '## New overview\n\nNew posting wording.';
     await createExtractionWorker('test', s.send, async () => replacement).run(
       'USER#alice',
       `JOB#${refreshed.extraction.generation}`,
@@ -150,11 +157,15 @@ describe('natural language role updates', () => {
     expect(effectiveFields(await s.get())).toMatchObject({
       title: 'Corrected title',
       locations: [],
+      technologies: [],
+      description: '## Corrected overview\n\nKeep my wording.',
     });
     await s.updates.undo('alice', s.item.id, entry.id);
     expect(effectiveFields(await s.get())).toMatchObject({
       title: 'New extracted title',
       locations: ['Boston'],
+      technologies: ['TypeScript (required)'],
+      description: '## New overview\n\nNew posting wording.',
     });
   });
   it('rejects overwrite after intervening changes including changes away and back', async () => {
@@ -510,7 +521,7 @@ it('recovers lost submission, completion and Undo acknowledgements without dupli
   );
   expect((await s.history()).items[0]?.undoneAt).not.toBeNull();
 });
-it('supports unextracted roles, partial salary units, notes and list replacement values', async () => {
+it('supports unextracted roles and partial salary units while redirecting note requests', async () => {
   const s = await setup();
   const empty = await s.postings.save(
     'alice',
@@ -551,7 +562,7 @@ it('supports unextracted roles, partial salary units, notes and list replacement
     compensation: [
       { minimum: 150000, maximum: 150000, currency: null, period: null },
     ],
-    notes: 'Recruiter notes',
+    notes: '',
     benefits: ['Paid leave'],
   });
 });
@@ -585,4 +596,64 @@ it('dispatches update jobs and recovery through the deployed worker and ignores 
   ).recover();
   expect((await s.history()).items[0]?.status).toBe('failed');
   expect(parse).toHaveBeenCalledTimes(1);
+});
+
+it('excludes notes from provider context, skips stale model note changes and keeps historical receipts readable', async () => {
+  const s = await setup();
+  await s.postings.update(
+    'alice',
+    s.item.id,
+    {
+      expectedApplicationVersion: 0,
+      changes: { notes: 'Fictional private legacy note' },
+    },
+    signal(),
+  );
+  await s.updates.submit(
+    'alice',
+    s.item.id,
+    s.input('Add a note and set high priority'),
+  );
+  await s.run(async (input) => {
+    expect(input.current).not.toHaveProperty('notes');
+    expect(JSON.stringify(input)).not.toContain(
+      'Fictional private legacy note',
+    );
+    return {
+      changes: [
+        { field: 'notes', value: 'Model note' },
+        { field: 'priority', value: 'high' },
+      ],
+      skipped: [],
+    };
+  });
+  expect((await s.get()).application).toMatchObject({
+    notes: 'Fictional private legacy note',
+    priority: 'high',
+  });
+  expect((await s.history()).items[0]).toMatchObject({
+    status: 'partial',
+    skipped: ['Notes: use the Notes composer to add a comment.'],
+  });
+  const row = [...s.rows.values()].find((value) =>
+    String(value.sk).startsWith('JOB#UPDATE#'),
+  );
+  if (!row || typeof row.data !== 'string')
+    throw new Error('Missing fixture operation');
+  const data = JSON.parse(row.data);
+  data.entry.changes.push({
+    field: 'notes',
+    before: '',
+    after: 'Fictional private legacy note',
+  });
+  row.data = JSON.stringify(data);
+  await expect(
+    s.updates.undo('alice', s.item.id, data.entry.id),
+  ).rejects.toMatchObject({ statusCode: 409 });
+  expect((await s.history()).items[0]?.changes).toHaveLength(2);
+  await s.updates.submit('alice', s.item.id, s.input('Set low priority'));
+  await s.run(async (input) => {
+    expect(input.history).toEqual([]);
+    return { changes: [{ field: 'priority', value: 'low' }], skipped: [] };
+  });
 });

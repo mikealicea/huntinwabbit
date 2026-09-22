@@ -50,6 +50,8 @@ export const jobSchema = z.strictObject({
   description: z.string().trim().min(1).max(60_000).nullable(),
   responsibilities: items,
   requirements: items,
+  // Older saved records predate technology extraction; absence is not an empty result.
+  technologies: items.optional(),
   preferredQualifications: items,
   benefits: items,
   compensation: z.array(compensationSchema).max(50),
@@ -61,14 +63,19 @@ export const jobSchema = z.strictObject({
 // Classification is internal: a challenge page must not become an empty job.
 export const extractionSchema = z.strictObject({
   pageType: z.enum(['job', 'expired', 'blocked', 'not-job']),
-  job: jobSchema.nullable(),
+  job: jobSchema.extend({ technologies: items }).nullable(),
 });
 
 export const parseResponseSchema = z.strictObject({
   schemaVersion: z.literal(1),
   source: z.strictObject({
     normalizedUrl: publicUrl,
-    fetchedAt: z.iso.datetime(),
+    fetchedAt: z.iso.datetime().nullable(),
+    extractedAt: z.iso.datetime().optional(),
+    inputs: z.array(z.enum(['webpage', 'pasted-text'])).optional(),
+    fetchWarning: z
+      .enum(['FETCH_UNAVAILABLE', 'FETCHED_PAGE_UNUSABLE'])
+      .optional(),
   }),
   job: jobSchema,
   warnings: z.array(
@@ -82,7 +89,22 @@ export const parseResponseSchema = z.strictObject({
 });
 
 export type ParsedJob = z.infer<typeof jobSchema>;
-export type Extraction = z.infer<typeof extractionSchema>;
+export type Extraction = z.infer<typeof extractionSchema> & {
+  selectedCompanyId?: string;
+  fetchedPageUsable?: boolean;
+};
+export interface CompanyCandidate {
+  id: string;
+  name: string;
+  website: string | null;
+}
+export interface CompanyMatchContext {
+  candidates: (
+    text: string,
+    signal: AbortSignal,
+  ) => Promise<CompanyCandidate[]>;
+  matched: (id: string) => void;
+}
 export type ParseResponse = z.infer<typeof parseResponseSchema>;
 
 export interface FetchedPosting {
@@ -97,8 +119,12 @@ export type FetchPosting = (
 export type ExtractPosting = (
   content: string,
   signal: AbortSignal,
+  companies?: CompanyCandidate[],
+  sourceText?: string,
 ) => Promise<Extraction>;
 export type ParsePosting = (
   url: string,
   signal: AbortSignal,
+  companyContext?: CompanyMatchContext,
+  sourceText?: string,
 ) => Promise<ParseResponse>;

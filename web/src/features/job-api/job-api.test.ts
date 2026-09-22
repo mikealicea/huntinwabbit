@@ -311,3 +311,115 @@ it('validates role update requests, history and undo through the authenticated b
     ).status,
   ).toBe(400);
 });
+
+it('bridges comment routes with bounded contracts and rejects unsupported methods', async () => {
+  const id = postingFixtures()[0].id;
+  const note = {
+    id: '00000000-0000-4000-8000-000000000090',
+    body: '**Fictional** note',
+    revision: 1,
+    createdAt: '2026-09-22T00:00:00.000Z',
+    updatedAt: '2026-09-22T00:00:00.000Z',
+  };
+  const s = setup({ schemaVersion: 1, note });
+  const call = (path: string, method: string, body?: unknown) =>
+    s.bridge(
+      new Request(`http://localhost:3000/api/job-postings/${id}/notes${path}`, {
+        method,
+        headers: {
+          origin: 'http://localhost:3000',
+          'Content-Type': 'application/json',
+        },
+        ...(body ? { body: JSON.stringify(body) } : {}),
+      }),
+    );
+  expect(
+    (await call('', 'POST', { id: note.id, body: note.body })).status,
+  ).toBe(200);
+  expect(
+    (
+      await call(`/${note.id}`, 'PATCH', {
+        expectedRevision: 1,
+        body: 'Edited',
+      })
+    ).status,
+  ).toBe(200);
+  s.fetcher.mockResolvedValueOnce(new Response(null, { status: 204 }));
+  expect(
+    (await call(`/${note.id}`, 'DELETE', { expectedRevision: 1 })).status,
+  ).toBe(204);
+  s.fetcher.mockResolvedValueOnce(
+    Response.json({ schemaVersion: 1, items: [note], nextCursor: null }),
+  );
+  expect((await call('?cursor=fixture', 'GET')).status).toBe(200);
+  expect((await call('', 'PATCH', { body: 'Wrong route' })).status).toBe(405);
+  expect((await call(`/${note.id}`, 'GET')).status).toBe(405);
+  expect((await call('', 'POST', { id: note.id, body: ' ' })).status).toBe(400);
+  expect(
+    (await call('', 'POST', { id: note.id, body: 'x'.repeat(20001) })).status,
+  ).toBe(400);
+  expect((await call('?cursor=a&cursor=b', 'GET')).status).toBe(400);
+  expect(
+    (await call('/not-a-uuid', 'DELETE', { expectedRevision: 1 })).status,
+  ).toBe(404);
+  s.fetcher.mockResolvedValueOnce(
+    Response.json({ schemaVersion: 1, note: { ...note, body: 123 } }),
+  );
+  expect(
+    (await call('', 'POST', { id: note.id, body: note.body })).status,
+  ).toBe(503);
+});
+
+it('forwards private source reads and bounded source changes while preserving provenance', async () => {
+  const item = postingFixtures()[0];
+  const source = {
+    text: 'Fictional posting',
+    sourceUrl: item.sourceUrl,
+    revision: crypto.randomUUID(),
+    updatedAt: item.updatedAt,
+  };
+  const s = setup({
+    schemaVersion: 1,
+    source,
+    applicationVersion: 0,
+    generation: null,
+  });
+  const read = await s.bridge(req(`/${item.id}/source-text`));
+  expect(read.status).toBe(200);
+  expect((await read.json()).source).toEqual(source);
+  expect(read.headers.get('Cache-Control')).toContain('no-store');
+  const updated = structuredClone(item);
+  if (!updated.parsedPosting) throw new Error();
+  updated.parsedPosting.source = {
+    ...updated.parsedPosting.source,
+    fetchedAt: null,
+    inputs: ['pasted-text'],
+    fetchWarning: 'FETCH_UNAVAILABLE',
+  };
+  s.fetcher.mockResolvedValueOnce(
+    Response.json({ schemaVersion: 1, item: updated }, { status: 202 }),
+  );
+  const changed = await s.bridge(
+    req(`/${item.id}/extraction`, 'POST', {
+      expectedGeneration: null,
+      expectedApplicationVersion: 0,
+      operationId: crypto.randomUUID(),
+      sourceText: '\u0001'.repeat(90_000),
+    }),
+  );
+  expect(changed.status).toBe(202);
+  expect((await changed.json()).item.parsedPosting.source.fetchedAt).toBeNull();
+  expect(
+    (await s.bridge(req(`/${item.id}/source-text`, 'POST', {}))).status,
+  ).toBe(405);
+  expect(
+    (
+      await s.bridge(
+        req(`/${item.id}/extraction`, 'POST', {
+          expectedGeneration: null,
+          sourceText: 'Missing concurrency controls',
+        }),
+      )
+    ).status,
+  ).toBe(400);
+});

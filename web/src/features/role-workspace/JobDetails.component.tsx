@@ -2,20 +2,11 @@ import {
   formatSalary,
   type Opportunity,
 } from '@/features/job-search/job-search.index';
-import { LoadingPulse } from '@/shared/shared.index';
+import { PostingDescription } from './PostingDescription.component';
 
-export function JobDetails({
-  role,
-  extracting,
-}: {
-  role: Opportunity;
-  extracting?: boolean;
-}) {
+export function JobDetails({ role }: { role: Opportunity }) {
   const posting = role.posting;
   const details = role.jobDetails ?? role.saved?.parsedPosting?.job;
-  const pending = ['queued', 'processing'].includes(
-    role.saved?.extraction.status ?? '',
-  );
   return (
     <section
       className="card border border-base-300 bg-base-100 shadow-sm"
@@ -27,23 +18,96 @@ export function JobDetails({
         </h2>
         {posting ? (
           <>
-            <p className="text-sm text-base-content/75">
-              {posting.location || 'Location not listed'} ·{' '}
-              {posting.employmentType || 'Employment type not listed'}
-            </p>
-            <p className="leading-relaxed">
-              {posting.description || 'Description not listed'}
-            </p>
-            {posting.requirements.length > 0 && (
-              <div>
-                <h3 className="mb-2 text-sm font-semibold">Requirements</h3>
-                <ul className="list-disc space-y-1 pl-5 text-sm leading-relaxed">
-                  {posting.requirements.map((requirement) => (
-                    <li key={requirement}>{requirement}</li>
+            <dl
+              aria-label="Job overview"
+              className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-base-content/75"
+            >
+              {[
+                ['Location', posting.location || 'Location not listed'],
+                [
+                  'Employment type',
+                  posting.employmentType || 'Employment type not listed',
+                ],
+                ['Salary', formatSalary(posting.salary)],
+                [
+                  'Work arrangement',
+                  details?.workArrangement === 'on-site'
+                    ? 'On-site'
+                    : details?.workArrangement === 'hybrid'
+                      ? 'Hybrid'
+                      : details?.workArrangement === 'remote'
+                        ? 'Remote'
+                        : 'Work arrangement not listed',
+                ],
+              ].map(([label, value]) => (
+                <div key={label} className="min-w-0 break-words">
+                  <dt className="sr-only">{label}</dt>
+                  <dd
+                    className={
+                      label === 'Salary'
+                        ? 'font-semibold text-base-content'
+                        : undefined
+                    }
+                  >
+                    {value}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+            <div>
+              <h3 className="mb-2 text-sm font-semibold">Requirements</h3>
+              <FactList
+                items={posting.requirements}
+                empty="Requirements not listed"
+              />
+              {!!details?.preferredQualifications.length && (
+                <div className="mt-3">
+                  <h4 className="mb-2 text-sm font-semibold">
+                    Preferred qualifications
+                  </h4>
+                  <FactList items={details.preferredQualifications} />
+                </div>
+              )}
+            </div>
+            <div>
+              <h3 className="mb-2 text-sm font-semibold">Tech stack</h3>
+              {details?.technologies?.length ? (
+                <ul className="flex flex-wrap gap-2 text-sm">
+                  {[...new Set(details.technologies)].map((technology) => (
+                    <li
+                      key={technology}
+                      className="min-w-0 max-w-full whitespace-pre-wrap break-words rounded-lg bg-base-200 px-3 py-1.5"
+                    >
+                      {technology}
+                    </li>
                   ))}
                 </ul>
-              </div>
-            )}
+              ) : (
+                <p className="text-sm text-base-content/75">
+                  {details?.technologies === undefined &&
+                  role.saved?.parsedPosting
+                    ? 'Refresh the posting to extract technologies.'
+                    : 'Technologies not listed'}
+                </p>
+              )}
+            </div>
+            <div>
+              <h3 className="mb-2 text-sm font-semibold">Responsibilities</h3>
+              <FactList
+                items={details?.responsibilities ?? []}
+                empty="Responsibilities not listed"
+              />
+            </div>
+            <div>
+              <h3 className="mb-2 text-sm font-semibold">Full job details</h3>
+              {posting.description ? (
+                <PostingDescription description={posting.description} />
+              ) : (
+                <p className="text-sm text-base-content/75">
+                  Description not listed
+                </p>
+              )}
+            </div>
           </>
         ) : (
           <p className="leading-relaxed text-base-content/75">
@@ -51,64 +115,13 @@ export function JobDetails({
             details have not been extracted yet.
           </p>
         )}
-        <p className="rounded-lg bg-base-200 p-3 text-sm font-medium">
-          {formatSalary(posting?.salary)}
-        </p>
-        {role.saved && (
-          <div className="space-y-2">
-            <p role="status">
-              {(extracting || pending) && <LoadingPulse />}
-              {extracting
-                ? 'Requesting extraction…'
-                : role.saved.extraction.status === 'queued'
-                  ? posting
-                    ? 'Waiting to refresh posting details…'
-                    : 'Waiting to extract posting details…'
-                  : role.saved.extraction.status === 'processing'
-                    ? posting
-                      ? 'Refreshing posting details…'
-                      : 'Extracting posting details…'
-                    : role.saved.extraction.status === 'failed'
-                      ? posting
-                        ? 'Refresh could not finish. Your previous details are still shown.'
-                        : 'Extraction could not finish. Your link is saved.'
-                      : role.saved.extraction.status === 'disabled'
-                        ? 'Extraction is currently unavailable. Your link is saved.'
-                        : role.saved.extraction.status === 'complete'
-                          ? role.saved.edits &&
-                            Object.keys(role.saved.edits.overrides).length
-                            ? 'Your corrections are preserved when posting details refresh.'
-                            : 'Details extracted from the posting. Review them against the original.'
-                          : 'Posting details have not been requested.'}
-            </p>
-          </div>
-        )}
         {details && (
           <>
-            <p>{details.workArrangement ?? 'Work arrangement not listed'}</p>
-            {(
-              [
-                'responsibilities',
-                'preferredQualifications',
-                'benefits',
-              ] as const
-            ).map((field) =>
-              details[field].length ? (
-                <div key={field}>
-                  <h3 className="font-semibold">
-                    {field === 'preferredQualifications'
-                      ? 'Preferred qualifications'
-                      : field === 'responsibilities'
-                        ? 'Responsibilities'
-                        : 'Benefits'}
-                  </h3>
-                  <ul className="list-disc pl-5">
-                    {[...new Set(details[field])].map((text) => (
-                      <li key={text}>{text}</li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null,
+            {details.benefits.length > 0 && (
+              <div>
+                <h3 className="mb-2 text-sm font-semibold">Benefits</h3>
+                <FactList items={details.benefits} />
+              </div>
             )}
             <dl className="space-y-2 text-sm">
               {details.company.website && (
@@ -161,13 +174,6 @@ export function JobDetails({
             )}
           </>
         )}
-        {role.saved?.parsedPosting &&
-          role.saved.parsedPosting.source.normalizedUrl !== role.sourceUrl && (
-            <p className="text-sm text-base-content/75">
-              These extracted details came from the previous posting link.
-              Refresh the posting to read the new link.
-            </p>
-          )}
         {role.sourceUrl && (
           <a
             href={role.sourceUrl}
@@ -185,4 +191,16 @@ export function JobDetails({
       </div>
     </section>
   );
+}
+
+function FactList({ items, empty }: { items: string[]; empty?: string }) {
+  return items.length ? (
+    <ul className="list-disc space-y-1 break-words pl-5 text-sm leading-relaxed">
+      {[...new Set(items)].map((item) => (
+        <li key={item}>{item}</li>
+      ))}
+    </ul>
+  ) : empty ? (
+    <p className="text-sm text-base-content/75">{empty}</p>
+  ) : null;
 }

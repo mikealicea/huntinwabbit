@@ -21,4 +21,10 @@ API cache tests cover live records. Run web, state, architecture and documentati
 
 The mapping resolves posting facts through saved user overrides, preserving explicit nulls and empty
 lists. Board summaries and the detailed role use those same effective facts, including records whose
-initial extraction never succeeded. Extracted provenance remains in the saved payload.
+initial extraction never succeeded. Extracted provenance remains in the saved payload. Technology lists and Markdown descriptions pass
+through the same effective-fact mapping; absent legacy technology data stays absent and explicit
+empty overrides remain empty.
+
+Saved company associations supply the canonical company ID and card/header label. Legacy records
+without an association use effective posting names. Explicitly cleared associations remain unknown;
+their source facts are preserved for inspection rather than silently restoring membership.

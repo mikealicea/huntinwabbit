@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { companyAssociationSchema } from './job-api.companies.contracts';
 
 const text = z.string().trim().min(1).max(4_000);
 const nullableText = text.nullable();
@@ -48,6 +49,8 @@ export const jobSchema = z.strictObject({
   description: z.string().trim().min(1).max(60_000).nullable(),
   responsibilities: items,
   requirements: items,
+  // Older saved records predate technology extraction; absence is not an empty result.
+  technologies: items.optional(),
   preferredQualifications: items,
   benefits: items,
   compensation: z.array(compensationSchema).max(50),
@@ -60,7 +63,12 @@ export const parseResponseSchema = z.strictObject({
   schemaVersion: z.literal(1),
   source: z.strictObject({
     normalizedUrl: publicUrl,
-    fetchedAt: z.iso.datetime(),
+    fetchedAt: z.iso.datetime().nullable(),
+    extractedAt: z.iso.datetime().optional(),
+    inputs: z.array(z.enum(['webpage', 'pasted-text'])).optional(),
+    fetchWarning: z
+      .enum(['FETCH_UNAVAILABLE', 'FETCHED_PAGE_UNUSABLE'])
+      .optional(),
   }),
   job: jobSchema,
   warnings: z.array(
@@ -74,6 +82,32 @@ export const parseResponseSchema = z.strictObject({
 });
 
 export const MAX_RECORD_BYTES = 256 * 1024;
+export const sourceTextSchema = z
+  .string()
+  .max(100_000)
+  .refine(
+    (text) => new TextEncoder().encode(text).byteLength <= 256 * 1024,
+    'Page text must be at most 100,000 characters and 256 KiB.',
+  );
+export const sourceTextResponseSchema = z.strictObject({
+  schemaVersion: z.literal(1),
+  source: z
+    .strictObject({
+      text: sourceTextSchema,
+      sourceUrl: z.url(),
+      revision: z.uuid(),
+      updatedAt: z.iso.datetime(),
+    })
+    .nullable(),
+  applicationVersion: z.number().int().nonnegative(),
+  generation: z.uuid().nullable(),
+});
+export const sourceExtractionFields = {
+  sourceText: sourceTextSchema.nullable().optional(),
+  expectedApplicationVersion: z.number().int().nonnegative().optional(),
+  operationId: z.uuid().optional(),
+};
+
 export const applicationSchema = z.strictObject({
   stage: z.enum([
     'collected',
@@ -107,6 +141,7 @@ export const roleEditsSchema = z.strictObject({
   pending: z.string().nullable(),
 });
 export const saveRequestSchema = z.strictObject({
+  sourceText: sourceTextSchema.optional(),
   url: z.string().trim().min(1).max(8_192),
   extract: z.boolean().default(false),
   parsedPosting: parseResponseSchema.nullable().default(null),
@@ -145,6 +180,7 @@ export const extractionSchema = z.strictObject({
   error: z.string().nullable(),
 });
 export const savedPostingSchema = legacyPostingSchema.extend({
+  companyAssociation: companyAssociationSchema.optional(),
   edits: roleEditsSchema.optional(),
   applicationVersion: z.number().int().nonnegative(),
   recordVersion: z.number().int().nonnegative(),
@@ -159,9 +195,19 @@ export const updateRequestSchema = z.strictObject({
 export const deleteRequestSchema = z.strictObject({
   expectedApplicationVersion: z.number().int().nonnegative(),
 });
-export const extractionRequestSchema = z.strictObject({
-  expectedGeneration: z.uuid().nullable(),
-});
+export const extractionRequestSchema = z
+  .strictObject({
+    expectedGeneration: z.uuid().nullable(),
+    ...sourceExtractionFields,
+  })
+  .refine(
+    (input) =>
+      input.sourceText === undefined ||
+      (input.operationId !== undefined &&
+        input.expectedApplicationVersion !== undefined),
+  );
+export type SourceExtractionInput = z.infer<typeof extractionRequestSchema>;
+
 export type UpdateInput = z.infer<typeof updateRequestSchema>;
 export const listRequestSchema = z.strictObject({
   limit: z
@@ -245,3 +291,37 @@ export const historyQuerySchema = z.strictObject({
 export type UpdateEntry = z.infer<typeof updateEntrySchema>;
 export type UpdateMessage = z.infer<typeof updateMessageSchema>;
 export type Job = z.infer<typeof jobSchema>;
+
+export const noteBodySchema = z
+  .string()
+  .max(20_000)
+  .refine((value) => value.trim().length > 0);
+export const noteSchema = z.strictObject({
+  id: z.uuid(),
+  body: noteBodySchema,
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
+  revision: z.number().int().positive(),
+});
+export const createNoteSchema = z.strictObject({
+  id: z.uuid(),
+  body: noteBodySchema,
+});
+export const editNoteSchema = z.strictObject({
+  body: noteBodySchema,
+  expectedRevision: z.number().int().positive(),
+});
+export const deleteNoteSchema = editNoteSchema.omit({ body: true });
+export const notesQuerySchema = z.strictObject({
+  cursor: z.string().min(1).max(2048).optional(),
+});
+export const notesPageSchema = z.strictObject({
+  schemaVersion: z.literal(1),
+  items: z.array(noteSchema).max(20),
+  nextCursor: z.string().nullable(),
+});
+export const noteResultSchema = z.strictObject({
+  schemaVersion: z.literal(1),
+  note: noteSchema,
+});
+export type RoleNote = z.infer<typeof noteSchema>;

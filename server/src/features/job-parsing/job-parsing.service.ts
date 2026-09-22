@@ -1,6 +1,7 @@
 import { parsingError } from './job-parsing.errors.ts';
 import {
   type ExtractPosting,
+  type FetchedPosting,
   type FetchPosting,
   type ParsePosting,
   type ParseResponse,
@@ -12,14 +13,26 @@ export function createParsePosting(dependencies: {
   fetchPosting: FetchPosting;
   extractPosting: ExtractPosting;
 }): ParsePosting {
-  return async (input, signal) => {
+  return async (input, signal, companyContext, sourceText) => {
     const normalizedUrl = normalizeJobUrl(input);
     signal.throwIfAborted();
-    const fetched = await dependencies.fetchPosting(normalizedUrl, signal);
+    let fetched: FetchedPosting | undefined;
+    try {
+      fetched = await dependencies.fetchPosting(normalizedUrl, signal);
+    } catch (cause) {
+      signal.throwIfAborted();
+      if (!sourceText?.trim()) throw cause;
+    }
     signal.throwIfAborted();
-    const extraction = await dependencies.extractPosting(
-      fetched.content,
+    const candidates = await companyContext?.candidates(
+      [sourceText, fetched?.content].filter(Boolean).join('\n'),
       signal,
+    );
+    const extraction = await dependencies.extractPosting(
+      fetched?.content ?? '',
+      signal,
+      candidates,
+      sourceText,
     );
     signal.throwIfAborted();
     if (extraction.pageType === 'blocked') throw parsingError('SOURCE_BLOCKED');
@@ -28,6 +41,11 @@ export function createParsePosting(dependencies: {
     const job = extraction.job;
     if (!job || (!job.title && !job.description))
       throw parsingError('INVALID_MODEL_OUTPUT');
+    if (
+      extraction.selectedCompanyId &&
+      candidates?.some((c) => c.id === extraction.selectedCompanyId)
+    )
+      companyContext?.matched(extraction.selectedCompanyId);
     const warnings: ParseResponse['warnings'] = [];
     if (!job.title) warnings.push('MISSING_TITLE');
     if (!job.company.name) warnings.push('MISSING_COMPANY');
@@ -35,7 +53,26 @@ export function createParsePosting(dependencies: {
     if (!job.compensation.length) warnings.push('MISSING_COMPENSATION');
     return parseResponseSchema.parse({
       schemaVersion: 1,
-      source: { normalizedUrl, fetchedAt: fetched.fetchedAt },
+      source: {
+        normalizedUrl,
+        fetchedAt: fetched?.fetchedAt ?? null,
+        ...(sourceText?.trim()
+          ? {
+              extractedAt: new Date().toISOString(),
+              inputs: [
+                ...(fetched && extraction.fetchedPageUsable !== false
+                  ? ['webpage']
+                  : []),
+                'pasted-text',
+              ],
+              ...(!fetched
+                ? { fetchWarning: 'FETCH_UNAVAILABLE' }
+                : extraction.fetchedPageUsable === false
+                  ? { fetchWarning: 'FETCHED_PAGE_UNUSABLE' }
+                  : {}),
+            }
+          : {}),
+      },
       job,
       warnings,
     });

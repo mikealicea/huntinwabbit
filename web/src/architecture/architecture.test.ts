@@ -29,6 +29,14 @@ function checkFixture(files: Record<string, string>) {
 }
 
 describe('presentation dependency boundaries', () => {
+  it('allows the declarative Markdown renderer through a presentation barrel', () => {
+    expect(
+      checkFixture({
+        'Description.component.tsx': `import { Markdown } from './rendering'; export function Description() { return <Markdown>{'## Description'}</Markdown>; }`,
+        'rendering.ts': `export { default as Markdown } from 'react-markdown';`,
+      }),
+    ).toEqual([]);
+  });
   it('allows props, local UI state, type imports, and pure named exports from mixed barrels', () => {
     expect(
       checkFixture({

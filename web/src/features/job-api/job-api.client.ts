@@ -6,11 +6,25 @@ import {
   fetchBaseQuery,
 } from '@reduxjs/toolkit/query/react';
 import {
+  analysisResponseSchema,
+  type CompanyAnalysis,
+} from './job-api.analysis.contracts';
+import {
+  type Company,
+  type CompanySelection,
+  companiesResponseSchema,
+  companyResponseSchema,
+} from './job-api.companies.contracts';
+import {
   type Application,
   itemResponseSchema,
   listResponseSchema,
+  noteResultSchema,
+  notesPageSchema,
+  type RoleNote,
   type SavedPosting,
   saveResponseSchema,
+  sourceTextResponseSchema,
   type UpdateEntry,
   type UpdateMessage,
   updateHistorySchema,
@@ -36,7 +50,7 @@ const validatedQuery: BaseQueryFn<
           },
         }
       : { error: { status: 'CUSTOM_ERROR', error: 'The request failed.' } };
-  if (api.endpoint === 'deletePosting')
+  if (api.endpoint === 'deletePosting' || api.endpoint === 'deleteNote')
     return result.meta?.response?.status === 204
       ? { data: null }
       : {
@@ -46,15 +60,31 @@ const validatedQuery: BaseQueryFn<
           },
         };
   const schema =
-    api.endpoint === 'roleUpdates'
-      ? updateHistorySchema
-      : ['sendRoleUpdate', 'undoRoleUpdate'].includes(api.endpoint)
-        ? updateResultSchema
-        : api.endpoint === 'postings'
-          ? listResponseSchema
-          : api.endpoint === 'savePosting'
-            ? saveResponseSchema
-            : itemResponseSchema;
+    api.endpoint === 'sourceText'
+      ? sourceTextResponseSchema
+      : ['companyAnalysis', 'requestCompanyAnalysis'].includes(api.endpoint)
+        ? analysisResponseSchema
+        : api.endpoint === 'roleNotes'
+          ? notesPageSchema
+          : ['createNote', 'editNote'].includes(api.endpoint)
+            ? noteResultSchema
+            : api.endpoint === 'company'
+              ? companyResponseSchema
+              : api.endpoint === 'companies'
+                ? companiesResponseSchema
+                : api.endpoint === 'companyRoles'
+                  ? listResponseSchema
+                  : api.endpoint === 'roleUpdates'
+                    ? updateHistorySchema
+                    : ['sendRoleUpdate', 'undoRoleUpdate'].includes(
+                          api.endpoint,
+                        )
+                      ? updateResultSchema
+                      : api.endpoint === 'postings'
+                        ? listResponseSchema
+                        : api.endpoint === 'savePosting'
+                          ? saveResponseSchema
+                          : itemResponseSchema;
   const parsed = schema.safeParse(result.data);
   return parsed.success
     ? { data: parsed.data }
@@ -68,8 +98,179 @@ const validatedQuery: BaseQueryFn<
 export const postingApi = createApi({
   reducerPath: 'postingApi',
   baseQuery: validatedQuery,
-  tagTypes: ['Posting', 'Updates'],
+  tagTypes: ['Posting', 'Updates', 'Notes', 'Analysis'],
   endpoints: (build) => ({
+    sourceText: build.query<
+      ReturnType<typeof sourceTextResponseSchema.parse>,
+      string
+    >({
+      query: (id) => `/${id}/source-text`,
+      transformResponse: (value: unknown) =>
+        sourceTextResponseSchema.parse(value),
+      providesTags: (_result, _error, id) => [{ type: 'Posting', id }],
+    }),
+    companyAnalysis: build.infiniteQuery<
+      CompanyAnalysis,
+      string,
+      string | null
+    >({
+      infiniteQueryOptions: {
+        initialPageParam: null,
+        refetchCachedPages: false,
+        getNextPageParam: (last) => last.nextCursor ?? undefined,
+      },
+      query: ({ queryArg, pageParam }) => ({
+        url: `/companies/${queryArg}/analysis`,
+        params: pageParam ? { cursor: pageParam } : {},
+      }),
+      transformResponse: (value: unknown) =>
+        analysisResponseSchema.parse(value),
+      providesTags: ['Posting', 'Analysis'],
+      async onCacheEntryAdded(id, { cacheDataLoaded, dispatch }) {
+        try {
+          const { data } = await cacheDataLoaded;
+          if (data.pages[0]?.status === 'not-started') {
+            await dispatch(
+              postingApi.endpoints.requestCompanyAnalysis.initiate(
+                { id, operationId: crypto.randomUUID(), intent: 'ensure' },
+                { fixedCacheKey: `company-analysis:${id}` },
+              ),
+            ).unwrap();
+          }
+        } catch {
+          /* Query/mutation state owns safe error feedback; no automatic paid retry. */
+        }
+      },
+    }),
+    requestCompanyAnalysis: build.mutation<
+      CompanyAnalysis,
+      { id: string; operationId: string; intent: 'ensure' | 'refresh' }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/companies/${id}/analysis`,
+        method: 'POST',
+        body,
+      }),
+      transformResponse: (value: unknown) =>
+        analysisResponseSchema.parse(value),
+      invalidatesTags: ['Analysis'],
+    }),
+    company: build.query<Company, string>({
+      query: (id) => `/companies/${id}`,
+      transformResponse: (value: unknown) =>
+        companyResponseSchema.parse(value).item,
+      providesTags: ['Posting'],
+    }),
+    companies: build.infiniteQuery<
+      ReturnType<typeof companiesResponseSchema.parse>,
+      string,
+      string | null
+    >({
+      infiniteQueryOptions: {
+        initialPageParam: null,
+        getNextPageParam: (last) => last.nextCursor ?? undefined,
+      },
+      query: ({ queryArg, pageParam }) => ({
+        url: '/companies',
+        params: {
+          limit: 50,
+          ...(queryArg ? { q: queryArg } : {}),
+          ...(pageParam ? { cursor: pageParam } : {}),
+        },
+      }),
+      transformResponse: (value: unknown) =>
+        companiesResponseSchema.parse(value),
+      providesTags: ['Posting'],
+    }),
+    companyRoles: build.infiniteQuery<
+      ReturnType<typeof listResponseSchema.parse>,
+      string,
+      string | null
+    >({
+      infiniteQueryOptions: {
+        initialPageParam: null,
+        getNextPageParam: (last) => last.nextCursor ?? undefined,
+      },
+      query: ({ queryArg, pageParam }) => ({
+        url: `/companies/${queryArg}/roles`,
+        params: { limit: 50, ...(pageParam ? { cursor: pageParam } : {}) },
+      }),
+      transformResponse: (value: unknown) => listResponseSchema.parse(value),
+      providesTags: ['Posting'],
+    }),
+    selectCompany: build.mutation<
+      SavedPosting,
+      CompanySelection & { id: string }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/${id}/company`,
+        method: 'PATCH',
+        body,
+      }),
+      transformResponse: (value: unknown) =>
+        itemResponseSchema.parse(value).item,
+      invalidatesTags: ['Posting'],
+    }),
+    roleNotes: build.infiniteQuery<
+      ReturnType<typeof notesPageSchema.parse>,
+      string,
+      string | null
+    >({
+      infiniteQueryOptions: {
+        initialPageParam: null,
+        getNextPageParam: (last) => last.nextCursor ?? undefined,
+      },
+      query: ({ queryArg, pageParam }) => ({
+        url: `/${queryArg}/notes`,
+        params: pageParam ? { cursor: pageParam } : {},
+      }),
+      transformResponse: (value: unknown) => notesPageSchema.parse(value),
+      providesTags: (_result, _error, id) => [{ type: 'Notes', id }],
+    }),
+    createNote: build.mutation<
+      RoleNote,
+      { roleId: string; id: string; body: string }
+    >({
+      query: ({ roleId, ...body }) => ({
+        url: `/${roleId}/notes`,
+        method: 'POST',
+        body,
+      }),
+      transformResponse: (value: unknown) => noteResultSchema.parse(value).note,
+      invalidatesTags: (_result, _error, { roleId }) => [
+        'Posting',
+        { type: 'Notes', id: roleId },
+      ],
+    }),
+    editNote: build.mutation<
+      RoleNote,
+      { roleId: string; noteId: string; body: string; expectedRevision: number }
+    >({
+      query: ({ roleId, noteId, ...body }) => ({
+        url: `/${roleId}/notes/${noteId}`,
+        method: 'PATCH',
+        body,
+      }),
+      transformResponse: (value: unknown) => noteResultSchema.parse(value).note,
+      invalidatesTags: (_result, _error, { roleId }) => [
+        'Posting',
+        { type: 'Notes', id: roleId },
+      ],
+    }),
+    deleteNote: build.mutation<
+      null,
+      { roleId: string; noteId: string; expectedRevision: number }
+    >({
+      query: ({ roleId, noteId, ...body }) => ({
+        url: `/${roleId}/notes/${noteId}`,
+        method: 'DELETE',
+        body,
+      }),
+      invalidatesTags: (_result, _error, { roleId }) => [
+        'Posting',
+        { type: 'Notes', id: roleId },
+      ],
+    }),
     roleUpdates: build.infiniteQuery<
       ReturnType<typeof updateHistorySchema.parse>,
       string,
@@ -153,6 +354,7 @@ export const postingApi = createApi({
         url: string;
         application: { interest: Application['interest'] };
         extract: true;
+        sourceText?: string;
       }
     >({
       query: (body) => ({ url: '', method: 'POST', body }),
@@ -189,9 +391,23 @@ export const postingApi = createApi({
       { id: string; expectedApplicationVersion: number }
     >({
       query: ({ id, ...body }) => ({ url: `/${id}`, method: 'DELETE', body }),
-      async onQueryStarted({ id }, { dispatch, queryFulfilled }) {
+      async onQueryStarted({ id }, { dispatch, getState, queryFulfilled }) {
         try {
           await queryFulfilled;
+          for (const companyId of postingApi.util.selectCachedArgsForQuery(
+            getState(),
+            'companyRoles',
+          ))
+            dispatch(
+              postingApi.util.updateQueryData(
+                'companyRoles',
+                companyId,
+                (draft) => {
+                  for (const page of draft.pages)
+                    page.items = page.items.filter((item) => item.id !== id);
+                },
+              ),
+            );
           dispatch(
             postingApi.util.updateQueryData('postings', undefined, (draft) => {
               for (const page of draft.pages)
@@ -206,7 +422,13 @@ export const postingApi = createApi({
     }),
     extractPosting: build.mutation<
       SavedPosting,
-      { id: string; expectedGeneration: string | null }
+      {
+        id: string;
+        expectedGeneration: string | null;
+        sourceText?: string | null;
+        expectedApplicationVersion?: number;
+        operationId?: string;
+      }
     >({
       query: ({ id, ...body }) => ({
         url: `/${id}/extraction`,
@@ -232,6 +454,17 @@ export const postingApi = createApi({
   }),
 });
 export const {
+  useSourceTextQuery,
+  useCompanyAnalysisInfiniteQuery,
+  useRequestCompanyAnalysisMutation,
+  useRoleNotesInfiniteQuery,
+  useCreateNoteMutation,
+  useEditNoteMutation,
+  useDeleteNoteMutation,
+  useCompanyQuery,
+  useCompaniesInfiniteQuery,
+  useCompanyRolesInfiniteQuery,
+  useSelectCompanyMutation,
   useRoleUpdatesInfiniteQuery,
   useSendRoleUpdateMutation,
   useUndoRoleUpdateMutation,

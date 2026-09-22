@@ -169,3 +169,12 @@ there is no delete API. The initial worker entry filename was rejected by Lambda
 `src/extraction.ts` entry is deployed and package inspection now checks both worker handler names.
 The first failed delivery made no inference call. One subsequent live extraction completed. These
 checks establish the tested dev path, not all posting sites, production, backups or screen-reader use.
+
+## Company analysis packaging
+
+The [analysis feature](../src/features/company-analysis/company-analysis.AGENTS.md) adds a separate
+stream mapping and worker, a scheduled analysis recovery function, failure queue and alarms.
+Analysis recovery uses the recovery IAM role and receives no provider key. Posting/API writes now
+need transactional UpdateItem for company revisions; analysis publication also uses conditional
+checks. The storage package checker verifies these resources. Deploy all affected functions and IAM
+together; enabling or live evaluation remains a separately authorized operation.

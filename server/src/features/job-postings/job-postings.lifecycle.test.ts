@@ -547,7 +547,9 @@ it('retries interrupted cleanup without losing its cursor or unrelated records',
       fail &&
       command instanceof TransactWriteCommand &&
       command.input.TransactItems?.some((entry) =>
-        String(entry.Delete?.Key?.sk).startsWith('DELETE#'),
+        String(entry.Delete?.Key?.sk ?? entry.Put?.Item?.sk).startsWith(
+          'DELETE#',
+        ),
       )
     ) {
       fail = false;

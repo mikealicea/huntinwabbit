@@ -16,9 +16,9 @@ export function memoryPostings() {
       const all = [...rows.values()]
         .filter((row) =>
           command.input.IndexName
-            ? row.dueGroup === 'PENDING' &&
+            ? row.dueGroup === values?.[':group'] &&
               Number(row.dueAt) <= Number(values?.[':now'])
-            : row.pk === values?.[':owner'] &&
+            : row.pk === (values?.[':owner'] ?? values?.[':pk']) &&
               String(row.sk).startsWith(String(values?.[':prefix'])),
         )
         .sort(
@@ -45,12 +45,43 @@ export function memoryPostings() {
     }
     const entries = command.input.TransactItems ?? [];
     for (const entry of entries) {
-      const operation = entry.Put ?? entry.Delete;
-      const address = entry.Put?.Item ?? entry.Delete?.Key;
+      const operation =
+        entry.Put ?? entry.Delete ?? entry.Update ?? entry.ConditionCheck;
+      const address =
+        entry.Put?.Item ??
+        entry.Delete?.Key ??
+        entry.Update?.Key ??
+        entry.ConditionCheck?.Key;
       if (!operation || !address) throw new Error('Expected put or delete');
       const existing = rows.get(key(address.pk, address.sk));
       const condition = operation.ConditionExpression;
       const values = operation.ExpressionAttributeValues;
+      // DynamoDB reserves HIDDEN. The fake must reject the same invalid
+      // expression that would otherwise pass locally and fail on publication.
+      if (
+        /\bhidden\b/i.test(
+          entry.Update?.UpdateExpression?.replace(/[#:]\w+/g, '') ?? '',
+        )
+      )
+        throw Object.assign(new Error('Unaliased reserved attribute'), {
+          name: 'ValidationException',
+        });
+      if (
+        condition === 'generation = :generation AND version = :version' &&
+        (existing?.generation !== values?.[':generation'] ||
+          existing?.version !== values?.[':version'])
+      )
+        throw new Error('Conditional conflict');
+      if (
+        condition === '#status = :queued' &&
+        existing?.status !== values?.[':queued']
+      )
+        throw new Error('Conditional conflict');
+      if (
+        condition === '#status = :claimed' &&
+        existing?.status !== values?.[':claimed']
+      )
+        throw new Error('Conditional conflict');
       if (condition === 'attribute_not_exists(pk)' && existing)
         throw new Error('Conditional conflict');
       if (
@@ -80,7 +111,38 @@ export function memoryPostings() {
       )
         throw new Error('Conditional conflict');
     }
+    const keys = entries.map((entry) => {
+      const address =
+        entry.Put?.Item ??
+        entry.Delete?.Key ??
+        entry.Update?.Key ??
+        entry.ConditionCheck?.Key;
+      return key(address?.pk, address?.sk);
+    });
+    if (new Set(keys).size !== keys.length)
+      throw new Error('Duplicate transaction item');
     for (const entry of entries) {
+      if (entry.Update?.Key) {
+        const address = entry.Update.Key,
+          values = entry.Update.ExpressionAttributeValues;
+        const existing = rows.get(key(address.pk, address.sk)) ?? {
+          ...address,
+        };
+        if (entry.Update.UpdateExpression?.startsWith('SET revision')) {
+          rows.set(key(address.pk, address.sk), {
+            ...existing,
+            revision: Number(existing.revision ?? 0) + 1,
+            dueGroup: values?.[':group'],
+            dueAt: values?.[':due'],
+            ...(values?.[':hidden'] ? { hidden: true } : {}),
+          });
+        } else if (
+          entry.Update.UpdateExpression === 'SET #hidden = :false' &&
+          entry.Update.ExpressionAttributeNames?.['#hidden'] === 'hidden'
+        ) {
+          rows.set(key(address.pk, address.sk), { ...existing, hidden: false });
+        } else throw new Error('Unsupported update');
+      }
       if (entry.Put?.Item)
         rows.set(
           key(entry.Put.Item.pk, entry.Put.Item.sk),

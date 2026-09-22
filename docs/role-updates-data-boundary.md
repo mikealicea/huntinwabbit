@@ -1,9 +1,11 @@
 # Natural-language role update data boundary
 
 Saved-role updates accept typed or pasted text. The authenticated server stores the submitted message
-before a worker sends it to Redpill. It also sends the current editable role fields (including saved
-notes), the request's local date and a bounded selection of recent completed conversation entries.
-Unsaved browser drafts are not sent. Credentials remain server-side; no file upload or URL retrieval
+before a worker sends it to Redpill. It also sends the current editable posting and tracking fields
+(excluding the legacy notes field), the request's local date and a bounded selection of recent completed
+conversation entries that did not change legacy notes.
+The separate comment timeline and unsaved browser drafts are not sent. Notes requests in chat are
+unsupported and direct users to the Notes composer; explicitly pasted chat text still goes to Redpill. Credentials remain server-side; no file upload or URL retrieval
 is performed by this interaction.
 
 This extends the existing [Redpill parsing boundary](job-parsing-data-boundary.md) from public posting
@@ -23,3 +25,9 @@ need no migration: missing edit metadata means no overrides or pending message. 
 existing parsing capability flag and provider key. Updated worker/API artifacts and transactional
 worker DeleteItem permission must ship together for source-link edits; local tests do not establish
 a deployed capability. Deployment and live paid inference are separate authorized operations.
+
+When a role has an explicit company selection, the chat's current employer name reflects that
+selection, so a later instruction can correct it even when the original posting named a different
+company. The role-update request includes that selected name; it does not include the company
+directory, company IDs, or other roles at the company. Company association snapshots stay in storage
+for conflict-safe Undo. See the [company barrel](../server/src/features/companies/companies.AGENTS.md).

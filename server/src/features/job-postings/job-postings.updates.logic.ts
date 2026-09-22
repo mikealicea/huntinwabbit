@@ -65,3 +65,11 @@ export function writeField(
   }
   edits.revisions[field] = item.recordVersion + 1;
 }
+
+// Chat edits the selected employer name; extraction still resolves source facts.
+export function effectiveUpdateFields(item: SavedPosting): EditableFields {
+  const fields = effectiveFields(item);
+  if (item.companyAssociation?.mode === 'manual')
+    fields.companyName = item.companyAssociation.company?.name ?? null;
+  return fields;
+}

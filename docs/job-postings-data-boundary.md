@@ -6,7 +6,7 @@ resources and access configuration. Checked-in resources are not evidence of a d
 
 ## Data flow and ownership
 
-Authenticated callers supply a posting URL, optional parsed facts and application choices. The
+Authenticated callers supply a posting URL, optional parsed facts, optional pasted page text and application choices. The
 backend validates the data and binds ownership to the verified Supabase subject. AWS DynamoDB stores
 that identity in the partition key, the normalized URL, supplied facts, tracking data, generated IDs
 and timestamps. Supabase remains the identity provider; application data is not sent to its user
@@ -69,3 +69,45 @@ Natural-language edits add persistent messages, change receipts, field revisions
 Their processor boundary and history lifecycle are described in
 [role update data boundary](role-updates-data-boundary.md). Deleting a posting also schedules cleanup
 of its update history and idempotency pointers; no history survives intentionally in active storage.
+
+## Companies and membership
+
+Owner-scoped company profiles and role memberships share the retained DynamoDB table. Deleting or
+reassigning a role atomically removes its old membership but does not erase the company. Empty company
+profiles persist; no company deletion or account-erasure flow is provided. Associations remain separate
+from posting facts and do not alter other application histories. See the
+[company barrel](../server/src/features/companies/companies.AGENTS.md) and
+[backfill runbook](runbooks/company-backfill.md) for identity and rollout constraints.
+## Role comments
+
+The notes composer stores Markdown comments directly through the existing bridge/API in DynamoDB,
+without a synchronous provider call. When company analysis is enabled, comment changes schedule
+background analysis that includes their contents; see the [company analysis boundary](company-analysis-data-boundary.md). Separate owner-scoped rows hold bodies, timestamps and revisions; lookup
+pointers hold original submission hashes for retry detection. Saved comments have no automatic expiry.
+Deleting a comment removes its body from active note storage but retains a content-free pointer/hash
+until role cleanup, preventing replay resurrection. Role deletion immediately denies access and
+schedules cleanup of all note rows and pointers. Existing backup limitations above still apply.
+
+Only application memory holds unsubmitted comment drafts. Markdown rendering performs no image
+fetches or HTML execution; following a user-selected external link contacts that destination.
+The legacy single notes field remains stored for old-record/API compatibility but is not shown or
+migrated. Role-update AI workers exclude it from input and cannot change it; company analysis includes
+it as personal context; historical receipts remain
+readable. Release the updated API and extraction/recovery workers before enabling the notes frontend;
+the [combined company rollout](runbooks/company-backfill.md) first prepares compatible web readers. No live deployment or
+backfill is implied by these source changes.
+
+## Retained pasted sources
+
+The latest pasted page text lives in a separate owner-scoped row in the same DynamoDB table, bound to
+its posting and normalized URL. Source reads require role ownership; board/list responses omit raw
+text. Capture saves it atomically with the role. Replacement/removal and an explicitly requested
+extraction generation commit together. Refresh reuses retained text only for the matching URL, and
+background workers validate the accepted revision before using it. Raw text never enters logs or
+historical extraction jobs; operation receipts contain input hashes and lifecycle references only.
+
+Pasted sources have no expiry. Replacing/removing text deletes the previous live value, and role
+deletion removes the source in its transaction. Content-free replay receipts persist until the role's
+durable cleanup removes them. Existing backup and external-provider limitations still apply; this is
+not a provider erasure guarantee. Browser drafts remain memory-only and may be lost on navigation.
+Pasted text is sent to Redpill for extraction under the [parsing boundary](job-parsing-data-boundary.md).
