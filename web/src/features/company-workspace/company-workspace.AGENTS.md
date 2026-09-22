@@ -2,7 +2,7 @@
 
 A company page shows all of the signed-in user's roles at one saved company, including Closed,
 newest first. Company names on the board and role workspace link to stable company IDs. Unknown
-companies have no fabricated link. Company comments, other research, contacts, interview processes,
+companies have no fabricated link. Structured research, contacts, interview processes,
 merging, renaming and a directory are outside this feature.
 
 [Page container](CompanyWorkspace.container.tsx) reads company details and paginated roles through
@@ -41,7 +41,7 @@ analysis reports unavailable results rather than claiming no commonalities were 
 first analysis starts, empty finding sections remain pending. Native details own
 local evidence disclosure and no background result moves focus.
 
-Results cannot be edited directly. All saved role context, including comments and history, can reach
+Results cannot be edited directly. All saved role context, including comments and history, plus company comments can reach
 Redpill for this feature; see the [data boundary](../../../../docs/company-analysis-data-boundary.md).
 [Analysis tests](CompanyAnalysis.test.tsx) exercise presentation contracts and real-store refresh/retry.
 Browser company tests cover initialization, evidence, refresh, reload and mobile themes. Offline
@@ -60,3 +60,25 @@ Older servers without a deadline retain the scheduled label without an invented 
 ticks are outside the live status announcement. Tests cover postponements, expiry, timer cleanup,
 immediate requests and lost acknowledgements; browser checks cover far-right placement, reload,
 keyboard controls and mobile themes.
+
+## Company comments and layout
+
+[CompanyNotesContainer](CompanyNotes.container.tsx) connects company-scoped paginated queries and
+versioned mutations to the shared [Notes](../../shared/Notes.component.tsx) presentation. The company
+page uses the role workspace's desktop column proportions: tech stack then requirements on the left,
+Notes on the right, and role cards full-width below. Mobile places Notes before the analysis.
+The analysis container remains the single owner of header status and generated findings.
+
+Comments belong to the company, not its membership. They survive moving or deleting the last role
+and work when analysis is disabled. Write/Preview, timestamps, inline edits, explicit deletion,
+keyboard submission and focus behavior are shared with role comments. Uncertain creates reuse their
+ID while the body is unchanged; conflicts retain drafts and require review. Failed reads preserve
+already loaded comments and unrelated company content. Drafts are local and may be lost on navigation
+or reload. No attachments, replies, trash or browser persistence are provided.
+
+Company-comment evidence is labeled as a personal observation and links to this company's Notes.
+It never increases supporting-role counts. Comment-only observations may appear even with no roles;
+role-only findings retain their shared-evidence threshold. Comments and analysis responses have
+separate cache tags; accepted mutations invalidate both without owning the worker lifecycle.
+The parameterized [comment tests](../role-workspace/RoleNotes.test.tsx) exercise both real containers;
+company browser tests cover persistence, editing/deletion, focus and responsive placement in both themes.

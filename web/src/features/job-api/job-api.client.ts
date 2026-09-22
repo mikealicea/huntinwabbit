@@ -50,7 +50,9 @@ const validatedQuery: BaseQueryFn<
           },
         }
       : { error: { status: 'CUSTOM_ERROR', error: 'The request failed.' } };
-  if (api.endpoint === 'deletePosting' || api.endpoint === 'deleteNote')
+  if (
+    ['deletePosting', 'deleteNote', 'deleteCompanyNote'].includes(api.endpoint)
+  )
     return result.meta?.response?.status === 204
       ? { data: null }
       : {
@@ -64,9 +66,14 @@ const validatedQuery: BaseQueryFn<
       ? sourceTextResponseSchema
       : ['companyAnalysis', 'requestCompanyAnalysis'].includes(api.endpoint)
         ? analysisResponseSchema
-        : api.endpoint === 'roleNotes'
+        : ['roleNotes', 'companyNotes'].includes(api.endpoint)
           ? notesPageSchema
-          : ['createNote', 'editNote'].includes(api.endpoint)
+          : [
+                'createNote',
+                'editNote',
+                'createCompanyNote',
+                'editCompanyNote',
+              ].includes(api.endpoint)
             ? noteResultSchema
             : api.endpoint === 'company'
               ? companyResponseSchema
@@ -98,7 +105,7 @@ const validatedQuery: BaseQueryFn<
 export const postingApi = createApi({
   reducerPath: 'postingApi',
   baseQuery: validatedQuery,
-  tagTypes: ['Posting', 'Updates', 'Notes', 'Analysis'],
+  tagTypes: ['Posting', 'Updates', 'Notes', 'CompanyNotes', 'Analysis'],
   endpoints: (build) => ({
     sourceText: build.query<
       ReturnType<typeof sourceTextResponseSchema.parse>,
@@ -210,6 +217,71 @@ export const postingApi = createApi({
       transformResponse: (value: unknown) =>
         itemResponseSchema.parse(value).item,
       invalidatesTags: ['Posting'],
+    }),
+    companyNotes: build.infiniteQuery<
+      ReturnType<typeof notesPageSchema.parse>,
+      string,
+      string | null
+    >({
+      infiniteQueryOptions: {
+        initialPageParam: null,
+        getNextPageParam: (last) => last.nextCursor ?? undefined,
+      },
+      query: ({ queryArg, pageParam }) => ({
+        url: `/companies/${queryArg}/notes`,
+        params: pageParam ? { cursor: pageParam } : {},
+      }),
+      transformResponse: (value: unknown) => notesPageSchema.parse(value),
+      providesTags: (_result, _error, id) => [{ type: 'CompanyNotes', id }],
+    }),
+    createCompanyNote: build.mutation<
+      RoleNote,
+      { companyId: string; id: string; body: string }
+    >({
+      query: ({ companyId, ...body }) => ({
+        url: `/companies/${companyId}/notes`,
+        method: 'POST',
+        body,
+      }),
+      transformResponse: (value: unknown) => noteResultSchema.parse(value).note,
+      invalidatesTags: (_result, _error, { companyId }) => [
+        'Analysis',
+        { type: 'CompanyNotes', id: companyId },
+      ],
+    }),
+    editCompanyNote: build.mutation<
+      RoleNote,
+      {
+        companyId: string;
+        noteId: string;
+        body: string;
+        expectedRevision: number;
+      }
+    >({
+      query: ({ companyId, noteId, ...body }) => ({
+        url: `/companies/${companyId}/notes/${noteId}`,
+        method: 'PATCH',
+        body,
+      }),
+      transformResponse: (value: unknown) => noteResultSchema.parse(value).note,
+      invalidatesTags: (_result, _error, { companyId }) => [
+        'Analysis',
+        { type: 'CompanyNotes', id: companyId },
+      ],
+    }),
+    deleteCompanyNote: build.mutation<
+      null,
+      { companyId: string; noteId: string; expectedRevision: number }
+    >({
+      query: ({ companyId, noteId, ...body }) => ({
+        url: `/companies/${companyId}/notes/${noteId}`,
+        method: 'DELETE',
+        body,
+      }),
+      invalidatesTags: (_result, _error, { companyId }) => [
+        'Analysis',
+        { type: 'CompanyNotes', id: companyId },
+      ],
     }),
     roleNotes: build.infiniteQuery<
       ReturnType<typeof notesPageSchema.parse>,
@@ -457,6 +529,10 @@ export const {
   useSourceTextQuery,
   useCompanyAnalysisInfiniteQuery,
   useRequestCompanyAnalysisMutation,
+  useCompanyNotesInfiniteQuery,
+  useCreateCompanyNoteMutation,
+  useEditCompanyNoteMutation,
+  useDeleteCompanyNoteMutation,
   useRoleNotesInfiniteQuery,
   useCreateNoteMutation,
   useEditNoteMutation,

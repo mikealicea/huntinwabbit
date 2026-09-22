@@ -1,31 +1,28 @@
 'use client';
 import { useRef } from 'react';
 import {
-  postingApi,
   type RoleNote,
-  useCreateNoteMutation,
-  useDeleteNoteMutation,
-  useEditNoteMutation,
-  useRoleNotesInfiniteQuery,
+  useCompanyNotesInfiniteQuery,
+  useCreateCompanyNoteMutation,
+  useDeleteCompanyNoteMutation,
+  useEditCompanyNoteMutation,
 } from '@/features/job-api/job-api.index';
 import type { NoteOutcome } from '@/shared/shared.index';
-import { useAppDispatch } from '@/state/state.index';
-import { RoleNotes } from './RoleNotes.component';
-export function RoleNotesContainer({
-  roleId,
+import { Notes } from '@/shared/shared.index';
+export function CompanyNotesContainer({
+  companyId,
   disabled = false,
 }: {
-  roleId: string;
+  companyId: string;
   disabled?: boolean;
 }) {
-  const dispatch = useAppDispatch();
-  const query = useRoleNotesInfiniteQuery(roleId, {
+  const query = useCompanyNotesInfiniteQuery(companyId, {
     refetchOnFocus: true,
     refetchOnReconnect: true,
   });
-  const [create, creating] = useCreateNoteMutation();
-  const [edit, editing] = useEditNoteMutation();
-  const [remove, deleting] = useDeleteNoteMutation();
+  const [create, creating] = useCreateCompanyNoteMutation();
+  const [edit, editing] = useEditCompanyNoteMutation();
+  const [remove, deleting] = useDeleteCompanyNoteMutation();
   const attempt = useRef<{ id: string; body: string } | null>(null);
   const busy = useRef(false);
   const notes = [
@@ -36,27 +33,17 @@ export function RoleNotesContainer({
     ).values(),
   ];
   const error = query.error ?? creating.error;
-  async function refreshRole() {
-    // Wait for the updated deletion/tracking version before reporting the save complete.
-    await dispatch(
-      postingApi.endpoints.posting.initiate(roleId, {
-        forceRefetch: true,
-        subscribe: false,
-      }),
-    );
-  }
   async function change(note: RoleNote, body?: string): Promise<NoteOutcome> {
     if (disabled || busy.current) return 'failed';
     busy.current = true;
     try {
       const input = {
-        roleId,
+        companyId,
         noteId: note.id,
         expectedRevision: note.revision,
       };
       if (body === undefined) await remove(input).unwrap();
       else await edit({ ...input, body }).unwrap();
-      await refreshRole();
       return 'saved';
     } catch (failure) {
       await query.refetch();
@@ -71,7 +58,8 @@ export function RoleNotesContainer({
     }
   }
   return (
-    <RoleNotes
+    <Notes
+      subject="company"
       notes={notes}
       loading={query.isFetching}
       error={
@@ -93,8 +81,7 @@ export function RoleNotesContainer({
         if (attempt.current?.body !== body)
           attempt.current = { id: crypto.randomUUID(), body };
         try {
-          await create({ roleId, ...attempt.current }).unwrap();
-          await refreshRole();
+          await create({ companyId, ...attempt.current }).unwrap();
           attempt.current = null;
           return true;
         } catch {

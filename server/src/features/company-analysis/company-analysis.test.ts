@@ -6,7 +6,10 @@ import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { buildApp } from '../../app.ts';
 import { AppError } from '../../shared/shared.errors.ts';
-import { createCompanyStore } from '../companies/companies.index.ts';
+import {
+  createCompanyNotes,
+  createCompanyStore,
+} from '../companies/companies.index.ts';
 import {
   createCompanyAnalysisInputs,
   withCompanyAnalysisInvalidation,
@@ -54,9 +57,17 @@ function finding(source = sample): Finding {
     explanation: 'TypeScript experience',
     evidence: [
       {
-        roleId: source.roleId,
-        roleTitle: source.roleTitle,
-        source: source.source,
+        ...(source.source === 'company-comment'
+          ? {
+              source: source.source,
+              companyId: source.companyId,
+              noteId: source.noteId,
+            }
+          : {
+              roleId: source.roleId,
+              roleTitle: source.roleTitle,
+              source: source.source,
+            }),
         excerpt: 'TypeScript',
       },
     ],
@@ -74,6 +85,7 @@ function setup(
   const postings = createJobPostings(
     createDynamoPostingStore('test', send, companies),
   );
+  const companyNotes = createCompanyNotes('test', send, () => now);
   const notes = createRoleNotes('test', send);
   const inputs = createCompanyAnalysisInputs('test', send, companies);
   const analyze = vi.fn<Analyze>(async (input) => {
@@ -82,7 +94,9 @@ function setup(
         .filter((source) => source.text.includes('TypeScript'))
         .map((source) => ({
           ...finding(source),
-          qualifier: ['personal', 'history'].includes(source.source)
+          qualifier: ['personal', 'history', 'company-comment'].includes(
+            source.source,
+          )
             ? 'observed'
             : 'required',
         }));
@@ -151,6 +165,7 @@ function setup(
     companies,
     postings,
     notes,
+    companyNotes,
     inputs,
     analysis,
     analyze,
@@ -227,9 +242,13 @@ describe('durable company analysis', () => {
       analyzedRoles: 2,
     });
     expect(result.items).toHaveLength(1);
-    expect(new Set(result.items[0]?.evidence.map((e) => e.roleId))).toEqual(
-      new Set([a.id, b.id]),
-    );
+    expect(
+      new Set(
+        result.items[0]?.evidence.flatMap((e) =>
+          e.source === 'company-comment' ? [] : [e.roleId],
+        ),
+      ),
+    ).toEqual(new Set([a.id, b.id]));
     const calls = s.analyze.mock.calls.length;
     for (const job of [...s.rows.values()].filter((row) =>
       String(row.sk).startsWith('CA-JOB#'),
@@ -874,4 +893,133 @@ it('accepts the shared frontend analysis fixtures against the public contract', 
   expect(Object.keys(fixtures).sort()).toEqual(['complete', 'scheduled']);
   for (const response of Object.values(fixtures))
     expect(analysisResponseSchema.parse(response)).toEqual(response);
+});
+
+it('analyzes paginated company comments without roles and keeps them observed and outside role counts', async () => {
+  const s = setup();
+  const company = await s.companies.resolve(
+    pk,
+    'Fictional Research',
+    null,
+    abort(),
+  );
+  if (!company) throw new Error();
+  for (let i = 0; i < 3; i++)
+    await s.companyNotes.create('alice', company.id, {
+      id: randomUUID(),
+      body: `TypeScript observation ${i}`,
+    });
+  await s.analysis.request(pk, company.id, {
+    operationId: randomUUID(),
+    intent: 'refresh',
+  });
+  await s.pump();
+  const result = await s.analysis.get(pk, company.id);
+  expect(result).toMatchObject({
+    status: 'complete',
+    analyzedRoles: 0,
+    totalRoles: 0,
+  });
+  expect(result.items).toHaveLength(1);
+  expect(result.items[0]).toMatchObject({ qualifier: 'observed' });
+  expect(result.items[0]?.evidence).toHaveLength(3);
+  for (const evidence of result.items[0]?.evidence ?? []) {
+    expect(evidence).toMatchObject({
+      source: 'company-comment',
+      companyId: company.id,
+    });
+    expect(evidence).not.toHaveProperty('roleId');
+  }
+});
+it('retains company comments after the final role leaves, fences concurrent edits, and hides deleted evidence', async () => {
+  const s = setup(),
+    role = await s.save();
+  const id = role.companyAssociation?.company?.id;
+  if (!id) throw new Error('Missing company');
+  const noteId = randomUUID();
+  await s.companyNotes.create('alice', id, {
+    id: noteId,
+    body: 'TypeScript personal observation',
+  });
+  await s.postings.delete('alice', role.id, role.applicationVersion, abort());
+  expect((await s.companyNotes.list('alice', id, {})).items).toHaveLength(1);
+  await s.analysis.request(pk, id, {
+    operationId: randomUUID(),
+    intent: 'refresh',
+  });
+  const original = s.analyze.getMockImplementation();
+  if (!original) throw new Error('Missing model fixture');
+  let edited = false;
+  s.analyze.mockImplementation(async (...args) => {
+    if (!edited) {
+      edited = true;
+      await s.companyNotes.edit('alice', id, noteId, {
+        body: 'TypeScript revised observation',
+        expectedRevision: 1,
+      });
+    }
+    return original(...args);
+  });
+  await s.pump();
+  expect((await s.analysis.get(pk, id)).items).toEqual([]);
+  s.advance();
+  await s.analysis.recover();
+  await s.pump();
+  expect((await s.analysis.get(pk, id)).items).toHaveLength(1);
+  await s.companyNotes.delete('alice', id, noteId, { expectedRevision: 2 });
+  expect((await s.analysis.get(pk, id)).items).toEqual([]);
+  const calls = s.analyze.mock.calls.length;
+  s.advance();
+  await s.analysis.recover();
+  await s.pump();
+  expect((await s.analysis.get(pk, id)).items).toEqual([]);
+  expect(s.analyze).toHaveBeenCalledTimes(calls);
+});
+it('saves company comments when inference is disabled and never counts company evidence as role support', async () => {
+  const s = setup(undefined, false),
+    role = await s.save();
+  const id = role.companyAssociation?.company?.id;
+  if (!id) throw new Error('Missing company');
+  await s.companyNotes.create('alice', id, {
+    id: randomUUID(),
+    body: 'TypeScript observation',
+  });
+  expect((await s.companyNotes.list('alice', id, {})).items).toHaveLength(1);
+  s.advance();
+  await s.analysis.recover();
+  await s.pump();
+  expect(s.analyze).not.toHaveBeenCalled();
+  const companySource: Source = {
+    source: 'company-comment',
+    companyId: id,
+    noteId: randomUUID(),
+    text: 'TypeScript observed',
+  };
+  const analyzer = createCompanyAnalyzer('fake', async () => ({
+    findings: [
+      {
+        category: 'technology',
+        qualifier: 'required',
+        label: 'TypeScript',
+        explanation: '',
+        evidence: [{ reference: 0, excerpt: 'TypeScript' }],
+      },
+    ],
+  }));
+  const observations = await analyzer({ sources: [companySource] }, abort());
+  expect(observations[0]?.qualifier).toBe('observed');
+  expect(sharedFindings([...observations, finding()], 2)).toEqual(observations);
+  await expect(
+    createCompanyAnalyzer('fake', async () => ({
+      findings: [
+        {
+          category: 'technology',
+          qualifier: 'used',
+          label: 'Invented',
+          explanation: '',
+          evidence: [{ reference: 0, excerpt: 'Invented' }],
+        },
+      ],
+    }))({ sources: [companySource] }, abort()),
+  ).rejects.toMatchObject({ code: 'INVALID_ANALYSIS_EVIDENCE' });
 });

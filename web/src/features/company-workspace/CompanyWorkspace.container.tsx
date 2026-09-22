@@ -12,6 +12,7 @@ import {
 } from '@/features/job-search/job-search.index';
 import { SavedRoleCardContainer } from '@/features/search-board/search-board.index';
 import { CompanyAnalysisContainer } from './CompanyAnalysis.container';
+import { CompanyNotesContainer } from './CompanyNotes.container';
 import {
   CompanyNotFound,
   CompanyWorkspace,
@@ -68,6 +69,9 @@ export function CompanyWorkspaceContainer({
     <CompanyAnalysisContainer key={companyId} companyId={companyId}>
       {({ analysis, status: analysisStatus }) => (
         <CompanyWorkspace
+          notes={
+            <CompanyNotesContainer key={companyId} companyId={companyId} />
+          }
           analysis={analysis}
           analysisStatus={analysisStatus}
           company={savedCompany}

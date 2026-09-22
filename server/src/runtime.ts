@@ -3,7 +3,10 @@ import {
   authConfig,
   createAccessTokenVerifier,
 } from './features/auth/auth.index.ts';
-import { createCompanyStore } from './features/companies/companies.index.ts';
+import {
+  createCompanyNotes,
+  createCompanyStore,
+} from './features/companies/companies.index.ts';
 import {
   companyAnalysisConfig,
   createCompanyAnalysis,
@@ -78,6 +81,7 @@ export function buildRuntimeApp(
     roleUpdates,
     companies,
     postingCompanies,
+    companyNotes: table ? createCompanyNotes(table, send) : undefined,
     roleNotes: table ? createRoleNotes(table, send) : undefined,
   });
 }

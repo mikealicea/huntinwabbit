@@ -45,9 +45,9 @@ function failure(status: number, code: string) {
         status === 401
           ? 'Your session expired. Sign in again.'
           : status === 409
-            ? 'This role changed. Refresh and review your changes.'
+            ? 'This item changed. Refresh and review your changes.'
             : status === 404
-              ? 'This saved role was not found.'
+              ? 'This saved item was not found.'
               : 'The request could not be completed. Please try again.',
     },
     { status, headers },
@@ -96,7 +96,9 @@ export function createApiBridge(deps: {
       const url = new URL(request.url);
       const suffix = url.pathname.slice('/api/job-postings'.length);
       const companyMatch =
-        /^\/companies(?:\/([0-9a-f-]{36})(\/roles|\/analysis)?)?$/.exec(suffix);
+        /^\/companies(?:\/([0-9a-f-]{36})(\/roles|\/analysis|\/notes(?:\/([0-9a-f-]{36}))?)?)?$/.exec(
+          suffix,
+        );
       if (companyMatch?.[1] && !z.uuid().safeParse(companyMatch[1]).success)
         return failure(404, 'NOT_FOUND');
       const match =
@@ -113,15 +115,18 @@ export function createApiBridge(deps: {
         return failure(404, 'NOT_FOUND');
       if (match?.[4] && !z.uuid().safeParse(match[4]).success)
         return failure(404, 'NOT_FOUND');
-      const isNotes = match?.[2]?.startsWith('/notes');
+      const noteId = companyMatch?.[3] ?? match?.[4];
+      if (noteId && !z.uuid().safeParse(noteId).success)
+        return failure(404, 'NOT_FOUND');
+      const isNotes = (companyMatch?.[2] ?? match?.[2])?.startsWith('/notes');
       const noteAction = isNotes
-        ? request.method === 'GET' && !match?.[4]
+        ? request.method === 'GET' && !noteId
           ? 'notes'
-          : request.method === 'POST' && !match?.[4]
+          : request.method === 'POST' && !noteId
             ? 'createNote'
-            : request.method === 'PATCH' && match?.[4]
+            : request.method === 'PATCH' && noteId
               ? 'editNote'
-              : request.method === 'DELETE' && match?.[4]
+              : request.method === 'DELETE' && noteId
                 ? 'deleteNote'
                 : undefined
         : undefined;

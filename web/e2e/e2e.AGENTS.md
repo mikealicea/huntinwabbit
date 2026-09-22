@@ -58,3 +58,9 @@ Company analysis uses deterministic fictional results from the loopback API. Com
 exercise initialization, evidence disclosure, explicit refresh, header status placement, scheduled
 countdown/expiry, Analyze now, keyboard details dismissal, reload, and narrow layouts in both
 themes. Analysis screenshots are ignored artifacts, not evidence of provider accuracy.
+
+Company comment cases use the same isolated fixture routes as role notes with separate company keys.
+They verify Markdown preview, keyboard submission, reload persistence, inline edits, confirmation and
+focus restoration, plus desktop columns and Notes-first mobile order in both themes. Company-comment
+analysis provenance and zero-role inference are tested through deterministic server/web contracts;
+browser fixtures do not establish deployed inference behavior.

@@ -32,6 +32,10 @@ for (const theme of ['light', 'dark'] as const) {
     await page
       .getByRole('link', { name: /Open Senior Product Engineer/ })
       .click();
+    await expect(page).toHaveURL(/\/app\/roles\//);
+    await expect(
+      page.getByRole('heading', { name: 'Senior Product Engineer', level: 1 }),
+    ).toBeVisible();
     await page
       .getByRole('textbox', { name: 'Add a note' })
       .fill('Ask about the fictional team.');
@@ -185,21 +189,16 @@ test('company analysis initializes, shows evidence, refreshes and survives reloa
     .first()
     .click();
   await expect(
-    page.getByRole('heading', { name: 'Shared requirements' }),
+    page.getByRole('heading', { name: 'Requirements' }),
   ).toBeVisible();
-  await expect(
-    page.getByRole('heading', { name: 'Common tech stack' }),
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Tech stack' })).toBeVisible();
   await expect(
     page.getByRole('heading', { name: 'TypeScript', exact: true }),
   ).toBeVisible({ timeout: 15000 });
   await page.getByText('Supporting evidence for TypeScript').focus();
   await page.keyboard.press('Enter');
   await expect(
-    page
-      .getByRole('region', { name: 'Common tech stack' })
-      .getByRole('link')
-      .first(),
+    page.getByRole('region', { name: 'Tech stack' }).getByRole('link').first(),
   ).toBeVisible();
   await page.getByRole('button', { name: 'Refresh analysis' }).click();
   await expect(
@@ -235,7 +234,7 @@ test('an analysis read failure keeps company roles available and can be retried'
     .first()
     .click();
   await expect(
-    page.getByRole('region', { name: 'Across your roles' }).getByRole('alert'),
+    page.getByRole('region', { name: 'Company insights' }).getByRole('alert'),
   ).toContainText('Your saved roles are still available');
   await expect(page.getByRole('article')).toHaveCount(2);
   await page.unroute('**/api/job-postings/companies/*/analysis*');
@@ -338,3 +337,83 @@ test('company header counts down scheduled analysis and Analyze now skips the wa
   await expect(status).toHaveText('Analysis up to date', { timeout: 15000 });
   expect(requestCount).toBe(1);
 });
+
+for (const theme of ['light', 'dark'] as const) {
+  test(`company comments persist and follow the split layout in ${theme}`, async ({
+    page,
+  }, info) => {
+    await page.emulateMedia({ colorScheme: theme });
+    await page
+      .getByRole('link', { name: 'View Northstar company' })
+      .first()
+      .click();
+    const notes = page.getByRole('region', { name: 'Notes', exact: true });
+    const tech = page.getByRole('region', { name: 'Tech stack', exact: true });
+    const requirements = page.getByRole('region', {
+      name: 'Requirements',
+      exact: true,
+    });
+    await notes
+      .getByRole('textbox', { name: 'Add a note' })
+      .fill('**Fictional company research**\n\n- Ask about TypeScript');
+    await notes.getByRole('button', { name: 'Preview', exact: true }).click();
+    await expect(notes.locator('strong')).toHaveText(
+      'Fictional company research',
+    );
+    await notes.getByRole('button', { name: 'Write', exact: true }).click();
+    await notes
+      .getByRole('textbox', { name: 'Add a note' })
+      .press('Meta+Enter');
+    await expect(notes.getByRole('article')).toHaveCount(1);
+    await page.reload();
+    await expect(notes.getByRole('article')).toContainText(
+      'Fictional company research',
+    );
+    const n = await notes.boundingBox(),
+      t = await tech.boundingBox(),
+      r = await requirements.boundingBox();
+    if (!n || !t || !r) throw new Error('Missing layout');
+    expect(n.x).toBeGreaterThan(t.x + t.width - 1);
+    expect(r.y).toBeGreaterThan(t.y);
+    await notes.getByRole('button', { name: 'Edit comment' }).click();
+    await notes
+      .getByRole('textbox', { name: 'Edit comment' })
+      .fill('Revised company observation');
+    await notes
+      .getByRole('textbox', { name: 'Edit comment' })
+      .press('Meta+Enter');
+    await expect(notes.getByText('· Edited')).toBeVisible();
+    await page.screenshot({
+      path: info.outputPath(`company-notes-desktop-${theme}.png`),
+      fullPage: true,
+    });
+    await page.setViewportSize({ width: 390, height: 844 });
+    const mobileNotes = await notes.boundingBox(),
+      mobileTech = await tech.boundingBox();
+    if (!mobileNotes || !mobileTech) throw new Error('Missing mobile layout');
+    expect(mobileNotes.y).toBeLessThan(mobileTech.y);
+    await expect(page.locator('body')).toHaveJSProperty('scrollWidth', 390);
+    await page.screenshot({
+      path: info.outputPath(`company-notes-mobile-${theme}.png`),
+      fullPage: true,
+    });
+    await notes.getByRole('button', { name: 'Delete comment' }).click();
+    await expect(
+      notes.getByRole('button', { name: 'Cancel deletion' }),
+    ).toBeFocused();
+    await notes.getByRole('button', { name: 'Cancel deletion' }).click();
+    await expect(
+      notes.getByRole('button', { name: 'Delete comment' }),
+    ).toBeFocused();
+    await notes.getByRole('button', { name: 'Delete comment' }).click();
+    await notes.getByRole('button', { name: 'Delete permanently' }).click();
+    await expect(notes.getByRole('article')).toHaveCount(0);
+    await expect(
+      notes.getByRole('textbox', { name: 'Add a note' }),
+    ).toBeFocused();
+    await page.reload();
+    await expect(
+      notes.getByText('No comments yet. Add your first note above.'),
+    ).toBeVisible();
+  });
+}

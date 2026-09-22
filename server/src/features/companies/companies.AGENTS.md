@@ -1,6 +1,6 @@
 # Saved companies
 
-Companies give one user's saved roles a shared identity and a stable page. Company requirements/technology analysis belongs to [company analysis](../company-analysis/company-analysis.AGENTS.md). Notes, other research, contacts,
+Companies give one user's saved roles a shared identity and a stable page. Company requirements/technology analysis belongs to [company analysis](../company-analysis/company-analysis.AGENTS.md). Structured research, contacts,
 interview processes, company renaming, merging and deletion are not implemented. Records are private
 to the authenticated account; matching never considers another user's companies.
 
@@ -52,3 +52,25 @@ bundling/configuration only; no offline test proves deployed IAM or model accura
 The [rollout runbook](../../../../docs/runbooks/company-backfill.md) owns compatibility and explicit
 operator migration. The [processor boundary](../../../../docs/job-parsing-data-boundary.md) explains
 which matching inputs leave the server. Never log company names, domains, owner IDs or membership.
+
+## Company comments
+
+[Company comment adapter](companies.notes.ts) supplies owner lookup, parent revision fencing and
+analysis invalidation to the shared [comment store](../../shared/shared.notes.ts).
+The [shared schemas](../../shared/shared.notes.schemas.ts) and
+[router](../../shared/shared.notes.router.ts) own the same bounded create/list/edit/delete contract
+as role comments; [app composition](../../app.ts) mounts it under company routes after authentication.
+[Runtime](../../runtime.ts) injects the existing table and transport. No new table, IAM permission or
+migration is needed. Existing company records acquire a comment revision on their first mutation.
+
+Owner/company-specific chronological rows and ID pointers use a namespace separate from role notes.
+Transactions advance the company comment revision and analysis source revision together; deletes
+hide previous analysis results immediately. Replay recovery avoids duplicate comments or revision
+increments, and content-free tombstones prevent delayed creates from resurrecting deleted entries.
+These rows have no TTL and remain when the last role leaves. Company erasure and account-wide deletion
+remain unimplemented; individual comment deletion removes its body, with existing backup and analysis
+snapshot retention described in the data boundary. Analysis being disabled does not prevent saving.
+
+[Tests](companies.notes.test.ts) cover ownership, paging, corruption, revision conflicts, concurrent
+writes, acknowledgements and routes. Company-analysis tests cover retention after role deletion,
+comment-only inference, disabled inference and stale worker fencing. Never log comment bodies or cursors.

@@ -124,7 +124,7 @@ export function withCompanyAnalysisInvalidation(
   };
 }
 const cursorSchema = z.object({
-  phase: z.enum(['role', 'notes', 'history']),
+  phase: z.enum(['company-notes', 'role', 'notes', 'history']),
   membership: z.string().nullable(),
   roleId: z.uuid().optional(),
   recordKey: z.string().optional(),
@@ -139,8 +139,71 @@ export function createCompanyAnalysisInputs(
   return async (pk, companyId, rawCursor, signal) => {
     const cursor = rawCursor
       ? cursorSchema.parse(JSON.parse(rawCursor))
-      : { phase: 'role' as const, membership: null, usable: false };
+      : { phase: 'company-notes' as const, membership: null, usable: false };
     const company = await companies.get(pk, companyId, signal);
+    if (cursor.phase === 'company-notes') {
+      const prefix = `COMPANY-NOTE#${companyId}#ENTRY#`;
+      const page = z
+        .object({
+          Items: z
+            .array(
+              z.object({
+                pk: z.string(),
+                sk: z.string(),
+                recordKey: z.string(),
+                data: z.string(),
+              }),
+            )
+            .default([]),
+          LastEvaluatedKey: z
+            .object({ pk: z.string(), sk: z.string() })
+            .optional(),
+        })
+        .parse(
+          await send(
+            new QueryCommand({
+              TableName: table,
+              ConsistentRead: true,
+              KeyConditionExpression: 'pk = :pk AND begins_with(sk, :prefix)',
+              ExpressionAttributeValues: { ':pk': pk, ':prefix': prefix },
+              Limit: 1,
+              ...(cursor.after
+                ? { ExclusiveStartKey: { pk, sk: cursor.after } }
+                : {}),
+            }),
+            signal,
+          ),
+        );
+      const sources: Source[] = page.Items.map((row) => {
+        const note = noteSchema.parse(JSON.parse(row.data));
+        if (
+          row.pk !== pk ||
+          row.recordKey !== `COMPANY#${companyId}` ||
+          row.sk !== `${prefix}${note.createdAt}#${note.id}` ||
+          note.updatedAt < note.createdAt
+        )
+          throw new Error('Invalid company comment source');
+        return {
+          source: 'company-comment',
+          companyId,
+          noteId: note.id,
+          text: note.body,
+        };
+      });
+      const last = page.LastEvaluatedKey;
+      if (last && (last.pk !== pk || !last.sk.startsWith(prefix)))
+        throw new Error('Invalid company comment cursor');
+      return {
+        sources,
+        roles: 0,
+        usable: 0,
+        cursor: JSON.stringify(
+          last
+            ? { ...cursor, after: last.sk }
+            : { phase: 'role', membership: null, usable: false },
+        ),
+      };
+    }
     let roleId = cursor.roleId,
       recordKey = cursor.recordKey,
       membership = cursor.membership;
@@ -168,7 +231,10 @@ export function createCompanyAnalysisInputs(
       throw new Error('Analysis source changed');
     const fields = effectiveFields(posting);
     const roleTitle = fields.title ?? 'Untitled role';
-    const source = (kind: Source['source'], text: string): Source => ({
+    const source = (
+      kind: Exclude<Source['source'], 'company-comment'>,
+      text: string,
+    ): Source => ({
       roleId,
       roleTitle,
       source: kind,

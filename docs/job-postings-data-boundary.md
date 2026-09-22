@@ -111,3 +111,11 @@ deletion removes the source in its transaction. Content-free replay receipts per
 durable cleanup removes them. Existing backup and external-provider limitations still apply; this is
 not a provider erasure guarantee. Browser drafts remain memory-only and may be lost on navigation.
 Pasted text is sent to Redpill for extraction under the [parsing boundary](job-parsing-data-boundary.md).
+
+Company comments use the same table but belong to the saved company rather than a role. They remain
+when roles are reassigned or deleted, including the last role. Individual deletion removes the current
+comment body and retains a content-free replay tombstone; company-wide erasure is not implemented.
+When enabled, company analysis processes these comments under the
+[company analysis boundary](company-analysis-data-boundary.md), including its snapshot cleanup and
+provider-retention limitations. Exact storage and mutation contracts belong to the
+[company barrel](../server/src/features/companies/companies.AGENTS.md).

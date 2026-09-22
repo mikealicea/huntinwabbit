@@ -7,12 +7,20 @@ export const analysisRequestSchema = z.strictObject({
 export const analysisQuerySchema = z.strictObject({
   cursor: z.string().max(2048).optional(),
 });
-export const evidenceSchema = z.strictObject({
-  roleId: z.uuid(),
-  roleTitle: z.string().max(4000),
-  source: z.enum(['posting', 'correction', 'personal', 'history']),
-  excerpt: z.string().min(1).max(600),
-});
+export const evidenceSchema = z.union([
+  z.strictObject({
+    roleId: z.uuid(),
+    roleTitle: z.string().max(4000),
+    source: z.enum(['posting', 'correction', 'personal', 'history']),
+    excerpt: z.string().min(1).max(600),
+  }),
+  z.strictObject({
+    source: z.literal('company-comment'),
+    companyId: z.uuid(),
+    noteId: z.uuid(),
+    excerpt: z.string().min(1).max(600),
+  }),
+]);
 export const findingSchema = z.strictObject({
   category: z.enum(['requirement', 'technology']),
   label: z.string().min(1).max(200),
@@ -49,12 +57,20 @@ export const analysisResponseSchema = z.strictObject({
 });
 export type Finding = z.infer<typeof findingSchema>;
 export type AnalysisResponse = z.infer<typeof analysisResponseSchema>;
-export interface Source {
+export type RoleSource = {
   roleId: string;
   roleTitle: string;
-  source: z.infer<typeof evidenceSchema>['source'];
+  source: 'posting' | 'correction' | 'personal' | 'history';
   text: string;
-}
+};
+export type Source =
+  | RoleSource
+  | {
+      source: 'company-comment';
+      companyId: string;
+      noteId: string;
+      text: string;
+    };
 export interface InputPage {
   sources: Source[];
   cursor: string | null;
@@ -71,12 +87,20 @@ export type Analyze = (
   input: { sources: Source[] } | { findings: Finding[] },
   signal: AbortSignal,
 ) => Promise<Finding[]>;
-export const sourceSchema = z.object({
-  roleId: z.uuid(),
-  roleTitle: z.string().max(4000),
-  source: evidenceSchema.shape.source,
-  text: z.string().max(24000),
-});
+export const sourceSchema = z.union([
+  z.object({
+    roleId: z.uuid(),
+    roleTitle: z.string().max(4000),
+    source: z.enum(['posting', 'correction', 'personal', 'history']),
+    text: z.string().max(24000),
+  }),
+  z.object({
+    source: z.literal('company-comment'),
+    companyId: z.uuid(),
+    noteId: z.uuid(),
+    text: z.string().max(24000),
+  }),
+]);
 export const sourceRevisionSchema = z.object({
   pk: z.string(),
   sk: z.string(),
@@ -92,6 +116,7 @@ export const stateSchema = z.object({
   revision: z.number().int().nonnegative(),
   version: z.number().int().nonnegative(),
   status: z.enum(['processing', 'complete', 'failed']),
+  companyComments: z.number().int().nonnegative().default(0),
   phase: z.enum(['snapshot', 'map', 'reduce', 'publish']),
   cursor: z.string().nullable(),
   count: z.number().int().nonnegative(),

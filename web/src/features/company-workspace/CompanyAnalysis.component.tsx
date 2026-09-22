@@ -24,12 +24,12 @@ export function CompanyAnalysis({
     <section className="mb-10" aria-labelledby="company-analysis-title">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <h2 id="company-analysis-title" className="text-xl font-semibold">
-          Across your roles
+          Company insights
         </h2>
       </div>
       <p className="mb-3 text-sm text-base-content/70">
-        AI-generated from saved role details, comments, and update history.
-        Review the supporting evidence.
+        AI-generated from saved role details, role and company comments, and
+        update history. Review the supporting evidence.
       </p>
       <div role="status" className="mb-4 text-sm">
         {!data && !failed
@@ -78,11 +78,12 @@ export function CompanyAnalysis({
       )}
       {data?.completedAt && data.analyzedRoles === 1 && (
         <p className="mb-4 rounded-box bg-base-200 p-3 text-sm">
-          Single-role preview — these findings are not yet shared across roles.
+          Single-role preview — only one role has been analyzed; company
+          observations are shown separately.
         </p>
       )}
-      <div className="grid gap-5 md:grid-cols-2">
-        {(['requirement', 'technology'] as const).map((category) => {
+      <div className="grid gap-5">
+        {(['technology', 'requirement'] as const).map((category) => {
           const findings =
             data?.items.filter((item) => item.category === category) ?? [];
           return (
@@ -95,9 +96,7 @@ export function CompanyAnalysis({
                 id={`company-${category}`}
                 className="mb-4 text-lg font-semibold"
               >
-                {category === 'requirement'
-                  ? 'Shared requirements'
-                  : 'Common tech stack'}
+                {category === 'requirement' ? 'Requirements' : 'Tech stack'}
               </h3>
               {findings.length ? (
                 <ul className="space-y-5">
@@ -110,11 +109,34 @@ export function CompanyAnalysis({
                           {finding.label}
                         </h4>
                         <span className="text-xs text-base-content/65">
-                          {
-                            new Set(finding.evidence.map((item) => item.roleId))
-                              .size
-                          }{' '}
-                          of {data?.analyzedRoles} analyzed roles
+                          {finding.evidence.some(
+                            (item) => item.source !== 'company-comment',
+                          ) && (
+                            <>
+                              {
+                                new Set(
+                                  finding.evidence.flatMap((item) =>
+                                    item.source === 'company-comment'
+                                      ? []
+                                      : [item.roleId],
+                                  ),
+                                ).size
+                              }{' '}
+                              of {data?.analyzedRoles} analyzed roles
+                            </>
+                          )}
+                          {finding.evidence.some(
+                            (item) => item.source === 'company-comment',
+                          ) && (
+                            <>
+                              {finding.evidence.some(
+                                (item) => item.source !== 'company-comment',
+                              )
+                                ? ' · '
+                                : ''}
+                              Company comments
+                            </>
+                          )}
                         </span>
                       </div>
                       <p className="mt-1 text-xs capitalize text-base-content/65">
@@ -130,17 +152,25 @@ export function CompanyAnalysis({
                         <ul className="space-y-3 border-l-2 border-base-300 pl-3">
                           {finding.evidence.map((evidence) => (
                             <li
-                              key={`${evidence.roleId}-${evidence.source}-${evidence.excerpt}`}
+                              key={`${evidence.source === 'company-comment' ? evidence.noteId : evidence.roleId}-${evidence.source}-${evidence.excerpt}`}
                               className="text-sm"
                             >
                               <Link
                                 className="link break-words"
-                                href={`/app/roles/${evidence.roleId}`}
+                                href={
+                                  evidence.source === 'company-comment'
+                                    ? `/app/companies/${evidence.companyId}#company-notes`
+                                    : `/app/roles/${evidence.roleId}`
+                                }
                               >
-                                {evidence.roleTitle}
+                                {evidence.source === 'company-comment'
+                                  ? 'Company comment'
+                                  : evidence.roleTitle}
                               </Link>
                               <span className="ml-2 text-xs text-base-content/65">
-                                {evidence.source === 'personal'
+                                {['personal', 'company-comment'].includes(
+                                  evidence.source,
+                                )
                                   ? 'Personal observation'
                                   : evidence.source === 'history'
                                     ? 'Historical context'
@@ -170,7 +200,7 @@ export function CompanyAnalysis({
                         : !complete
                           ? 'More results may be available below.'
                           : !data.analyzedRoles
-                            ? 'Add role details or comments to begin finding patterns.'
+                            ? 'No findings in the saved company comments. Add role details or comments to find patterns.'
                             : category === 'requirement'
                               ? 'No shared requirements found in the analyzed information.'
                               : 'No common technologies found in the analyzed information.'}

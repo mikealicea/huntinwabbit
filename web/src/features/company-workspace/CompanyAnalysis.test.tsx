@@ -78,9 +78,7 @@ it.each([
       onLoadMore={vi.fn()}
     />,
   );
-  expect(
-    screen.getByRole('heading', { name: 'Shared requirements' }),
-  ).toBeVisible();
+  expect(screen.getByRole('heading', { name: 'Requirements' })).toBeVisible();
 
   if (status === 'failed')
     expect(screen.getByRole('alert')).toHaveTextContent('capacity');
@@ -257,4 +255,47 @@ it('keeps initial findings pending until the first analysis has actually run', (
   expect(
     screen.getAllByText('Results will appear here when analysis finishes.'),
   ).toHaveLength(2);
+});
+
+it('attributes comment-only findings to the company without inventing role support', async () => {
+  const commentData: Analysis = {
+    ...data,
+    totalRoles: 0,
+    analyzedRoles: 0,
+    items: [
+      {
+        category: 'technology',
+        label: 'TypeScript',
+        qualifier: 'observed',
+        explanation: '',
+        evidence: [
+          {
+            source: 'company-comment',
+            companyId: id,
+            noteId: id,
+            excerpt: 'TypeScript is used by the team.',
+          },
+        ],
+      },
+    ],
+  };
+  render(
+    <CompanyAnalysis
+      data={commentData}
+      pending={false}
+      failed={false}
+      complete
+      onRefresh={vi.fn()}
+      onRetry={vi.fn()}
+      onLoadMore={vi.fn()}
+    />,
+  );
+  expect(screen.getByText('Company comments')).toBeVisible();
+  expect(screen.queryByText(/0 of 0 analyzed roles/)).not.toBeInTheDocument();
+  await userEvent.click(screen.getByText('Supporting evidence for TypeScript'));
+  expect(screen.getByText('Personal observation')).toBeVisible();
+  expect(screen.getByRole('link', { name: 'Company comment' })).toHaveAttribute(
+    'href',
+    `/app/companies/${id}#company-notes`,
+  );
 });

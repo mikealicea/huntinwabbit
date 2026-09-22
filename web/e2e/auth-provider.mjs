@@ -126,6 +126,68 @@ const server = createServer(async (request, response) => {
       companies.set(owner, saved);
     }
     const companyRecords = companies.get(owner);
+    if (url.pathname.split('/')[3] === 'notes') {
+      const id = url.pathname.split('/')[2];
+      const companyScope = url.pathname.startsWith('/companies/');
+      const role = records.get(id);
+      if (companyScope ? !companyRecords.has(id) : !role)
+        return error(404, 'not_found');
+      const key = `${owner}:${companyScope ? 'company:' : ''}${id}`;
+      const list = roleNotes.get(key) ?? [];
+      roleNotes.set(key, list);
+      if (request.method === 'GET') {
+        const after = Number(url.searchParams.get('cursor') ?? 0);
+        return send(200, {
+          schemaVersion: 1,
+          items: list.slice(after, after + 20),
+          nextCursor: list.length > after + 20 ? String(after + 20) : null,
+        });
+      }
+      const noteId = url.pathname.split('/')[4] ?? body.id;
+      const note = list.find((item) => item.id === noteId);
+      if (request.method === 'POST') {
+        if (note)
+          return note.body === body.body
+            ? send(200, { schemaVersion: 1, note })
+            : error(409, 'conflict');
+        const timestamp = new Date().toISOString();
+        const created = {
+          id: noteId,
+          body: body.body,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+          revision: 1,
+        };
+        list.unshift(created);
+        if (!companyScope) {
+          role.applicationVersion++;
+          role.recordVersion++;
+        }
+        return send(201, { schemaVersion: 1, note: created });
+      }
+      if (!note) return error(404, 'not_found');
+      if (note.revision !== body.expectedRevision)
+        return error(409, 'conflict');
+      if (!companyScope) {
+        role.applicationVersion++;
+        role.recordVersion++;
+      }
+      if (request.method === 'DELETE') {
+        roleNotes.set(
+          key,
+          list.filter((item) => item.id !== noteId),
+        );
+        response.writeHead(204);
+        response.end();
+        return;
+      }
+      Object.assign(note, {
+        body: body.body,
+        revision: note.revision + 1,
+        updatedAt: new Date().toISOString(),
+      });
+      return send(200, { schemaVersion: 1, note });
+    }
     if (url.pathname.startsWith('/companies')) {
       const [, , companyId, child] = url.pathname.split('/');
       if (child === 'analysis') {
@@ -252,61 +314,6 @@ const server = createServer(async (request, response) => {
       item.recordVersion++;
       item.applicationVersion++;
       return send(200, { schemaVersion: 1, item });
-    }
-    if (operation === 'notes') {
-      const role = records.get(id);
-      if (!role) return error(404, 'not_found');
-      const key = `${owner}:${id}`;
-      const list = roleNotes.get(key) ?? [];
-      roleNotes.set(key, list);
-      if (request.method === 'GET') {
-        const after = Number(url.searchParams.get('cursor') ?? 0);
-        return send(200, {
-          schemaVersion: 1,
-          items: list.slice(after, after + 20),
-          nextCursor: list.length > after + 20 ? String(after + 20) : null,
-        });
-      }
-      const noteId = url.pathname.split('/')[4] ?? body.id;
-      const note = list.find((item) => item.id === noteId);
-      if (request.method === 'POST') {
-        if (note)
-          return note.body === body.body
-            ? send(200, { schemaVersion: 1, note })
-            : error(409, 'conflict');
-        const timestamp = new Date().toISOString();
-        const created = {
-          id: noteId,
-          body: body.body,
-          createdAt: timestamp,
-          updatedAt: timestamp,
-          revision: 1,
-        };
-        list.unshift(created);
-        role.applicationVersion++;
-        role.recordVersion++;
-        return send(201, { schemaVersion: 1, note: created });
-      }
-      if (!note) return error(404, 'not_found');
-      if (note.revision !== body.expectedRevision)
-        return error(409, 'conflict');
-      role.applicationVersion++;
-      role.recordVersion++;
-      if (request.method === 'DELETE') {
-        roleNotes.set(
-          key,
-          list.filter((item) => item.id !== noteId),
-        );
-        response.writeHead(204);
-        response.end();
-        return;
-      }
-      Object.assign(note, {
-        body: body.body,
-        revision: note.revision + 1,
-        updatedAt: new Date().toISOString(),
-      });
-      return send(200, { schemaVersion: 1, note });
     }
     if (operation === 'updates') {
       const role = records.get(id);

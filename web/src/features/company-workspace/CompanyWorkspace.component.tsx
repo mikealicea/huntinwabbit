@@ -7,6 +7,7 @@ export function CompanyWorkspace({
   complete,
   status,
   analysis,
+  notes,
   analysisStatus,
   children,
 }: {
@@ -15,6 +16,7 @@ export function CompanyWorkspace({
   complete: boolean;
   status: ReactNode;
   analysis?: ReactNode;
+  notes?: ReactNode;
   analysisStatus?: ReactNode;
   children: ReactNode;
 }) {
@@ -38,7 +40,10 @@ export function CompanyWorkspace({
         </div>
         <div className="ml-auto">{analysisStatus}</div>
       </header>
-      {analysis}
+      <div className="mb-10 grid items-start gap-5 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
+        <div className="min-w-0 lg:col-start-2 lg:row-start-1">{notes}</div>
+        <div className="min-w-0 lg:col-start-1 lg:row-start-1">{analysis}</div>
+      </div>
       <section aria-labelledby="company-roles-title">
         <div className="mb-5 flex flex-wrap items-baseline justify-between gap-3">
           <h2 id="company-roles-title" className="text-xl font-semibold">
