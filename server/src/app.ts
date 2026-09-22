@@ -7,6 +7,10 @@ import {
   type CompanyStore,
   createCompaniesRouter,
 } from './features/companies/companies.index.ts';
+import {
+  type CompanyAnalysis,
+  createCompanyAnalysisRouter,
+} from './features/company-analysis/company-analysis.index.ts';
 import { createHelloRouter } from './features/hello/hello.index.ts';
 import {
   createJobParsingRouter,
@@ -32,6 +36,7 @@ export function buildApp(dependencies: {
   companies?: CompanyStore;
   postingCompanies?: PostingCompanies;
   roleNotes?: RoleNotes;
+  companyAnalysis?: CompanyAnalysis;
 }): express.Express {
   const app = express();
 
@@ -48,6 +53,7 @@ export function buildApp(dependencies: {
       dependencies.postingCompanies,
     ),
   );
+  app.use(createCompanyAnalysisRouter(dependencies.companyAnalysis));
   app.use(createRoleNotesRouter(dependencies.roleNotes));
   app.use(createRoleUpdatesRouter(dependencies.roleUpdates));
   app.use(createJobPostingsRouter(dependencies.jobPostings));

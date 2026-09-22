@@ -5,6 +5,10 @@ import {
 } from './features/auth/auth.index.ts';
 import { createCompanyStore } from './features/companies/companies.index.ts';
 import {
+  companyAnalysisConfig,
+  createCompanyAnalysis,
+} from './features/company-analysis/company-analysis.index.ts';
+import {
   createFetchPosting,
   createParsePosting,
   createRedpillExtractor,
@@ -18,6 +22,7 @@ import {
   createRoleNotes,
   createRoleUpdates,
   jobPostingsTable,
+  withCompanyAnalysisInvalidation,
 } from './features/job-postings/job-postings.index.ts';
 
 export function buildRuntimeApp(
@@ -32,7 +37,8 @@ export function buildRuntimeApp(
       })
     : undefined;
   const table = jobPostingsTable(env);
-  const send = createDynamoTransport();
+  const send = withCompanyAnalysisInvalidation(createDynamoTransport());
+  const analysisConfig = companyAnalysisConfig(env);
   const companies = table ? createCompanyStore(table, send) : undefined;
   const postingCompanies =
     table && companies
@@ -57,14 +63,21 @@ export function buildRuntimeApp(
       )
     : undefined;
   return buildApp({
+    companyAnalysis:
+      table && companies
+        ? createCompanyAnalysis({
+            table,
+            send,
+            enabled: analysisConfig.enabled,
+            company: companies.get,
+          })
+        : undefined,
     verifyAccessToken,
     parsePosting,
     jobPostings,
     roleUpdates,
     companies,
     postingCompanies,
-    roleNotes: table
-      ? createRoleNotes(table, createDynamoTransport())
-      : undefined,
+    roleNotes: table ? createRoleNotes(table, send) : undefined,
   });
 }

@@ -6,6 +6,10 @@ import {
   fetchBaseQuery,
 } from '@reduxjs/toolkit/query/react';
 import {
+  analysisResponseSchema,
+  type CompanyAnalysis,
+} from './job-api.analysis.contracts';
+import {
   type Company,
   type CompanySelection,
   companiesResponseSchema,
@@ -54,8 +58,11 @@ const validatedQuery: BaseQueryFn<
             error: 'The API response was invalid.',
           },
         };
-  const schema =
-    api.endpoint === 'roleNotes'
+  const schema = ['companyAnalysis', 'requestCompanyAnalysis'].includes(
+    api.endpoint,
+  )
+    ? analysisResponseSchema
+    : api.endpoint === 'roleNotes'
       ? notesPageSchema
       : ['createNote', 'editNote'].includes(api.endpoint)
         ? noteResultSchema
@@ -87,8 +94,54 @@ const validatedQuery: BaseQueryFn<
 export const postingApi = createApi({
   reducerPath: 'postingApi',
   baseQuery: validatedQuery,
-  tagTypes: ['Posting', 'Updates', 'Notes'],
+  tagTypes: ['Posting', 'Updates', 'Notes', 'Analysis'],
   endpoints: (build) => ({
+    companyAnalysis: build.infiniteQuery<
+      CompanyAnalysis,
+      string,
+      string | null
+    >({
+      infiniteQueryOptions: {
+        initialPageParam: null,
+        refetchCachedPages: false,
+        getNextPageParam: (last) => last.nextCursor ?? undefined,
+      },
+      query: ({ queryArg, pageParam }) => ({
+        url: `/companies/${queryArg}/analysis`,
+        params: pageParam ? { cursor: pageParam } : {},
+      }),
+      transformResponse: (value: unknown) =>
+        analysisResponseSchema.parse(value),
+      providesTags: ['Posting', 'Analysis'],
+      async onCacheEntryAdded(id, { cacheDataLoaded, dispatch }) {
+        try {
+          const { data } = await cacheDataLoaded;
+          if (data.pages[0]?.status === 'not-started') {
+            await dispatch(
+              postingApi.endpoints.requestCompanyAnalysis.initiate(
+                { id, operationId: crypto.randomUUID(), intent: 'ensure' },
+                { fixedCacheKey: `company-analysis:${id}` },
+              ),
+            ).unwrap();
+          }
+        } catch {
+          /* Query/mutation state owns safe error feedback; no automatic paid retry. */
+        }
+      },
+    }),
+    requestCompanyAnalysis: build.mutation<
+      CompanyAnalysis,
+      { id: string; operationId: string; intent: 'ensure' | 'refresh' }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/companies/${id}/analysis`,
+        method: 'POST',
+        body,
+      }),
+      transformResponse: (value: unknown) =>
+        analysisResponseSchema.parse(value),
+      invalidatesTags: ['Analysis'],
+    }),
     company: build.query<Company, string>({
       query: (id) => `/companies/${id}`,
       transformResponse: (value: unknown) =>
@@ -381,6 +434,8 @@ export const postingApi = createApi({
   }),
 });
 export const {
+  useCompanyAnalysisInfiniteQuery,
+  useRequestCompanyAnalysisMutation,
   useRoleNotesInfiniteQuery,
   useCreateNoteMutation,
   useEditNoteMutation,

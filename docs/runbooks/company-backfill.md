@@ -60,3 +60,7 @@ Matching uses effective names and employer website domains conservatively. Ambig
 separate; manually correct associations from role pages. No inference or remote migration executes
 as part of ordinary tests, builds, packaging or PR creation. Verify the deployed company page and
 multiple-role membership with a dedicated test account only when that target is authorized.
+
+When performing an association-only backfill, keep `COMPANY_ANALYSIS_ENABLED=false` for deployed
+analysis workers. Applied membership changes now invalidate company analysis transactionally and can
+schedule paid analysis when that capability is enabled. Dry-run does not schedule analysis.

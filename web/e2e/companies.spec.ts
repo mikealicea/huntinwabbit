@@ -176,3 +176,71 @@ test('company picker clears assignments and long company names reflow at enlarge
     fullPage: true,
   });
 });
+
+test('company analysis initializes, shows evidence, refreshes and survives reload', async ({
+  page,
+}, info) => {
+  await page
+    .getByRole('link', { name: 'View Northstar company' })
+    .first()
+    .click();
+  await expect(
+    page.getByRole('heading', { name: 'Shared requirements' }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Common tech stack' }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'TypeScript', exact: true }),
+  ).toBeVisible({ timeout: 15000 });
+  await page.getByText('Supporting evidence for TypeScript').focus();
+  await page.keyboard.press('Enter');
+  await expect(
+    page
+      .getByRole('region', { name: 'Common tech stack' })
+      .getByRole('link')
+      .first(),
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'Refresh analysis' }).click();
+  await expect(
+    page.getByRole('status').filter({ hasText: 'Analyzing saved information' }),
+  ).toBeVisible();
+  await page.reload();
+  await expect(
+    page.getByRole('heading', { name: 'TypeScript', exact: true }),
+  ).toBeVisible({ timeout: 15000 });
+  await page.screenshot({
+    path: info.outputPath('company-analysis-desktop.png'),
+    fullPage: true,
+  });
+  for (const theme of ['light', 'dark'] as const) {
+    await page.emulateMedia({ colorScheme: theme, reducedMotion: 'reduce' });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(page.locator('body')).toHaveJSProperty('scrollWidth', 390);
+    await page.screenshot({
+      path: info.outputPath(`company-analysis-${theme}.png`),
+      fullPage: true,
+    });
+  }
+});
+
+test('an analysis read failure keeps company roles available and can be retried', async ({
+  page,
+}) => {
+  await page.route('**/api/job-postings/companies/*/analysis*', (route) =>
+    route.fulfill({ status: 503, contentType: 'application/json', body: '{}' }),
+  );
+  await page
+    .getByRole('link', { name: 'View Northstar company' })
+    .first()
+    .click();
+  await expect(
+    page.getByRole('region', { name: 'Across your roles' }).getByRole('alert'),
+  ).toContainText('Your saved roles are still available');
+  await expect(page.getByRole('article')).toHaveCount(2);
+  await page.unroute('**/api/job-postings/companies/*/analysis*');
+  await page.getByRole('button', { name: 'Reload analysis' }).click();
+  await expect(
+    page.getByRole('heading', { name: 'TypeScript', exact: true }),
+  ).toBeVisible({ timeout: 15000 });
+});

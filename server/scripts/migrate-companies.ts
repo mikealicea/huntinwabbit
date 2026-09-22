@@ -15,8 +15,10 @@ import {
   createDynamoPostingStore,
   type DynamoTransport,
 } from '../src/features/job-postings/job-postings.dynamodb.ts';
+import { withCompanyAnalysisInvalidation } from '../src/features/job-postings/job-postings.index.ts';
 
-// Operator-only, no inference or deployment. Credentials come from the ordinary AWS chain.
+// Operator-only, no direct inference or deployment. Membership writes can schedule enabled company analysis.
+// Credentials come from the ordinary AWS chain.
 const { values } = parseArgs({
   options: {
     table: { type: 'string' },
@@ -78,12 +80,14 @@ if (checkpoint.target !== target)
 const client = DynamoDBDocumentClient.from(
   new DynamoDBClient({ region: input.region, maxAttempts: 3 }),
 );
-const send: DynamoTransport = (command, signal) =>
-  command instanceof GetCommand
-    ? client.send(command, { abortSignal: signal })
-    : command instanceof QueryCommand
+const send: DynamoTransport = withCompanyAnalysisInvalidation(
+  (command, signal) =>
+    command instanceof GetCommand
       ? client.send(command, { abortSignal: signal })
-      : client.send(command, { abortSignal: signal });
+      : command instanceof QueryCommand
+        ? client.send(command, { abortSignal: signal })
+        : client.send(command, { abortSignal: signal }),
+);
 const companies = createCompanyStore(input.table, send);
 const postingCompanies = createPostingCompanies(input.table, send, companies);
 const postings = createDynamoPostingStore(input.table, send);

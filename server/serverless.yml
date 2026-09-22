@@ -33,6 +33,7 @@ functions:
     url: true
     role: !GetAtt ApiRole.Arn
     environment:
+      COMPANY_ANALYSIS_ENABLED: ${env:COMPANY_ANALYSIS_ENABLED, 'false'}
       JOB_PARSING_ENABLED: ${env:JOB_PARSING_ENABLED, 'false'}
       REDPILL_API_KEY: ${env:REDPILL_API_KEY, ''}
   extraction:
@@ -48,6 +49,24 @@ functions:
     timeout: 60
     memorySize: 256
     role: !GetAtt RecoveryRole.Arn
+    events:
+      - schedule: rate(1 minute)
+
+  analysis:
+    handler: src/analysis.handler
+    timeout: 90
+    memorySize: 512
+    role: !GetAtt AnalysisRole.Arn
+    environment:
+      COMPANY_ANALYSIS_ENABLED: ${env:COMPANY_ANALYSIS_ENABLED, 'false'}
+      REDPILL_API_KEY: ${env:REDPILL_API_KEY, ''}
+  analysisRecovery:
+    handler: src/analysis.recover
+    timeout: 60
+    memorySize: 256
+    role: !GetAtt RecoveryRole.Arn
+    environment:
+      COMPANY_ANALYSIS_ENABLED: ${env:COMPANY_ANALYSIS_ENABLED, 'false'}
     events:
       - schedule: rate(1 minute)
 
@@ -114,7 +133,7 @@ resources:
                   Action: ['dynamodb:GetItem', 'dynamodb:Query']
                   Resource: !GetAtt JobPostingsTable.Arn
                 - Effect: Allow
-                  Action: ['dynamodb:PutItem', 'dynamodb:DeleteItem']
+                  Action: ['dynamodb:PutItem', 'dynamodb:DeleteItem', 'dynamodb:UpdateItem', 'dynamodb:ConditionCheckItem']
                   Resource: !GetAtt JobPostingsTable.Arn
                   Condition:
                     StringEquals:
@@ -141,7 +160,7 @@ resources:
                   Action: ['dynamodb:GetItem', 'dynamodb:Query']
                   Resource: !GetAtt JobPostingsTable.Arn
                 - Effect: Allow
-                  Action: ['dynamodb:PutItem', 'dynamodb:DeleteItem']
+                  Action: ['dynamodb:PutItem', 'dynamodb:DeleteItem', 'dynamodb:UpdateItem', 'dynamodb:ConditionCheckItem']
                   Resource: !GetAtt JobPostingsTable.Arn
                   Condition:
                     StringEquals:
@@ -155,6 +174,42 @@ resources:
                 - Effect: Allow
                   Action: ['sqs:SendMessage']
                   Resource: !GetAtt ExtractionFailures.Arn
+
+    AnalysisRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: lambda.amazonaws.com
+              Action: sts:AssumeRole
+        ManagedPolicyArns:
+          - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        Policies:
+          - PolicyName: postings
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: Allow
+                  Action: ['dynamodb:GetItem', 'dynamodb:Query']
+                  Resource: !GetAtt JobPostingsTable.Arn
+                - Effect: Allow
+                  Action: ['dynamodb:PutItem', 'dynamodb:DeleteItem', 'dynamodb:UpdateItem', 'dynamodb:ConditionCheckItem']
+                  Resource: !GetAtt JobPostingsTable.Arn
+                  Condition:
+                    StringEquals:
+                      dynamodb:EnclosingOperation: TransactWriteItems
+                - Effect: Allow
+                  Action: ['dynamodb:GetRecords', 'dynamodb:GetShardIterator', 'dynamodb:DescribeStream']
+                  Resource: !GetAtt JobPostingsTable.StreamArn
+                - Effect: Allow
+                  Action: ['dynamodb:ListStreams']
+                  Resource: '*'
+                - Effect: Allow
+                  Action: ['sqs:SendMessage']
+                  Resource: !GetAtt AnalysisFailures.Arn
 
     RecoveryRole:
       Type: AWS::IAM::Role
@@ -177,7 +232,7 @@ resources:
                   Action: ['dynamodb:GetItem', 'dynamodb:Query']
                   Resource: !GetAtt JobPostingsTable.Arn
                 - Effect: Allow
-                  Action: ['dynamodb:PutItem', 'dynamodb:DeleteItem']
+                  Action: ['dynamodb:PutItem', 'dynamodb:DeleteItem', 'dynamodb:UpdateItem', 'dynamodb:ConditionCheckItem']
                   Resource: !GetAtt JobPostingsTable.Arn
                   Condition:
                     StringEquals:
@@ -242,6 +297,68 @@ resources:
         Dimensions:
           - Name: FunctionName
             Value: !Ref RecoveryLambdaFunction
+        Statistic: Sum
+        Period: 60
+        EvaluationPeriods: 1
+        Threshold: 0
+        ComparisonOperator: GreaterThanThreshold
+        TreatMissingData: notBreaching
+    AnalysisFailures:
+      Type: AWS::SQS::Queue
+      Properties:
+        SqsManagedSseEnabled: true
+        MessageRetentionPeriod: 1209600
+    AnalysisMapping:
+      Type: AWS::Lambda::EventSourceMapping
+      Properties:
+        FunctionName: !Ref AnalysisLambdaFunction
+        EventSourceArn: !GetAtt JobPostingsTable.StreamArn
+        StartingPosition: TRIM_HORIZON
+        BatchSize: 1
+        MaximumRetryAttempts: 2
+        MaximumRecordAgeInSeconds: 3600
+        FilterCriteria:
+          Filters:
+            - Pattern: '{"eventName":["INSERT"],"dynamodb":{"Keys":{"sk":{"S":[{"prefix":"CA-JOB#"}]}}}}'
+        DestinationConfig:
+          OnFailure:
+            Destination: !GetAtt AnalysisFailures.Arn
+    AnalysisFailureAlarm:
+      Type: AWS::CloudWatch::Alarm
+      Properties:
+        Namespace: AWS/SQS
+        MetricName: ApproximateNumberOfMessagesVisible
+        Dimensions:
+          - Name: QueueName
+            Value: !GetAtt AnalysisFailures.QueueName
+        Statistic: Maximum
+        Period: 60
+        EvaluationPeriods: 1
+        Threshold: 0
+        ComparisonOperator: GreaterThanThreshold
+        TreatMissingData: notBreaching
+    AnalysisBacklogAlarm:
+      Type: AWS::CloudWatch::Alarm
+      Properties:
+        Namespace: AWS/Lambda
+        MetricName: IteratorAge
+        Dimensions:
+          - Name: FunctionName
+            Value: !Ref AnalysisLambdaFunction
+        Statistic: Maximum
+        Period: 60
+        EvaluationPeriods: 2
+        Threshold: 300000
+        ComparisonOperator: GreaterThanThreshold
+        TreatMissingData: notBreaching
+    AnalysisRecoveryFailureAlarm:
+      Type: AWS::CloudWatch::Alarm
+      Properties:
+        Namespace: AWS/Lambda
+        MetricName: Errors
+        Dimensions:
+          - Name: FunctionName
+            Value: !Ref AnalysisRecoveryLambdaFunction
         Statistic: Sum
         Period: 60
         EvaluationPeriods: 1

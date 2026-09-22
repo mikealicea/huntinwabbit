@@ -11,6 +11,7 @@ import {
   toOpportunity,
 } from '@/features/job-search/job-search.index';
 import { SavedRoleCardContainer } from '@/features/search-board/search-board.index';
+import { CompanyAnalysisContainer } from './CompanyAnalysis.container';
 import {
   CompanyNotFound,
   CompanyWorkspace,
@@ -64,6 +65,9 @@ export function CompanyWorkspaceContainer({
     );
   return (
     <CompanyWorkspace
+      analysis={
+        <CompanyAnalysisContainer key={companyId} companyId={companyId} />
+      }
       company={company.currentData}
       count={items.length}
       complete={

@@ -6,12 +6,14 @@ export function CompanyWorkspace({
   count,
   complete,
   status,
+  analysis,
   children,
 }: {
   company: SavedCompany;
   count: number;
   complete: boolean;
   status: ReactNode;
+  analysis?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -29,6 +31,7 @@ export function CompanyWorkspace({
           {company.name}
         </h1>
       </header>
+      {analysis}
       <section aria-labelledby="company-roles-title">
         <div className="mb-5 flex flex-wrap items-baseline justify-between gap-3">
           <h2 id="company-roles-title" className="text-xl font-semibold">
