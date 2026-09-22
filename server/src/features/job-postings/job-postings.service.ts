@@ -50,16 +50,28 @@ export function createJobPostings(
       });
       if (Buffer.byteLength(JSON.stringify(item), 'utf8') > MAX_RECORD_BYTES)
         throw postingError('POSTING_TOO_LARGE');
-      return { schemaVersion: 1, ...(await store.save(userId, item, signal)) };
+      return {
+        schemaVersion: 1,
+        ...(await store.save(userId, item, signal, input.sourceText)),
+      };
     },
     delete: (userId, id, version, signal) =>
       store.delete(userId, id, version, signal),
     get: (userId, id, signal) => store.get(userId, id, signal),
     update: (userId, id, input, signal) =>
       store.update(userId, id, input, signal),
-    extract: async (userId, id, generation, signal) => {
-      if (!extractionEnabled) throw postingError('PARSING_DISABLED');
-      return store.extract(userId, id, generation, signal);
+    sourceText: (userId, id, signal) => store.sourceText(userId, id, signal),
+    extract: async (userId, id, generation, signal, input) => {
+      if (!extractionEnabled && input?.sourceText === undefined)
+        throw postingError('PARSING_DISABLED');
+      return store.extract(
+        userId,
+        id,
+        generation,
+        signal,
+        input,
+        extractionEnabled,
+      );
     },
     list: (userId, input, signal) => store.list(userId, input, signal),
   };

@@ -369,3 +369,57 @@ it('bridges comment routes with bounded contracts and rejects unsupported method
     (await call('', 'POST', { id: note.id, body: note.body })).status,
   ).toBe(503);
 });
+
+it('forwards private source reads and bounded source changes while preserving provenance', async () => {
+  const item = postingFixtures()[0];
+  const source = {
+    text: 'Fictional posting',
+    sourceUrl: item.sourceUrl,
+    revision: crypto.randomUUID(),
+    updatedAt: item.updatedAt,
+  };
+  const s = setup({
+    schemaVersion: 1,
+    source,
+    applicationVersion: 0,
+    generation: null,
+  });
+  const read = await s.bridge(req(`/${item.id}/source-text`));
+  expect(read.status).toBe(200);
+  expect((await read.json()).source).toEqual(source);
+  expect(read.headers.get('Cache-Control')).toContain('no-store');
+  const updated = structuredClone(item);
+  if (!updated.parsedPosting) throw new Error();
+  updated.parsedPosting.source = {
+    ...updated.parsedPosting.source,
+    fetchedAt: null,
+    inputs: ['pasted-text'],
+    fetchWarning: 'FETCH_UNAVAILABLE',
+  };
+  s.fetcher.mockResolvedValueOnce(
+    Response.json({ schemaVersion: 1, item: updated }, { status: 202 }),
+  );
+  const changed = await s.bridge(
+    req(`/${item.id}/extraction`, 'POST', {
+      expectedGeneration: null,
+      expectedApplicationVersion: 0,
+      operationId: crypto.randomUUID(),
+      sourceText: '\u0001'.repeat(90_000),
+    }),
+  );
+  expect(changed.status).toBe(202);
+  expect((await changed.json()).item.parsedPosting.source.fetchedAt).toBeNull();
+  expect(
+    (await s.bridge(req(`/${item.id}/source-text`, 'POST', {}))).status,
+  ).toBe(405);
+  expect(
+    (
+      await s.bridge(
+        req(`/${item.id}/extraction`, 'POST', {
+          expectedGeneration: null,
+          sourceText: 'Missing concurrency controls',
+        }),
+      )
+    ).status,
+  ).toBe(400);
+});

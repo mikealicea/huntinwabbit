@@ -12,6 +12,10 @@ export function mockPostingApi(initial = postingFixtures()) {
     initial.map((item) => [item.id, structuredClone(item)]),
   );
   const notes = new Map<string, RoleNote[]>();
+  const sources = new Map<
+    string,
+    { text: string; sourceUrl: string; revision: string; updatedAt: string }
+  >();
   let sequence = 100;
   const NativeRequest = globalThis.Request;
   vi.stubGlobal(
@@ -34,6 +38,17 @@ export function mockPostingApi(initial = postingFixtures()) {
       const id = url.pathname.split('/')[3];
       const json = (body: unknown, status = 200) =>
         Response.json(body, { status });
+      if (url.pathname.endsWith('/source-text')) {
+        const item = records.get(id);
+        return item
+          ? json({
+              schemaVersion: 1,
+              source: sources.get(id) ?? null,
+              applicationVersion: item.applicationVersion,
+              generation: item.extraction.generation,
+            })
+          : json({}, 404);
+      }
       if (url.pathname.split('/')[4] === 'notes') {
         const role = records.get(id);
         if (!role) return json({}, 404);
@@ -131,6 +146,13 @@ export function mockPostingApi(initial = postingFixtures()) {
           extraction: { status: 'disabled', generation: null, error: null },
         };
         records.set(item.id, item);
+        if (body.sourceText?.trim())
+          sources.set(item.id, {
+            text: body.sourceText,
+            sourceUrl,
+            revision: crypto.randomUUID(),
+            updatedAt: item.updatedAt,
+          });
         return json({ schemaVersion: 1, item, created: true }, 201);
       }
       const item = records.get(id);
@@ -153,6 +175,19 @@ export function mockPostingApi(initial = postingFixtures()) {
         records.set(id, next);
         return json({ schemaVersion: 1, item: next });
       }
+      if (body.sourceText !== undefined) {
+        if (body.expectedApplicationVersion !== item.applicationVersion)
+          return json({}, 409);
+        if (body.sourceText?.trim())
+          sources.set(id, {
+            text: body.sourceText,
+            sourceUrl: item.sourceUrl,
+            revision: crypto.randomUUID(),
+            updatedAt: item.updatedAt,
+          });
+        else sources.delete(id);
+        item.applicationVersion++;
+      }
       const next: SavedPosting = {
         ...item,
         extraction: {
@@ -166,5 +201,5 @@ export function mockPostingApi(initial = postingFixtures()) {
     },
   );
   vi.stubGlobal('fetch', fetcher);
-  return { records, notes, fetcher };
+  return { records, notes, sources, fetcher };
 }

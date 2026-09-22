@@ -26,6 +26,7 @@ import {
   notesQuerySchema,
   saveRequestSchema,
   saveResponseSchema,
+  sourceTextResponseSchema,
   updateHistorySchema,
   updateMessageSchema,
   updateRequestSchema,
@@ -99,7 +100,7 @@ export function createApiBridge(deps: {
       if (companyMatch?.[1] && !z.uuid().safeParse(companyMatch[1]).success)
         return failure(404, 'NOT_FOUND');
       const match =
-        /^\/([0-9a-f-]{36})(\/company|\/extraction|\/updates(?:\/([0-9a-f-]{36})\/undo)?|\/notes(?:\/([0-9a-f-]{36}))?)?$/.exec(
+        /^\/([0-9a-f-]{36})(\/source-text|\/company|\/extraction|\/updates(?:\/([0-9a-f-]{36})\/undo)?|\/notes(?:\/([0-9a-f-]{36}))?)?$/.exec(
           suffix,
         );
       if (
@@ -126,6 +127,9 @@ export function createApiBridge(deps: {
         : undefined;
       if (isNotes && !noteAction) return failure(405, 'METHOD_NOT_ALLOWED');
       const action =
+        (request.method === 'GET' && match?.[2] === '/source-text'
+          ? 'sourceText'
+          : undefined) ??
         noteAction ??
         (companyMatch
           ? companyMatch[2] === '/analysis'
@@ -214,7 +218,10 @@ export function createApiBridge(deps: {
             !request.headers.get('content-type')?.startsWith('application/json')
           )
             return failure(415, 'UNSUPPORTED_MEDIA_TYPE');
-          const value = await boundedJson(request, 256 * 1024);
+          const value = await boundedJson(
+            request,
+            ['save', 'extract'].includes(action) ? 1024 * 1024 : 256 * 1024,
+          );
           const schema =
             action === 'requestAnalysis'
               ? analysisRequestSchema
@@ -268,27 +275,30 @@ export function createApiBridge(deps: {
         return response.status === 204
           ? new Response(null, { status: 204, headers })
           : failure(502, 'INVALID_RESPONSE');
-      const schema = ['analysis', 'requestAnalysis'].includes(action)
-        ? analysisResponseSchema
-        : action === 'notes'
-          ? notesPageSchema
-          : ['createNote', 'editNote'].includes(action)
-            ? noteResultSchema
-            : action === 'company'
-              ? companyResponseSchema
-              : action === 'companies'
-                ? companiesResponseSchema
-                : action === 'companyRoles'
-                  ? listResponseSchema
-                  : action === 'history'
-                    ? updateHistorySchema
-                    : ['message', 'undo'].includes(action)
-                      ? updateResultSchema
-                      : action === 'list'
-                        ? listResponseSchema
-                        : action === 'save'
-                          ? saveResponseSchema
-                          : itemResponseSchema;
+      const schema =
+        action === 'sourceText'
+          ? sourceTextResponseSchema
+          : ['analysis', 'requestAnalysis'].includes(action)
+            ? analysisResponseSchema
+            : action === 'notes'
+              ? notesPageSchema
+              : ['createNote', 'editNote'].includes(action)
+                ? noteResultSchema
+                : action === 'company'
+                  ? companyResponseSchema
+                  : action === 'companies'
+                    ? companiesResponseSchema
+                    : action === 'companyRoles'
+                      ? listResponseSchema
+                      : action === 'history'
+                        ? updateHistorySchema
+                        : ['message', 'undo'].includes(action)
+                          ? updateResultSchema
+                          : action === 'list'
+                            ? listResponseSchema
+                            : action === 'save'
+                              ? saveResponseSchema
+                              : itemResponseSchema;
       const result = schema.parse(await boundedJson(response, 2 * 1024 * 1024));
       return Response.json(result, { status: response.status, headers });
     } catch {

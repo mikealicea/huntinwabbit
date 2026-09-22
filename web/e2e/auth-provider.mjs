@@ -11,6 +11,7 @@ const companies = new Map();
 const companyAnalyses = new Map();
 const updateHistories = new Map();
 const roleNotes = new Map();
+const sources = new Map();
 let postingSequence = 100;
 
 const accounts = new Map();
@@ -390,6 +391,17 @@ const server = createServer(async (request, response) => {
       return send(202, { schemaVersion: 1, entry });
     }
 
+    if (request.method === 'GET' && operation === 'source-text') {
+      const item = records.get(id);
+      return item
+        ? send(200, {
+            schemaVersion: 1,
+            source: sources.get(`${owner}:${id}`) ?? null,
+            applicationVersion: item.applicationVersion,
+            generation: item.extraction.generation,
+          })
+        : error(404, 'not_found');
+    }
     if (request.method === 'GET')
       return id
         ? records.has(id)
@@ -427,6 +439,13 @@ const server = createServer(async (request, response) => {
         extraction: { status: 'disabled', generation: null, error: null },
       };
       records.set(item.id, item);
+      if (body.sourceText?.trim())
+        sources.set(`${owner}:${item.id}`, {
+          text: body.sourceText,
+          sourceUrl,
+          revision: randomUUID(),
+          updatedAt: item.updatedAt,
+        });
       return send(201, { schemaVersion: 1, item, created: true });
     }
     const item = records.get(id);
@@ -435,6 +454,7 @@ const server = createServer(async (request, response) => {
         return error(409, 'conflict');
       records.delete(id);
       updateHistories.delete(`${owner}:${id}`);
+      sources.delete(`${owner}:${id}`);
       response.writeHead(204);
       return response.end();
     }
@@ -456,7 +476,24 @@ const server = createServer(async (request, response) => {
         return send(202, { schemaVersion: 1, item });
       if (body.expectedGeneration !== item.extraction.generation)
         return error(409, 'conflict');
-      const shouldFail = item.extraction.status !== 'failed';
+      if (body.sourceText !== undefined) {
+        if (body.expectedApplicationVersion !== item.applicationVersion)
+          return error(409, 'conflict');
+        if (body.sourceText?.trim())
+          sources.set(`${owner}:${id}`, {
+            text: body.sourceText,
+            sourceUrl: item.sourceUrl,
+            revision: randomUUID(),
+            updatedAt: item.updatedAt,
+          });
+        else sources.delete(`${owner}:${id}`);
+        item.applicationVersion++;
+      }
+      const pasted = sources.get(`${owner}:${id}`);
+      const shouldFail =
+        body.sourceText === undefined &&
+        !pasted &&
+        item.extraction.status !== 'failed';
       const generation = randomUUID();
       const next = {
         ...item,
@@ -477,6 +514,13 @@ const server = createServer(async (request, response) => {
                 source: {
                   ...initialPostings[0].parsedPosting.source,
                   normalizedUrl: current.sourceUrl,
+                  ...(pasted
+                    ? {
+                        fetchedAt: null,
+                        inputs: ['pasted-text'],
+                        fetchWarning: 'FETCH_UNAVAILABLE',
+                      }
+                    : {}),
                 },
                 job: {
                   ...(current.parsedPosting ?? initialPostings[0].parsedPosting)

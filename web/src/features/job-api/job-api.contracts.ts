@@ -63,7 +63,12 @@ export const parseResponseSchema = z.strictObject({
   schemaVersion: z.literal(1),
   source: z.strictObject({
     normalizedUrl: publicUrl,
-    fetchedAt: z.iso.datetime(),
+    fetchedAt: z.iso.datetime().nullable(),
+    extractedAt: z.iso.datetime().optional(),
+    inputs: z.array(z.enum(['webpage', 'pasted-text'])).optional(),
+    fetchWarning: z
+      .enum(['FETCH_UNAVAILABLE', 'FETCHED_PAGE_UNUSABLE'])
+      .optional(),
   }),
   job: jobSchema,
   warnings: z.array(
@@ -77,6 +82,32 @@ export const parseResponseSchema = z.strictObject({
 });
 
 export const MAX_RECORD_BYTES = 256 * 1024;
+export const sourceTextSchema = z
+  .string()
+  .max(100_000)
+  .refine(
+    (text) => new TextEncoder().encode(text).byteLength <= 256 * 1024,
+    'Page text must be at most 100,000 characters and 256 KiB.',
+  );
+export const sourceTextResponseSchema = z.strictObject({
+  schemaVersion: z.literal(1),
+  source: z
+    .strictObject({
+      text: sourceTextSchema,
+      sourceUrl: z.url(),
+      revision: z.uuid(),
+      updatedAt: z.iso.datetime(),
+    })
+    .nullable(),
+  applicationVersion: z.number().int().nonnegative(),
+  generation: z.uuid().nullable(),
+});
+export const sourceExtractionFields = {
+  sourceText: sourceTextSchema.nullable().optional(),
+  expectedApplicationVersion: z.number().int().nonnegative().optional(),
+  operationId: z.uuid().optional(),
+};
+
 export const applicationSchema = z.strictObject({
   stage: z.enum([
     'collected',
@@ -110,6 +141,7 @@ export const roleEditsSchema = z.strictObject({
   pending: z.string().nullable(),
 });
 export const saveRequestSchema = z.strictObject({
+  sourceText: sourceTextSchema.optional(),
   url: z.string().trim().min(1).max(8_192),
   extract: z.boolean().default(false),
   parsedPosting: parseResponseSchema.nullable().default(null),
@@ -163,9 +195,19 @@ export const updateRequestSchema = z.strictObject({
 export const deleteRequestSchema = z.strictObject({
   expectedApplicationVersion: z.number().int().nonnegative(),
 });
-export const extractionRequestSchema = z.strictObject({
-  expectedGeneration: z.uuid().nullable(),
-});
+export const extractionRequestSchema = z
+  .strictObject({
+    expectedGeneration: z.uuid().nullable(),
+    ...sourceExtractionFields,
+  })
+  .refine(
+    (input) =>
+      input.sourceText === undefined ||
+      (input.operationId !== undefined &&
+        input.expectedApplicationVersion !== undefined),
+  );
+export type SourceExtractionInput = z.infer<typeof extractionRequestSchema>;
+
 export type UpdateInput = z.infer<typeof updateRequestSchema>;
 export const listRequestSchema = z.strictObject({
   limit: z

@@ -18,6 +18,7 @@ export {
   useSavePostingMutation,
   useSelectCompanyMutation,
   useSendRoleUpdateMutation,
+  useSourceTextQuery,
   useUndoRoleUpdateMutation,
   useUpdatePostingMutation,
 } from './job-api.client';
@@ -33,4 +34,5 @@ export type {
   UpdateEntry,
   UpdateMessage,
 } from './job-api.contracts';
+export { sourceTextSchema } from './job-api.contracts';
 export { RequestFeedback } from './RequestFeedback.component';

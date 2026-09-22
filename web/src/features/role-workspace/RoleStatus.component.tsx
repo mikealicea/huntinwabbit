@@ -73,6 +73,20 @@ export function RoleStatus({
               </p>
             </div>
           )}
+          {role.saved?.parsedPosting?.source.inputs?.includes(
+            'pasted-text',
+          ) && (
+            <p>
+              Pasted page text was used for these details. Saved text takes
+              priority on refresh until replaced or removed.
+            </p>
+          )}
+          {role.saved?.parsedPosting?.source.fetchWarning && (
+            <p>
+              The webpage could not supply usable details. Extraction used your
+              pasted text.
+            </p>
+          )}
           {role.saved?.parsedPosting &&
             role.saved.parsedPosting.source.normalizedUrl !==
               role.sourceUrl && (

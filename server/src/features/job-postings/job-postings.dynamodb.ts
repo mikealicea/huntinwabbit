@@ -22,6 +22,7 @@ import {
   type SavedPosting,
   storedPostingSchema,
 } from './job-postings.schemas.ts';
+import { sourceRow } from './job-postings.source.ts';
 
 export type DynamoTransport = (
   command: GetCommand | QueryCommand | TransactWriteCommand,
@@ -175,7 +176,7 @@ export function createDynamoPostingStore(
   }
   return {
     ...createPostingOperations(tableName, send),
-    save(userId, item, signal) {
+    save(userId, item, signal, sourceText) {
       return storageOperation(signal, async () => {
         const pk = `USER#${userId}`;
         const prior = await existing(pk, item.sourceUrl, signal);
@@ -196,6 +197,9 @@ export function createDynamoPostingStore(
             },
           };
         }
+        const source = sourceText?.trim()
+          ? sourceRow(pk, item, sourceText)
+          : null;
         const data = JSON.stringify(item);
         if (Buffer.byteLength(data) > MAX_RECORD_BYTES)
           throw postingError('POSTING_TOO_LARGE');
@@ -204,6 +208,17 @@ export function createDynamoPostingStore(
             new TransactWriteCommand({
               ClientRequestToken: item.id,
               TransactItems: [
+                ...(source
+                  ? [
+                      {
+                        Put: {
+                          TableName: tableName,
+                          Item: source,
+                          ConditionExpression: 'attribute_not_exists(pk)',
+                        },
+                      },
+                    ]
+                  : []),
                 ...companyMembershipWrites(
                   tableName,
                   pk,
@@ -227,7 +242,12 @@ export function createDynamoPostingStore(
                       {
                         Put: {
                           TableName: tableName,
-                          Item: jobRow(pk, item),
+                          Item: {
+                            ...jobRow(pk, item),
+                            ...(source
+                              ? { sourceRevision: source.revision }
+                              : {}),
+                          },
                           ConditionExpression: 'attribute_not_exists(pk)',
                         },
                       },

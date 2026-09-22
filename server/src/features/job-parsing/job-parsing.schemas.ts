@@ -70,7 +70,12 @@ export const parseResponseSchema = z.strictObject({
   schemaVersion: z.literal(1),
   source: z.strictObject({
     normalizedUrl: publicUrl,
-    fetchedAt: z.iso.datetime(),
+    fetchedAt: z.iso.datetime().nullable(),
+    extractedAt: z.iso.datetime().optional(),
+    inputs: z.array(z.enum(['webpage', 'pasted-text'])).optional(),
+    fetchWarning: z
+      .enum(['FETCH_UNAVAILABLE', 'FETCHED_PAGE_UNUSABLE'])
+      .optional(),
   }),
   job: jobSchema,
   warnings: z.array(
@@ -86,6 +91,7 @@ export const parseResponseSchema = z.strictObject({
 export type ParsedJob = z.infer<typeof jobSchema>;
 export type Extraction = z.infer<typeof extractionSchema> & {
   selectedCompanyId?: string;
+  fetchedPageUsable?: boolean;
 };
 export interface CompanyCandidate {
   id: string;
@@ -114,9 +120,11 @@ export type ExtractPosting = (
   content: string,
   signal: AbortSignal,
   companies?: CompanyCandidate[],
+  sourceText?: string,
 ) => Promise<Extraction>;
 export type ParsePosting = (
   url: string,
   signal: AbortSignal,
   companyContext?: CompanyMatchContext,
+  sourceText?: string,
 ) => Promise<ParseResponse>;

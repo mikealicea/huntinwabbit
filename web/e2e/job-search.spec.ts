@@ -482,6 +482,10 @@ test('delete confirmation works by keyboard and removes the posting across reloa
   });
   await page.keyboard.press('Tab');
   await page.keyboard.press('Tab');
+  await expect(
+    page.getByRole('button', { name: 'Manage pasted text', exact: true }),
+  ).toBeFocused();
+  await page.keyboard.press('Tab');
   await expect(deleteAction).toBeFocused();
   await page.keyboard.press('Enter');
   const dialog = page.getByRole('dialog', { name: 'Delete posting?' });
@@ -1067,5 +1071,140 @@ for (const viewport of [
         () => document.documentElement.scrollWidth <= window.innerWidth,
       ),
     ).toBe(true);
+  });
+}
+
+for (const scheme of ['light', 'dark'] as const) {
+  test(`pasted text folds during capture and persists through saved-role refresh in ${scheme}`, async ({
+    page,
+  }, testInfo) => {
+    await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
+    await page.getByRole('button', { name: 'Add job links' }).click();
+    await page
+      .getByRole('textbox', { name: 'Job link 1', exact: true })
+      .fill('https://example.test/pasted');
+    const disclosure = page.getByRole('button', {
+      name: 'Paste page text for job link 1',
+      exact: true,
+    });
+    await expect(disclosure).toHaveAttribute('aria-expanded', 'false');
+    for (const [name, width] of [
+      ['desktop', 1280],
+      ['mobile', 390],
+    ] as const) {
+      await page.setViewportSize({ width, height: 900 });
+      await page
+        .getByRole('button', {
+          name: /(?:Paste|Edit) page text for job link 1/,
+        })
+        .click();
+      await page
+        .getByRole('textbox', { name: 'Page text for job link 1', exact: true })
+        .fill(
+          'Fictional software engineer.\nBuild reliable tools.\n'.repeat(20),
+        );
+      await page.screenshot({
+        path: testInfo.outputPath(`paste-expanded-${name}-${scheme}.png`),
+        fullPage: true,
+      });
+      await page
+        .getByRole('button', { name: 'Done with pasted text for job link 1' })
+        .click();
+      await expect(
+        page.getByRole('button', { name: 'Edit page text for job link 1' }),
+      ).toBeFocused();
+      await expect(
+        page.getByRole('textbox', {
+          name: 'Page text for job link 1',
+          exact: true,
+        }),
+      ).toBeHidden();
+      await page.screenshot({
+        path: testInfo.outputPath(`paste-collapsed-${name}-${scheme}.png`),
+        fullPage: true,
+      });
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+    }
+    await page
+      .getByRole('button', { name: 'Edit page text for job link 1' })
+      .click();
+    await page
+      .getByRole('textbox', { name: 'Job link 2', exact: true })
+      .fill('https://example.test/second');
+    await expect(
+      page.getByRole('textbox', {
+        name: 'Page text for job link 1',
+        exact: true,
+      }),
+    ).toBeHidden();
+    await page.getByRole('button', { name: 'Save to Collected' }).click();
+    await expect(page.getByText(/2 saved/)).toBeVisible();
+    await page
+      .getByRole('link', {
+        name: 'Open Saved opening at Company unknown',
+        exact: true,
+      })
+      .first()
+      .click();
+    await expect(page).toHaveURL(/\/app\/roles\//);
+    await expect(
+      page.getByRole('heading', { name: 'Saved opening', exact: true }),
+    ).toBeVisible();
+    await page.getByLabel('Posting actions').click();
+    await page
+      .getByRole('button', { name: 'Manage pasted text', exact: true })
+      .click();
+    const dialog = page.getByRole('dialog', { name: 'Manage pasted text' });
+    await expect(
+      dialog.getByRole('textbox', { name: 'Page text', exact: true }),
+    ).toHaveValue(
+      'Fictional software engineer.\nBuild reliable tools.\n'.repeat(20),
+    );
+    await dialog
+      .getByRole('textbox', { name: 'Page text', exact: true })
+      .fill('Updated fictional engineer posting');
+    await page.screenshot({
+      path: testInfo.outputPath(`paste-role-${scheme}.png`),
+      fullPage: true,
+    });
+    await dialog.getByRole('button', { name: 'Save and refresh' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(
+      page.getByRole('heading', {
+        name: 'Refreshed Product Engineer',
+        exact: true,
+      }),
+    ).toBeVisible();
+    await page.reload();
+    await page.getByLabel('Posting actions').click();
+    await page
+      .getByRole('button', { name: 'Manage pasted text', exact: true })
+      .click();
+    await expect(
+      dialog.getByRole('textbox', { name: 'Page text', exact: true }),
+    ).toHaveValue('Updated fictional engineer posting');
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+    await expect(page.getByLabel('Posting actions')).toBeFocused();
+    await page.getByLabel('Posting actions').click();
+    await page
+      .getByRole('button', { name: 'Manage pasted text', exact: true })
+      .click();
+    await dialog
+      .getByRole('button', { name: 'Remove text and refresh' })
+      .click();
+    await expect(dialog).toBeHidden();
+    await page.reload();
+    await page.getByLabel('Posting actions').click();
+    await page
+      .getByRole('button', { name: 'Manage pasted text', exact: true })
+      .click();
+    await expect(
+      dialog.getByRole('textbox', { name: 'Page text', exact: true }),
+    ).toHaveValue('');
   });
 }

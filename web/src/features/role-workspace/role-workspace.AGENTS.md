@@ -114,3 +114,20 @@ browser persistence are added. Background refreshes preserve drafts; navigation/
 them. Legacy single-field notes are retained in storage for compatibility but not displayed or migrated.
 [Notes tests](RoleNotes.test.tsx) exercise real stores, acknowledgements, conflicts and pagination;
 browser tests cover Markdown, reload, edit/delete, keyboard focus and both responsive themes.
+
+## Retained page text
+
+Posting actions opens the [source editor](SourceText.component.tsx), coordinated by
+[SourceTextContainer](SourceText.container.tsx). It loads retained text only when opened and keeps
+local edits through recoverable failures and dismissal while mounted. Save and refresh replaces
+retained text; Remove text and refresh clears it. Both are explicit source changes, with version
+checks and stable operation IDs on unchanged retries. Conflicts retain the draft and require explicit
+review of the current version. Active extraction disables competing submissions; closing the dialog
+never cancels accepted backend work. Native dialog dismissal restores focus to Posting actions.
+
+Ordinary refresh reuses retained text. A previous-URL source is visibly identified and must be
+replaced or removed before reuse. Source changes do not reset manual corrections or previous facts.
+The status popover distinguishes pasted-source extraction and unavailable/unusable fetched pages.
+Source text is separate from role-update chat and comments; editing it never writes either timeline.
+The source editor and Chromium capture/refresh scenarios cover retention, retry IDs, conflict review,
+removal, responsive layouts and focus. No live inference fidelity is established by these fixtures.

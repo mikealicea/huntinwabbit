@@ -6,7 +6,7 @@ resources and access configuration. Checked-in resources are not evidence of a d
 
 ## Data flow and ownership
 
-Authenticated callers supply a posting URL, optional parsed facts and application choices. The
+Authenticated callers supply a posting URL, optional parsed facts, optional pasted page text and application choices. The
 backend validates the data and binds ownership to the verified Supabase subject. AWS DynamoDB stores
 that identity in the partition key, the normalized URL, supplied facts, tracking data, generated IDs
 and timestamps. Supabase remains the identity provider; application data is not sent to its user
@@ -96,3 +96,18 @@ it as personal context; historical receipts remain
 readable. Release the updated API and extraction/recovery workers before enabling the notes frontend;
 the [combined company rollout](runbooks/company-backfill.md) first prepares compatible web readers. No live deployment or
 backfill is implied by these source changes.
+
+## Retained pasted sources
+
+The latest pasted page text lives in a separate owner-scoped row in the same DynamoDB table, bound to
+its posting and normalized URL. Source reads require role ownership; board/list responses omit raw
+text. Capture saves it atomically with the role. Replacement/removal and an explicitly requested
+extraction generation commit together. Refresh reuses retained text only for the matching URL, and
+background workers validate the accepted revision before using it. Raw text never enters logs or
+historical extraction jobs; operation receipts contain input hashes and lifecycle references only.
+
+Pasted sources have no expiry. Replacing/removing text deletes the previous live value, and role
+deletion removes the source in its transaction. Content-free replay receipts persist until the role's
+durable cleanup removes them. Existing backup and external-provider limitations still apply; this is
+not a provider erasure guarantee. Browser drafts remain memory-only and may be lost on navigation.
+Pasted text is sent to Redpill for extraction under the [parsing boundary](job-parsing-data-boundary.md).

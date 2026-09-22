@@ -29,7 +29,7 @@ export function createJobPostingsRouter(postings?: JobPostings): Router {
       );
     })
     .post(
-      express.json({ limit: '256kb' }),
+      express.json({ limit: '1mb' }),
       async (req: Request, res: Response<unknown, AuthLocals>) => {
         if (!req.is('application/json')) {
           res.status(415).json({
@@ -64,6 +64,21 @@ export function createJobPostingsRouter(postings?: JobPostings): Router {
           AbortSignal.timeout(10_000),
         ),
       });
+    },
+  );
+  router.get(
+    '/job-postings/:id/source-text',
+    async (req: Request, res: Response<unknown, AuthLocals>) => {
+      const id = z.uuid().safeParse(req.params.id);
+      if (!id.success) throw postingError('NOT_FOUND');
+      if (!postings) throw postingError('STORAGE_DISABLED');
+      res.json(
+        await postings.sourceText(
+          res.locals.identity.userId,
+          id.data,
+          AbortSignal.timeout(10_000),
+        ),
+      );
     },
   );
   for (const operation of ['update', 'extract', 'delete'] as const) {
@@ -114,6 +129,7 @@ export function createJobPostingsRouter(postings?: JobPostings): Router {
             id.data,
             input.data.expectedGeneration,
             signal,
+            input.data,
           ),
         });
       }
@@ -133,7 +149,7 @@ export function createJobPostingsRouter(postings?: JobPostings): Router {
     else
       router.post(
         '/job-postings/:id/extraction',
-        express.json({ limit: '16kb' }),
+        express.json({ limit: '1mb' }),
         handler,
       );
   }

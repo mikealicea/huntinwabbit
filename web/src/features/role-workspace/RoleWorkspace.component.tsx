@@ -32,6 +32,8 @@ export interface RoleWorkspaceProps {
   onExtract?: () => void;
   onTaskCompletionChange: (taskId: string, completed: boolean) => void;
   status?: ReactNode;
+  sourceEditor?: ReactNode;
+  onManageSource?: () => void;
   updates?: ReactNode;
   notes?: ReactNode;
   materials: ReactNode;
@@ -52,6 +54,8 @@ export function RoleWorkspace({
   onApplicationChange,
   onTaskCompletionChange,
   status,
+  sourceEditor,
+  onManageSource,
   updates,
   notes,
   materials,
@@ -96,6 +100,7 @@ export function RoleWorkspace({
               roleName={roleName}
               role={role}
               onExtract={onExtract}
+              onManageSource={onManageSource}
               extracting={extracting && !deleting}
               deleting={deleting}
               deleteDisabled={deleteDisabled}
@@ -105,6 +110,7 @@ export function RoleWorkspace({
           {status}
         </div>
       </div>
+      {sourceEditor}
       <div className="mb-7 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="fieldset p-0">
           <label htmlFor="role-stage" className="fieldset-legend py-1">
