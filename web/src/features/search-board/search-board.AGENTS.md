@@ -13,8 +13,9 @@ message; partial or failed lists remain labeled incomplete. The marker describes
 card extraction and capture feedback remain with their owning controls.
 
 [Column containers](BoardColumn.container.tsx) receive mapped roles and coordinate drop targets.
-[Card containers](RoleCard.container.tsx) own drag mechanics, clock context and polling for pending
-extraction. [Card presentation](RoleCard.component.tsx) receives typed props. API data belongs to the
+[Board card containers](RoleCard.container.tsx) own drag mechanics.
+[Reusable connected cards](SavedRoleCard.container.tsx) own clock context, posting actions and pending
+extraction polling for both board and company pages. [Card presentation](RoleCard.component.tsx) receives typed props. API data belongs to the
 [RTK Query cache](../job-api/job-api.AGENTS.md), not a second board slice.
 
 Valid drops persist stage changes with the current application version. Interest, priority and notes
@@ -47,3 +48,6 @@ review before reconfirmation. Acknowledged deletion removes the card. The surviv
 the card and native modal have unmounted; the removed card does not own the focus timer.
 Browser coverage exercises in-place refresh/retry, confirmation cancellation, deletion/reload, keyboard
 menu controls and narrow-card/mobile menus in both themes alongside existing drag tests.
+
+Company names link to saved company IDs when assigned. Company-page cards reuse presentation and
+actions while showing stage labels and omitting board dragging. The company page owns deletion focus.

@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { GetCommand, TransactWriteCommand } from '@aws-sdk/lib-dynamodb';
 import { z } from 'zod';
+import { companyMembershipWrites } from '../companies/companies.index.ts';
 import {
   type DynamoTransport,
   readRecord,
@@ -120,6 +121,13 @@ export function createPostingOperations(
             await send(
               new TransactWriteCommand({
                 TransactItems: [
+                  ...companyMembershipWrites(
+                    table,
+                    pk,
+                    item,
+                    item.companyAssociation,
+                    undefined,
+                  ),
                   {
                     Delete: {
                       TableName: table,

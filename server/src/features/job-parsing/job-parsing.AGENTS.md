@@ -102,3 +102,12 @@ the actual archive in a network-disabled AWS Linux runtime image. The opt-in
 and potentially paid inference. It records safe outcomes and accepts documented source failures;
 passing it does not mean every site parsed, or prove deployed authentication. See the
 [E2E guide](../../../e2e/e2e.AGENTS.md) before running it.
+
+## Company matching context
+
+Durable callers may supply owner-scoped candidates after fetching text. The same extraction call
+receives at most twenty temporary references, bounded names and website hostnames. A validated
+selection returns through the internal callback, outside the public parse-response contract. Invalid
+matching metadata is ignored without discarding valid posting facts. The synchronous parse endpoint
+has no company context. No company data enters posting fetch requests. See the
+[company barrel](../companies/companies.AGENTS.md) for ranking, persistence and correction semantics.

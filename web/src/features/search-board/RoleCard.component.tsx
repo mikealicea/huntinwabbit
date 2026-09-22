@@ -6,10 +6,13 @@ import {
   INTEREST_LABELS,
   type Opportunity,
   PRIORITY_LABELS,
+  STAGE_LABELS,
 } from '@/features/job-search/job-search.index';
 import { LoadingPulse } from '@/shared/shared.index';
 
 export interface RoleCardProps {
+  showDrag?: boolean;
+  showStage?: boolean;
   actions?: ReactNode;
   feedback?: ReactNode;
   busy?: boolean;
@@ -23,6 +26,8 @@ export interface RoleCardProps {
 }
 export function RoleCard({
   role,
+  showDrag = true,
+  showStage = false,
   actions,
   feedback,
   busy = false,
@@ -45,36 +50,51 @@ export function RoleCard({
       <div className="card-body gap-3 p-4">
         <div className="flex flex-wrap items-start justify-between gap-1">
           <p className="min-w-16 flex-1 break-words pt-2 text-sm font-medium text-base-content/75">
-            {company}
+            {role.companyId ? (
+              <Link
+                className="inline-flex min-h-6 items-center hover:underline"
+                href={`/app/companies/${role.companyId}`}
+                aria-label={`View ${company} company`}
+              >
+                {company}
+              </Link>
+            ) : (
+              company
+            )}
           </p>
           <div className="ml-auto flex shrink-0 items-center">
             {actions}
-            <button
-              id={`move-${role.id}`}
-              ref={dragHandleRef}
-              type="button"
-              disabled={busy}
-              className="btn btn-ghost size-11 min-h-11 shrink-0 cursor-grab touch-none p-2 active:cursor-grabbing"
-              aria-label={`Move ${title} at ${company}`}
-              aria-describedby="board-move-help"
-            >
-              <svg
-                aria-hidden="true"
-                width="20"
-                height="20"
-                viewBox="0 0 20 20"
-                fill="currentColor"
+            {showDrag && (
+              <button
+                id={`move-${role.id}`}
+                ref={dragHandleRef}
+                type="button"
+                disabled={busy}
+                className="btn btn-ghost size-11 min-h-11 shrink-0 cursor-grab touch-none p-2 active:cursor-grabbing"
+                aria-label={`Move ${title} at ${company}`}
+                aria-describedby="board-move-help"
               >
-                <circle cx="7" cy="5" r="1.5" />
-                <circle cx="13" cy="5" r="1.5" />
-                <circle cx="7" cy="10" r="1.5" />
-                <circle cx="13" cy="10" r="1.5" />
-                <circle cx="7" cy="15" r="1.5" />
-                <circle cx="13" cy="15" r="1.5" />
-              </svg>
-            </button>
+                <svg
+                  aria-hidden="true"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <circle cx="7" cy="5" r="1.5" />
+                  <circle cx="13" cy="5" r="1.5" />
+                  <circle cx="7" cy="10" r="1.5" />
+                  <circle cx="13" cy="10" r="1.5" />
+                  <circle cx="7" cy="15" r="1.5" />
+                  <circle cx="13" cy="15" r="1.5" />
+                </svg>
+              </button>
+            )}
           </div>
         </div>
+        {showStage && (
+          <p className="text-xs font-medium">{STAGE_LABELS[role.stage]}</p>
+        )}
         {feedback}
         <h3 className="text-base font-semibold leading-snug">
           <Link

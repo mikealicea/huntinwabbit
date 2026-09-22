@@ -8,6 +8,13 @@ import {
 import { z } from 'zod';
 import { AppError } from '../../shared/shared.errors.ts';
 import {
+  type CompanyStore,
+  companyMembershipWrites,
+  companySummary,
+  createCompanyStore,
+  shortlistCompanies,
+} from '../companies/companies.index.ts';
+import {
   createFetchPosting,
   createParsePosting,
   createRedpillExtractor,
@@ -20,6 +27,7 @@ import { jobPostingsTable } from './job-postings.config.ts';
 import { type DynamoTransport, readRecord } from './job-postings.dynamodb.ts';
 import { postingPut, readRow } from './job-postings.operations.ts';
 import type { SavedPosting } from './job-postings.schemas.ts';
+import { effectiveFields } from './job-postings.updates.logic.ts';
 import { createRoleUpdateParser } from './job-postings.updates.redpill.ts';
 import type { ParseUpdates } from './job-postings.updates.schemas.ts';
 import { createRoleUpdates } from './job-postings.updates.ts';
@@ -41,6 +49,7 @@ export function createExtractionWorker(
   parse: ParsePosting | undefined,
   now = Date.now,
   parseUpdates?: ParseUpdates,
+  companies?: CompanyStore,
 ) {
   const updates = createRoleUpdates(
     table,
@@ -48,12 +57,14 @@ export function createExtractionWorker(
     !!parseUpdates,
     parseUpdates,
     now,
+    companies,
   );
   async function transition(
     job: Job,
     status: Job['status'],
     result?: ParseResponse,
     error: string | null = null,
+    suggestedCompany?: string,
   ) {
     for (let attempt = 0; attempt < 3; attempt++) {
       const signal = AbortSignal.timeout(10_000);
@@ -74,6 +85,28 @@ export function createExtractionWorker(
         recordVersion: posting.recordVersion + 1,
         extraction: { status, generation: job.generation, error },
       };
+      if (
+        result &&
+        companies &&
+        posting.companyAssociation?.mode !== 'manual'
+      ) {
+        const fields = effectiveFields(next);
+        const company = await companies.resolve(
+          job.pk,
+          fields.companyName,
+          fields.companyWebsite,
+          signal,
+          posting.edits?.overrides.companyName === undefined &&
+            posting.edits?.overrides.companyWebsite === undefined
+            ? suggestedCompany
+            : undefined,
+        );
+        next.companyAssociation = {
+          company: companySummary(company),
+          mode: 'automatic',
+          revision: (posting.companyAssociation?.revision ?? 0) + 1,
+        };
+      }
       const nextJob =
         status === 'processing'
           ? { ...job, status, dueAt: now() + 180_000, dueGroup: 'PENDING' }
@@ -90,6 +123,13 @@ export function createExtractionWorker(
           new TransactWriteCommand({
             TransactItems: [
               postingPut(table, job.pk, next, row.data),
+              ...companyMembershipWrites(
+                table,
+                job.pk,
+                next,
+                posting.companyAssociation,
+                next.companyAssociation,
+              ),
               {
                 Put: {
                   TableName: table,
@@ -145,6 +185,7 @@ export function createExtractionWorker(
       if (!(await transition(job, 'processing'))) return;
       const claimed: Job = { ...job, status: 'processing' };
       let result: ParseResponse;
+      let suggestedCompany: string | undefined;
       try {
         const row = await readRow(
           table,
@@ -160,7 +201,19 @@ export function createExtractionWorker(
           posting.extraction.status !== 'processing'
         )
           return;
-        result = await parse(posting.sourceUrl, AbortSignal.timeout(60_000));
+        result = await parse(
+          posting.sourceUrl,
+          AbortSignal.timeout(60_000),
+          companies && posting.companyAssociation?.mode !== 'manual'
+            ? {
+                candidates: async (text, signal) =>
+                  shortlistCompanies(await companies.all(pk, signal), text),
+                matched: (id) => {
+                  suggestedCompany = id;
+                },
+              }
+            : undefined,
+        );
       } catch (cause) {
         await transition(
           claimed,
@@ -173,7 +226,7 @@ export function createExtractionWorker(
         console.log(JSON.stringify({ event: 'extraction.failed' }));
         return;
       }
-      if (await transition(claimed, 'complete', result))
+      if (await transition(claimed, 'complete', result, null, suggestedCompany))
         console.log(JSON.stringify({ event: 'extraction.completed' }));
     },
     async recover() {
@@ -252,6 +305,7 @@ function runtime() {
       : undefined,
     Date.now,
     config.enabled ? createRoleUpdateParser(config.apiKey) : undefined,
+    createCompanyStore(table, send),
   );
 }
 const streamSchema = z.object({

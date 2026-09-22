@@ -106,3 +106,14 @@ it('maps user corrections and explicit clears consistently even without extracte
     }).jobDetails?.company,
   ).toEqual({ name: null, website: null });
 });
+
+it('preserves an explicit unassigned company without restoring extracted identity', () => {
+  const item = postingFixtures()[0];
+  const role = toOpportunity({
+    ...item,
+    companyAssociation: { company: null, mode: 'manual', revision: 1 },
+  });
+  expect(role.companyId).toBeNull();
+  expect(role.companyName).toBeNull();
+  expect(role.jobDetails?.company.name).toBe('Northstar');
+});

@@ -104,6 +104,7 @@ uses erasable syntax, so avoid enums, namespaces and constructor parameter prope
 | Area | Owner |
 |---|---|
 | API authentication | [auth.AGENTS.md](src/features/auth/auth.AGENTS.md) |
+| Saved companies | [companies.AGENTS.md](src/features/companies/companies.AGENTS.md) |
 | Saved job postings | [job-postings.AGENTS.md](src/features/job-postings/job-postings.AGENTS.md) |
 | Job URL parsing | [job-parsing.AGENTS.md](src/features/job-parsing/job-parsing.AGENTS.md) |
 | Package verification scripts | [scripts.AGENTS.md](scripts/scripts.AGENTS.md) |

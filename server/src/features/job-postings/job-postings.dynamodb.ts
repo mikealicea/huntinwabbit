@@ -8,6 +8,11 @@ import {
 } from '@aws-sdk/lib-dynamodb';
 import { z } from 'zod';
 import { AppError } from '../../shared/shared.errors.ts';
+import {
+  type CompanyStore,
+  companyMembershipWrites,
+  companySummary,
+} from '../companies/companies.index.ts';
 import { normalizeJobUrl } from '../job-parsing/job-parsing.index.ts';
 import { postingError } from './job-postings.errors.ts';
 import { createPostingOperations, jobRow } from './job-postings.operations.ts';
@@ -127,6 +132,7 @@ export async function storageOperation<T>(
 export function createDynamoPostingStore(
   tableName: string,
   transport?: DynamoTransport,
+  companies?: CompanyStore,
 ): PostingStore {
   const send = transport ?? createDynamoTransport();
   async function existing(
@@ -174,6 +180,22 @@ export function createDynamoPostingStore(
         const pk = `USER#${userId}`;
         const prior = await existing(pk, item.sourceUrl, signal);
         if (prior) return { item: prior, created: false };
+        if (companies && item.parsedPosting) {
+          const company = await companies.resolve(
+            pk,
+            item.parsedPosting.job.company.name,
+            item.parsedPosting.job.company.website,
+            signal,
+          );
+          item = {
+            ...item,
+            companyAssociation: {
+              company: companySummary(company),
+              mode: 'automatic',
+              revision: 0,
+            },
+          };
+        }
         const data = JSON.stringify(item);
         if (Buffer.byteLength(data) > MAX_RECORD_BYTES)
           throw postingError('POSTING_TOO_LARGE');
@@ -182,6 +204,13 @@ export function createDynamoPostingStore(
             new TransactWriteCommand({
               ClientRequestToken: item.id,
               TransactItems: [
+                ...companyMembershipWrites(
+                  tableName,
+                  pk,
+                  item,
+                  undefined,
+                  item.companyAssociation,
+                ),
                 {
                   Put: {
                     TableName: tableName,

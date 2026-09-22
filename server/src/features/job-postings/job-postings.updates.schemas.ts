@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { companyAssociationSchema } from '../companies/companies.index.ts';
 import {
   editableFieldsSchema,
   fieldNameSchema,
@@ -73,6 +74,9 @@ export const updateJobSchema = z.strictObject({
   dueAt: z.number().optional(),
 });
 export const updateDataSchema = z.strictObject({
+  beforeCompanyAssociation: companyAssociationSchema.optional(),
+  companyBaselineRevision: z.number().int().nonnegative().optional(),
+  appliedCompanyRevision: z.number().int().nonnegative().optional(),
   entry: updateEntrySchema,
   timezone: updateMessageSchema.shape.timezone,
   baseline: editableFieldsSchema,

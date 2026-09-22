@@ -66,12 +66,17 @@ history is paginated, polls pending operations, and refreshes role/board caches 
 
 Source-derived facts resolve through saved overrides, including empty values. Posting and tracking fields are supported, including fields shown in the detailed posting section;
 notes and comments must be entered through the Notes composer. Chat does not create
-unimplemented tasks, material records or shared company profiles. Pasted text is processed by Redpill;
+unimplemented tasks or material records. Company-name corrections can reassign this role to an existing
+or new company; they do not edit shared research. Pasted text is processed by Redpill;
 links are values, not fetching instructions. Comment drafts remain local and survive chat updates. Chat does not read or modify the comment timeline.
 
 [Chat tests](UpdateRole.test.tsx) exercise props and a fresh real store. Browser tests cover desktop
 and mobile, both themes, persisted history, partial updates, retry, refresh precedence and Undo.
 
+Company headings link to the associated company page. The connected Change company slot is owned
+by [company workspace](../company-workspace/company-workspace.AGENTS.md); selecting, creating or clearing
+an association leaves role history and original extracted company facts intact. The association
+revision protects corrections from stale chat results and Undo.
 ## Notes timeline
 
 [RoleNotesContainer](RoleNotes.container.tsx) owns paginated RTK Query reads and direct mutations;

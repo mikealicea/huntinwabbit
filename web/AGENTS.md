@@ -122,6 +122,7 @@ changes. Exact shapes remain in executable owners; barrels explain intent and im
 | Job-search presentation contracts | [job-search.AGENTS.md](src/features/job-search/job-search.AGENTS.md) |
 | Search board and dragging | [search-board.AGENTS.md](src/features/search-board/search-board.AGENTS.md) |
 | Batch link capture | [job-capture.AGENTS.md](src/features/job-capture/job-capture.AGENTS.md) |
+| Company workspace | [company-workspace.AGENTS.md](src/features/company-workspace/company-workspace.AGENTS.md) |
 | Role workspace | [role-workspace.AGENTS.md](src/features/role-workspace/role-workspace.AGENTS.md) |
 | Navigation | [header.AGENTS.md](src/features/header/header.AGENTS.md) |
 | Light/dark theme and hydration | [theme.AGENTS.md](src/features/theme/theme.AGENTS.md) |

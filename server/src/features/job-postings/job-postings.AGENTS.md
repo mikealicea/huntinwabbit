@@ -143,6 +143,14 @@ describes the newly included personal text and notes.
 replay, uncertain claims, recovery, history, source identity, deletion and authenticated routes.
 Run server/build, documentation and package gates; fake storage does not prove AWS IAM or scheduling.
 
+## Company associations
+
+[Posting-company coordination](job-postings.companies.ts) owns versioned selection, membership reads
+and no-cost backfill. [Companies](../companies/companies.AGENTS.md) own identity and matching.
+Save/extraction/chat commits maintain membership transactionally with posting data; deletion removes
+membership but retains the company. Manual assignment/clear survives extraction. Chat company-name
+edits can reassign only this role, with association snapshots/revisions protecting Undo and newer
+manual selections. Generated employer facts are never rewritten merely to change membership.
 ## Role comments
 
 [Note schemas](job-postings.notes.schemas.ts) and [router](job-postings.notes.router.ts) own direct
@@ -168,5 +176,6 @@ is not displayed by the timeline. No migration is required. AI input excludes th
 receipts that changed it; new model output cannot change it. Legacy receipts remain readable, but
 Undo containing a notes change is refused as a whole. Comments are never included in AI input.
 [Notes tests](job-postings.notes.test.ts) cover ownership, replay, conflicts, pagination and cleanup.
-Ship the API and extraction/recovery workers together before enabling the updated frontend. No new infrastructure
+Ship the API and extraction/recovery workers together before enabling the notes frontend. Follow the
+[company rollout](../../../../docs/runbooks/company-backfill.md) when also introducing associations. No new infrastructure
 or processor is introduced; packaging and deployed IAM verification remain separate from local tests.

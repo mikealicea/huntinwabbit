@@ -2,11 +2,13 @@ import Link from 'next/link';
 import { LoadingPulse } from '@/shared/shared.index';
 export function RequestFeedback({
   loading,
+  loadingMessage = 'Loading your saved roles…',
   error,
   onRetry,
   children,
 }: {
   loading?: boolean;
+  loadingMessage?: string;
   error?: unknown;
   onRetry?: () => void;
   children?: React.ReactNode;
@@ -20,7 +22,7 @@ export function RequestFeedback({
       {loading && (
         <p role="status">
           <LoadingPulse />
-          Loading your saved roles…
+          {loadingMessage}
         </p>
       )}
       {Boolean(error) && (

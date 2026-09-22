@@ -25,3 +25,9 @@ need no migration: missing edit metadata means no overrides or pending message. 
 existing parsing capability flag and provider key. Updated worker/API artifacts and transactional
 worker DeleteItem permission must ship together for source-link edits; local tests do not establish
 a deployed capability. Deployment and live paid inference are separate authorized operations.
+
+When a role has an explicit company selection, the chat's current employer name reflects that
+selection, so a later instruction can correct it even when the original posting named a different
+company. The role-update request includes that selected name; it does not include the company
+directory, company IDs, or other roles at the company. Company association snapshots stay in storage
+for conflict-safe Undo. See the [company barrel](../server/src/features/companies/companies.AGENTS.md).

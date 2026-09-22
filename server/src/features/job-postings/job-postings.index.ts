@@ -1,3 +1,7 @@
+export {
+  createPostingCompanies,
+  type PostingCompanies,
+} from './job-postings.companies.ts';
 export { jobPostingsTable } from './job-postings.config.ts';
 export {
   createDynamoPostingStore,

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { companyAssociationSchema } from './job-api.companies.contracts';
 
 const text = z.string().trim().min(1).max(4_000);
 const nullableText = text.nullable();
@@ -147,6 +148,7 @@ export const extractionSchema = z.strictObject({
   error: z.string().nullable(),
 });
 export const savedPostingSchema = legacyPostingSchema.extend({
+  companyAssociation: companyAssociationSchema.optional(),
   edits: roleEditsSchema.optional(),
   applicationVersion: z.number().int().nonnegative(),
   recordVersion: z.number().int().nonnegative(),

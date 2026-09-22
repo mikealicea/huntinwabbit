@@ -61,6 +61,11 @@ reads invalidate posting caches so durable results appear on the board and role.
 a client operation ID for acknowledgement recovery; the server owns paid work and ordering.
 The [role workspace barrel](../role-workspace/role-workspace.AGENTS.md) owns interaction details.
 
+Company detail/search/membership queries and versioned role association changes share this cache and
+bridge. [Company contracts](job-api.companies.contracts.ts) mirror the server schemas. The bridge
+allowlists company paths under its existing local route and forwards to the protected company API.
+Successful selection and posting mutations invalidate company queries; acknowledged deletion also
+removes the role from cached company pages. Older roles may omit associations.
 Comments use allowlisted notes routes and independently paginated Notes cache tags. The API validates
 bodies and revisions on both sides of the bridge; delete requires an empty 204. Successful or uncertain
 mutations invalidate notes and posting caches so role deletion reviews current application versions.

@@ -269,3 +269,36 @@ describe('Redpill adapter', () => {
     expect(http).toHaveBeenCalledOnce();
   });
 });
+
+it.each(['candidate-1', 'invented-reference', null, { malformed: true }])(
+  'validates company choice %j without losing job facts',
+  async (companyMatch) => {
+    const http = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(
+        Response.json(
+          completion({ pageType: 'job', job: exampleJob(), companyMatch }),
+        ),
+      );
+    const result = await createRedpillExtractor('fixture-key', { fetch: http })(
+      'Example posting',
+      AbortSignal.timeout(5000),
+      [
+        {
+          id: 'private-company-id',
+          name: 'Example',
+          website: 'https://example.test/private-path',
+        },
+      ],
+    );
+    expect(result.job).toEqual(exampleJob());
+    expect(result.selectedCompanyId).toBe(
+      companyMatch === 'candidate-1' ? 'private-company-id' : undefined,
+    );
+    expect(http).toHaveBeenCalledOnce();
+    const sent = JSON.parse(String(http.mock.calls[0]?.[1]?.body));
+    expect(sent.messages[1].content).toContain('candidate-1');
+    expect(sent.messages[1].content).not.toContain('private-company-id');
+    expect(sent.messages[1].content).not.toContain('private-path');
+  },
+);

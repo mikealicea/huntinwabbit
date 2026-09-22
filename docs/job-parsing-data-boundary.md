@@ -72,3 +72,13 @@ frontend validators reject job payloads containing technologies. The version-one
 unchanged, and the updated readers accept both old and new records. API and extraction workers must
 use matching updated schemas. Once new records or overrides are stored, rolling either application
 back requires readers that still accept technologies; do not drop saved facts to enable a rollback.
+
+## Saved company matching
+
+Durable extraction additionally sends a ranked shortlist of saved company names and employer website
+hostnames to Redpill in the existing completion. The shortlist is account-scoped and bounded; only
+temporary candidate references leave the server, not stored company IDs, account IDs, notes or
+application history. Candidate website paths are excluded. Matching adds no second model call.
+This expands provider input to include saved company identity information; existing provider retention
+limitations still apply. Manual selection and existing-role backfill use no model.
+The [company barrel](../server/src/features/companies/companies.AGENTS.md) owns matching behavior.

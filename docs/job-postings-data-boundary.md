@@ -70,6 +70,14 @@ Their processor boundary and history lifecycle are described in
 [role update data boundary](role-updates-data-boundary.md). Deleting a posting also schedules cleanup
 of its update history and idempotency pointers; no history survives intentionally in active storage.
 
+## Companies and membership
+
+Owner-scoped company profiles and role memberships share the retained DynamoDB table. Deleting or
+reassigning a role atomically removes its old membership but does not erase the company. Empty company
+profiles persist; no company deletion or account-erasure flow is provided. Associations remain separate
+from posting facts and do not alter other application histories. See the
+[company barrel](../server/src/features/companies/companies.AGENTS.md) and
+[backfill runbook](runbooks/company-backfill.md) for identity and rollout constraints.
 ## Role comments
 
 The notes composer stores Markdown comments directly through the existing bridge/API in DynamoDB,
@@ -83,5 +91,6 @@ Only application memory holds unsubmitted comment drafts. Markdown rendering per
 fetches or HTML execution; following a user-selected external link contacts that destination.
 The legacy single notes field remains stored for old-record/API compatibility but is not shown or
 migrated. Updated AI workers exclude it from input and cannot change it; historical receipts remain
-readable. Release the updated API and extraction/recovery workers before the frontend. No live deployment or
+readable. Release the updated API and extraction/recovery workers before enabling the notes frontend;
+the [combined company rollout](runbooks/company-backfill.md) first prepares compatible web readers. No live deployment or
 backfill is implied by these source changes.
