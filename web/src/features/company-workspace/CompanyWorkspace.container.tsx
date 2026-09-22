@@ -63,37 +63,41 @@ export function CompanyWorkspaceContainer({
         onRetry={() => void company.refetch()}
       />
     );
+  const savedCompany = company.currentData;
   return (
-    <CompanyWorkspace
-      analysis={
-        <CompanyAnalysisContainer key={companyId} companyId={companyId} />
-      }
-      company={company.currentData}
-      count={items.length}
-      complete={
-        Boolean(roles.currentData) && !roles.hasNextPage && !roles.isError
-      }
-      status={
-        <RequestFeedback
-          loading={
-            roles.isFetching || Boolean(roles.hasNextPage && !roles.isError)
+    <CompanyAnalysisContainer key={companyId} companyId={companyId}>
+      {({ analysis, status: analysisStatus }) => (
+        <CompanyWorkspace
+          analysis={analysis}
+          analysisStatus={analysisStatus}
+          company={savedCompany}
+          count={items.length}
+          complete={
+            Boolean(roles.currentData) && !roles.hasNextPage && !roles.isError
           }
-          error={company.error ?? roles.error}
-          onRetry={() => {
-            void company.refetch();
-            if (roles.hasNextPage) void roles.fetchNextPage();
-            else void roles.refetch();
-          }}
-        />
-      }
-    >
-      {items.map((item) => (
-        <SavedRoleCardContainer
-          key={item.id}
-          role={toOpportunity(item)}
-          onDeleted={setDeleted}
-        />
-      ))}
-    </CompanyWorkspace>
+          status={
+            <RequestFeedback
+              loading={
+                roles.isFetching || Boolean(roles.hasNextPage && !roles.isError)
+              }
+              error={company.error ?? roles.error}
+              onRetry={() => {
+                void company.refetch();
+                if (roles.hasNextPage) void roles.fetchNextPage();
+                else void roles.refetch();
+              }}
+            />
+          }
+        >
+          {items.map((item) => (
+            <SavedRoleCardContainer
+              key={item.id}
+              role={toOpportunity(item)}
+              onDeleted={setDeleted}
+            />
+          ))}
+        </CompanyWorkspace>
+      )}
+    </CompanyAnalysisContainer>
   );
 }

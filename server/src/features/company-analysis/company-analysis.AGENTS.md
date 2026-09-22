@@ -10,7 +10,9 @@ manual finding overrides. Cross-role evidence is observational, not verified emp
 [Contracts](company-analysis.schemas.ts) own status, findings, evidence, pagination and commands.
 [Router](company-analysis.router.ts) enforces authenticated company ownership. Reads have no paid
 side effects. The idempotent ensure command initializes existing companies without a bulk backfill;
-refresh requests immediate durable work. Operation receipts expire after seven days, bounding
+refresh requests immediate durable work, including bypassing a pending quiet period. Reads expose
+the scheduling deadline for an approximate UI countdown; a due deadline does not mean a worker has
+started. Non-scheduled or disabled responses have no deadline. Operation receipts expire after seven days, bounding
 request replay protection. Concurrent refreshes reuse an active generation for the same revision.
 
 [Posting adapter](../job-postings/job-postings.analysis.ts) adds one source revision per affected
@@ -60,7 +62,8 @@ compatible. No deployment or inference backfill occurs merely by installing the 
 
 [Tests](company-analysis.test.ts) cover shared/single/empty results, input paging, comments/history,
 claims, duplicate delivery, lost acknowledgements, recovery, deletion/reassignment, stale completion,
-cleanup, model evidence, malformed merges and ownership. Inject storage and model boundaries;
+cleanup, model evidence, malformed merges, ownership, schedule postponement and immediate refresh
+without duplicate work. Inject storage and model boundaries;
 ordinary tests never call Redpill. Run server gates/build, storage/native packaging checks,
 web/browser gates and root documentation checks. Fake storage does not prove deployed IAM, stream
 scheduling, or model quality; live evaluations need a separately authorized target.

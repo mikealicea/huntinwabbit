@@ -22,6 +22,7 @@ export const analysisResponseSchema = z.strictObject({
     'complete',
     'failed',
   ]),
+  scheduledFor: z.iso.datetime().nullable().optional(),
   generation: z.uuid().nullable(),
   stale: z.boolean(),
   totalRoles: z.number().int().nonnegative(),

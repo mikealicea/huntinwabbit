@@ -1,12 +1,19 @@
 'use client';
-import { useRef } from 'react';
+import { type ReactNode, useRef } from 'react';
 import {
   postingApi,
   useCompanyAnalysisInfiniteQuery,
   useRequestCompanyAnalysisMutation,
 } from '@/features/job-api/job-api.index';
 import { CompanyAnalysis } from './CompanyAnalysis.component';
-export function CompanyAnalysisContainer({ companyId }: { companyId: string }) {
+import { CompanyAnalysisStatus } from './CompanyAnalysisStatus.component';
+export function CompanyAnalysisContainer({
+  companyId,
+  children,
+}: {
+  companyId: string;
+  children?: (slots: { analysis: ReactNode; status: ReactNode }) => ReactNode;
+}) {
   const cached =
     postingApi.endpoints.companyAnalysis.useInfiniteQueryState(companyId);
   const status = cached.data?.pages[0]?.status;
@@ -52,7 +59,7 @@ export function CompanyAnalysisContainer({ companyId }: { companyId: string }) {
       /* Keep operation ID for explicit acknowledgement recovery. */
     }
   }
-  return (
+  const analysis = (
     <CompanyAnalysis
       data={data}
       pending={mutation.isLoading || query.isFetchingNextPage}
@@ -65,5 +72,21 @@ export function CompanyAnalysisContainer({ companyId }: { companyId: string }) {
       }}
       onLoadMore={() => void query.fetchNextPage()}
     />
+  );
+  const header = (
+    <CompanyAnalysisStatus
+      data={data}
+      pending={mutation.isLoading}
+      failed={query.isError || mutation.isError}
+      onAnalyze={() => void requestRefresh()}
+    />
+  );
+  return children ? (
+    children({ analysis, status: header })
+  ) : (
+    <>
+      {header}
+      {analysis}
+    </>
   );
 }

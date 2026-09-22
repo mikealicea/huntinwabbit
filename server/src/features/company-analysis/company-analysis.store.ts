@@ -262,6 +262,10 @@ export function createCompanyAnalysis(deps: {
         : source?.dueAt !== undefined
           ? 'scheduled'
           : (state?.status ?? 'not-started'),
+      scheduledFor:
+        deps.enabled && source?.dueAt !== undefined
+          ? new Date(source.dueAt).toISOString()
+          : null,
       generation: state?.generation ?? null,
       stale: stale || (!!state && state.status !== 'complete' && !!generation),
       totalRoles: visible

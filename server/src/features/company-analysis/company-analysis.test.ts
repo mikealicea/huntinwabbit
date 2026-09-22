@@ -159,6 +159,44 @@ function setup(
   };
 }
 describe('durable company analysis', () => {
+  it('exposes the durable schedule, postpones on changes, and lets refresh skip the wait once', async () => {
+    const s = setup();
+    const a = await s.save();
+    const company = a.companyAssociation?.company?.id as string;
+    expect(await s.analysis.get(pk, company)).toMatchObject({
+      status: 'scheduled',
+      scheduledFor: '2026-09-22T12:01:00.000Z',
+    });
+    s.advance(10000);
+    await s.save(2);
+    expect(await s.analysis.get(pk, company)).toMatchObject({
+      status: 'scheduled',
+      scheduledFor: '2026-09-22T12:01:10.000Z',
+    });
+    const command = { operationId: randomUUID(), intent: 'refresh' as const };
+    const immediate = await s.analysis.request(pk, company, command);
+    expect(immediate).toMatchObject({
+      status: 'processing',
+      scheduledFor: null,
+    });
+    const duplicate = await s.analysis.request(pk, company, {
+      ...command,
+      operationId: randomUUID(),
+    });
+    expect(duplicate.generation).toBe(immediate.generation);
+    await s.pump();
+    const calls = s.analyze.mock.calls.length;
+    s.advance();
+    await s.analysis.recover();
+    await s.pump();
+    expect(s.analyze).toHaveBeenCalledTimes(calls);
+    expect(await s.analysis.request(pk, company, command)).toMatchObject({
+      status: 'complete',
+      scheduledFor: null,
+      generation: immediate.generation,
+    });
+  });
+
   it('coalesces saves, analyzes all pages including Closed roles and publishes shared evidence', async () => {
     const s = setup();
     const a = await s.save();

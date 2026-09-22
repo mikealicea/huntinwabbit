@@ -37,7 +37,8 @@ initializes an existing company once; the backend owns the durable work. [Presen
 shows generated requirements/technologies, distinct supporting-role counts, evidence links and
 employer/personal/historical attribution. Single usable roles are clearly labeled previews. Empty,
 disabled, pending, stale, failed and paginated results leave role cards available. A failed first
-analysis reports unavailable results rather than claiming no commonalities were found. Native details own
+analysis reports unavailable results rather than claiming no commonalities were found. Before the
+first analysis starts, empty finding sections remain pending. Native details own
 local evidence disclosure and no background result moves focus.
 
 Results cannot be edited directly. All saved role context, including comments and history, can reach
@@ -45,3 +46,17 @@ Redpill for this feature; see the [data boundary](../../../../docs/company-analy
 [Analysis tests](CompanyAnalysis.test.tsx) exercise presentation contracts and real-store refresh/retry.
 Browser company tests cover initialization, evidence, refresh, reload and mobile themes. Offline
 fixtures do not establish model quality or deployed scheduling.
+
+[Header status](CompanyAnalysisStatus.component.tsx) uses the shared request indicator at the far right
+of the company heading, with visible scheduled/running/current/unavailable labels and details. The
+same analysis container supplies both header and results slots, so requests have one owner. Analyze
+now reuses the refresh command to bypass the quiet period; it is disabled while requesting/running
+or when analysis is disabled. Completed results offer Refresh analysis.
+
+The local display clock counts down the server-provided scheduling deadline, never triggers work,
+and stops on unmount/status change. New source revisions can postpone that deadline. Zero means
+Waiting to start, not proof of worker execution; scheduler cadence makes the estimate approximate.
+Older servers without a deadline retain the scheduled label without an invented countdown. Timer
+ticks are outside the live status announcement. Tests cover postponements, expiry, timer cleanup,
+immediate requests and lost acknowledgements; browser checks cover far-right placement, reload,
+keyboard controls and mobile themes.

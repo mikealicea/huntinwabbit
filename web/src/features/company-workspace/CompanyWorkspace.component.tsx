@@ -7,6 +7,7 @@ export function CompanyWorkspace({
   complete,
   status,
   analysis,
+  analysisStatus,
   children,
 }: {
   company: SavedCompany;
@@ -14,6 +15,7 @@ export function CompanyWorkspace({
   complete: boolean;
   status: ReactNode;
   analysis?: ReactNode;
+  analysisStatus?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -21,15 +23,20 @@ export function CompanyWorkspace({
       <Link href="/app" className="btn btn-ghost -ml-3 mb-5 min-h-11">
         <span aria-hidden="true">←</span> Search board
       </Link>
-      <header className="mb-8 border-b border-base-300 pb-7">
-        <p className="mb-2 text-sm font-medium text-base-content/65">Company</p>
-        <h1
-          id="company-title"
-          tabIndex={-1}
-          className="break-words text-3xl font-bold tracking-tight sm:text-4xl"
-        >
-          {company.name}
-        </h1>
+      <header className="mb-8 flex flex-wrap items-center justify-between gap-4 border-b border-base-300 pb-7">
+        <div className="min-w-0 max-w-full">
+          <p className="mb-2 text-sm font-medium text-base-content/65">
+            Company
+          </p>
+          <h1
+            id="company-title"
+            tabIndex={-1}
+            className="break-words text-3xl font-bold tracking-tight sm:text-4xl"
+          >
+            {company.name}
+          </h1>
+        </div>
+        <div className="ml-auto">{analysisStatus}</div>
       </header>
       {analysis}
       <section aria-labelledby="company-roles-title">

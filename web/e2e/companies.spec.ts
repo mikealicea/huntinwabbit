@@ -244,3 +244,97 @@ test('an analysis read failure keeps company roles available and can be retried'
     page.getByRole('heading', { name: 'TypeScript', exact: true }),
   ).toBeVisible({ timeout: 15000 });
 });
+
+test('company header counts down scheduled analysis and Analyze now skips the wait', async ({
+  page,
+}, info) => {
+  let requested = false;
+  let requestCount = 0;
+  const scheduledFor = new Date(Date.now() + 60000).toISOString();
+  await page.clock.install();
+  await page.route(
+    '**/api/job-postings/companies/*/analysis*',
+    async (route) => {
+      if (route.request().method() === 'POST') {
+        expect(route.request().postDataJSON().intent).toBe('refresh');
+        requestCount++;
+        requested = true;
+      }
+      if (requested) return route.continue();
+      return route.fulfill({
+        json: {
+          schemaVersion: 1,
+          status: 'scheduled',
+          scheduledFor,
+          generation: null,
+          stale: false,
+          totalRoles: 2,
+          analyzedRoles: 0,
+          completedAt: null,
+          progress: 0,
+          error: null,
+          items: [],
+          nextCursor: null,
+        },
+      });
+    },
+  );
+  await page
+    .getByRole('link', { name: 'View Northstar company' })
+    .first()
+    .click();
+  const header = page.locator('header').filter({
+    has: page.getByRole('heading', { name: 'Northstar', level: 1 }),
+  });
+  const status = header.getByRole('status', {
+    name: 'Company analysis status',
+  });
+  await expect(status).toHaveText('Analysis scheduled');
+  await expect(header.getByRole('timer')).toContainText('Starts in about');
+  const headerBox = await header.boundingBox();
+  const indicatorBox = await header
+    .getByRole('button', { name: 'Analysis scheduled. Show details' })
+    .boundingBox();
+  if (!headerBox || !indicatorBox)
+    throw new Error('Company header status is missing');
+  expect(
+    Math.abs(
+      headerBox.x + headerBox.width - (indicatorBox.x + indicatorBox.width),
+    ),
+  ).toBeLessThan(2);
+  await page.screenshot({
+    path: info.outputPath('company-scheduled-desktop.png'),
+    fullPage: true,
+  });
+  for (const theme of ['light', 'dark'] as const) {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.emulateMedia({ colorScheme: theme, reducedMotion: 'reduce' });
+    await expect(page.locator('body')).toHaveJSProperty('scrollWidth', 390);
+    await page.screenshot({
+      path: info.outputPath(`company-scheduled-${theme}.png`),
+      fullPage: true,
+    });
+  }
+  await page.reload();
+  await expect(status).toHaveText('Analysis scheduled');
+  await page.clock.fastForward(61000);
+  await expect(status).toHaveText('Waiting to start');
+  await expect(header.getByRole('timer')).toHaveCount(0);
+  await header
+    .getByRole('button', { name: 'Waiting to start. Show details' })
+    .focus();
+  await page.keyboard.press('Enter');
+  await expect(header.getByText(/countdown is approximate/)).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(
+    header.getByRole('button', { name: 'Waiting to start. Show details' }),
+  ).toBeFocused();
+  await header.getByRole('button', { name: 'Analyze now' }).focus();
+  await page.keyboard.press('Enter');
+  await expect(status).toHaveText('Analyzing…');
+  await expect(
+    header.getByRole('button', { name: 'Analyze now' }),
+  ).toBeDisabled();
+  await expect(status).toHaveText('Analysis up to date', { timeout: 15000 });
+  expect(requestCount).toBe(1);
+});

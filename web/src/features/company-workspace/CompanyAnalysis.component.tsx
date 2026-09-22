@@ -26,14 +26,6 @@ export function CompanyAnalysis({
         <h2 id="company-analysis-title" className="text-xl font-semibold">
           Across your roles
         </h2>
-        <button
-          type="button"
-          className="btn btn-sm min-h-11"
-          disabled={pending || data?.status === 'processing' || disabled}
-          onClick={onRefresh}
-        >
-          Refresh analysis
-        </button>
       </div>
       <p className="mb-3 text-sm text-base-content/70">
         AI-generated from saved role details, comments, and update history.
@@ -173,7 +165,7 @@ export function CompanyAnalysis({
                     : (failed || data?.status === 'failed') &&
                         !data?.completedAt
                       ? 'No analysis results are available yet.'
-                      : running || !data
+                      : running || !data || data.status === 'not-started'
                         ? 'Results will appear here when analysis finishes.'
                         : !complete
                           ? 'More results may be available below.'

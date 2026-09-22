@@ -30,6 +30,18 @@ it('validates the shared wire contract and bridges analysis reads and requests',
   expect(server.analysisResponseSchema.parse(response)).toEqual(
     analysisResponseSchema.parse(response),
   );
+  const scheduled = {
+    ...response,
+    status: 'scheduled',
+    scheduledFor: '2026-09-22T12:01:00.000Z',
+  };
+  expect(server.analysisResponseSchema.parse(scheduled)).toEqual(
+    analysisResponseSchema.parse(scheduled),
+  );
+  expect(
+    analysisResponseSchema.safeParse({ ...scheduled, scheduledFor: 'soon' })
+      .success,
+  ).toBe(false);
   const http = vi.fn<typeof fetch>(async () => Response.json(response));
   const bridge = createApiBridge({
     origin: 'https://api.example.test',
