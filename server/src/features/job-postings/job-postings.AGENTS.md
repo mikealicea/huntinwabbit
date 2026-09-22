@@ -154,8 +154,8 @@ manual selections. Generated employer facts are never rewritten merely to change
 ## Role comments
 
 [Note schemas](job-postings.notes.schemas.ts) and [router](job-postings.notes.router.ts) own direct
-create/list/edit/delete contracts; [operations](job-postings.notes.ts) enforce ownership and bounded
-storage access using the existing table. Notes are not posting extraction jobs. When company analysis is enabled, comment changes invalidate and schedule that company’s analysis.
+create/list/edit/delete contracts; [operations](job-postings.notes.ts) enforce ownership and parent-version updates while the
+[shared comment store](../../shared/shared.notes.ts) owns paging, mutations and replay recovery in the existing table. Notes are not posting extraction jobs. When company analysis is enabled, comment changes invalidate and schedule that company’s analysis.
 The timeline is independently paginated, newest first, with owner/role-bound cursors. Stored entries
 and lookup pointers are validated. Missing and other-owner roles share the same unavailable response.
 

@@ -1,5 +1,6 @@
 import { type ReactNode, useEffect, useId, useRef, useState } from 'react';
-import { LoadingPulse, SafeMarkdown } from '@/shared/shared.index';
+import { LoadingPulse } from './LoadingPulse.component';
+import { SafeMarkdown } from './SafeMarkdown.component';
 export function NoteComposer({
   body,
   onChange,

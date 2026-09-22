@@ -28,3 +28,12 @@ and optional feedback. Callers own labels and success/error policy. Busy, failed
 icons have a live text equivalent. Optional details open in an overlay with keyboard activation,
 Escape focus restoration and outside/focus dismissal; reduced motion disables spinning. Board and
 role workspace browser tests exercise the shared behavior with their own request recovery actions.
+
+[Notes](Notes.component.tsx), [NoteComposer](NoteComposer.component.tsx) and
+[NoteEntry](NoteEntry.component.tsx) own the shared role/company comment presentation contract.
+[Neutral types](shared.notes.ts) describe presentation data and save outcomes without importing an API
+adapter. Feature containers provide records and callbacks; local drafts, previews, edit conflict
+review, deletion confirmation and focus restoration stay here. Subject-specific copy identifies
+where comments are saved. SafeMarkdown owns rendering restrictions. The role-workspace comment
+suite runs against both connected containers, and the workspace browser suites verify real focus,
+keyboard submission, reloads and theme/reflow behavior.

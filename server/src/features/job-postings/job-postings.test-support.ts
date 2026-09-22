@@ -82,6 +82,14 @@ export function memoryPostings() {
         existing?.status !== values?.[':claimed']
       )
         throw new Error('Conditional conflict');
+      if (
+        condition ===
+          'attribute_exists(pk) AND (notesRevision = :previous OR attribute_not_exists(notesRevision))' &&
+        (!existing ||
+          (existing.notesRevision !== undefined &&
+            existing.notesRevision !== values?.[':previous']))
+      )
+        throw new Error('Conditional conflict');
       if (condition === 'attribute_not_exists(pk)' && existing)
         throw new Error('Conditional conflict');
       if (
@@ -141,6 +149,13 @@ export function memoryPostings() {
           entry.Update.ExpressionAttributeNames?.['#hidden'] === 'hidden'
         ) {
           rows.set(key(address.pk, address.sk), { ...existing, hidden: false });
+        } else if (
+          entry.Update.UpdateExpression === 'SET notesRevision = :next'
+        ) {
+          rows.set(key(address.pk, address.sk), {
+            ...existing,
+            notesRevision: values?.[':next'],
+          });
         } else throw new Error('Unsupported update');
       }
       if (entry.Put?.Item)

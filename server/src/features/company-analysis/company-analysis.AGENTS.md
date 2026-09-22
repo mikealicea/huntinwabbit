@@ -1,8 +1,8 @@
 # Company analysis
 
 Generate shared requirements and technology findings from one account's company and associated
-roles, including Closed roles. Single usable roles produce a labeled preview; zero usable roles
-complete without inference. This feature does not fetch websites, edit source roles, or provide
+roles, including Closed roles, plus saved company comments. Single usable roles produce a labeled
+preview; companies with neither usable roles nor company comments complete without inference. This feature does not fetch websites, edit source roles, or provide
 manual finding overrides. Cross-role evidence is observational, not verified employer policy.
 
 ## Owners and flow
@@ -23,7 +23,7 @@ output is an analysis input. Creation can precede membership, so creation alone 
 
 [Store/worker](company-analysis.store.ts) owns generation fencing, claims, paginated snapshots,
 binary reduction, result publication and cleanup in the existing table. Each snapshot step reads
-one role or one note/history page, retaining a durable cursor. The input adapter validates ownership
+one role or one company-comment/role-note/history page, retaining a durable cursor. The input adapter validates ownership
 and membership. Completion checks the company revision, so intervening source writes invalidate
 mixed snapshots. The scheduler coalesces changes after a quiet period; exact deadlines live in code.
 [Entry point](../../analysis.ts) isolates this worker from posting extraction. The recovery entry
@@ -101,3 +101,16 @@ local schemas. Share fixture data, not cross-app source imports, so web builds r
 Run server gates/build, storage/native packaging checks,
 web/browser gates and root documentation checks. Fake storage does not prove deployed IAM, stream
 scheduling, or model quality; live evaluations need a separately authorized target.
+
+Company comments have their own source/evidence variant in the contracts. Their exact excerpts are
+validated like role evidence, and their qualifier is forced to observed. They never count as roles.
+Company-comment-supported observations survive the final filter even without role evidence; existing
+role-only thresholds remain unchanged. The snapshot starts with paginated company comments, and
+persisted role-only cursors remain decodable. A defaulted comment count preserves old state decoding
+while permitting comment-only map/reduce runs. The company comment adapter invalidates source revisions
+atomically, including while analysis is disabled, and hides prior results on deletion.
+
+Install web validators that accept both evidence variants before deploying a backend that emits
+company-comment evidence. Deploy API and workers from the same revision; old backend responses remain
+readable. No bulk migration or paid backfill is required. Empty-company observations, mixed evidence,
+comment pagination, disabled inference and edits/deletions during inference have deterministic tests.

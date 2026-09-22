@@ -4,7 +4,9 @@ import {
   type VerifyAccessToken,
 } from './features/auth/auth.index.ts';
 import {
+  type CompanyNotes,
   type CompanyStore,
+  companyNoteError,
   createCompaniesRouter,
 } from './features/companies/companies.index.ts';
 import {
@@ -27,6 +29,7 @@ import {
 } from './features/job-postings/job-postings.index.ts';
 import { errorMiddleware } from './shared/shared.errors.ts';
 import { requestLogging } from './shared/shared.middleware.ts';
+import { createNotesRouter } from './shared/shared.notes.router.ts';
 
 export function buildApp(dependencies: {
   verifyAccessToken: VerifyAccessToken;
@@ -36,6 +39,7 @@ export function buildApp(dependencies: {
   companies?: CompanyStore;
   postingCompanies?: PostingCompanies;
   roleNotes?: RoleNotes;
+  companyNotes?: CompanyNotes;
   companyAnalysis?: CompanyAnalysis;
 }): express.Express {
   const app = express();
@@ -54,6 +58,13 @@ export function buildApp(dependencies: {
     ),
   );
   app.use(createCompanyAnalysisRouter(dependencies.companyAnalysis));
+  app.use(
+    createNotesRouter(
+      '/companies/:id/notes',
+      companyNoteError,
+      dependencies.companyNotes,
+    ),
+  );
   app.use(createRoleNotesRouter(dependencies.roleNotes));
   app.use(createRoleUpdatesRouter(dependencies.roleUpdates));
   app.use(createJobPostingsRouter(dependencies.jobPostings));

@@ -29,6 +29,7 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 function boundary(mode = 'roles') {
   const api = mockPostingApi();
+  api.companies.add(company.id);
   const original = api.fetcher.getMockImplementation();
   const roles = postingFixtures()
     .slice(0, 2)
@@ -45,6 +46,7 @@ function boundary(mode = 'roles') {
   api.fetcher.mockImplementation(async (input, init) => {
     const req = new Request(input, init);
     const url = new URL(req.url);
+    if (url.pathname.includes('/notes') && original) return original(req);
     if (url.pathname.endsWith('/company')) {
       const body = await req.json();
       if (mode === 'conflict') return Response.json({}, { status: 409 });

@@ -47,3 +47,13 @@ health, auth failures and complete app ordering. [Runtime tests](../runtime.test
 [Lambda tests](../lambda.test.ts) check construction and entry-point composition. Run the server
 gate and build; follow the deployment guide for packaging checks. Local tests do not prove deployed
 access controls, hosting log redaction or live provider compatibility.
+
+## Shared comment mechanics
+
+[Comment schemas](shared.notes.schemas.ts), [store](shared.notes.ts) and
+[router](shared.notes.router.ts) provide the common role/company comment contract. The store owns
+bounded paging, conditional entry/pointer writes, replay recovery and content-free deletion tombstones.
+Features inject owner lookup, namespace, parent transaction writes, deadlines and error mapping; shared
+code never imports a feature. The router receives its authenticated route and feature error mapping.
+Role and company suites verify these mechanics through their adapters, preserving existing role
+versions, cleanup keys and cursor compatibility.

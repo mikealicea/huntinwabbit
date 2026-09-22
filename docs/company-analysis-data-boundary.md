@@ -9,11 +9,11 @@ lifecycle and links executable contracts. It is an optional capability, disabled
 
 The server reads the user's company identity and all associated roles, including Closed roles.
 Inputs include effective posting facts and corrections, original extraction when superseded, saved
-URLs, tracking choices, legacy notes, current comments, and role-update messages and receipts.
+URLs, tracking choices, legacy notes, current role and company comments, and role-update messages and receipts.
 Original and historical information remains labeled; undone/failed changes are not current facts.
 Deleted comments and previous generated company findings are excluded. Internal storage keys,
 authentication credentials and owner identifiers do not enter prompts. Temporary numeric evidence
-references replace internal role identifiers in model requests.
+references replace internal role, company and comment identifiers in model requests.
 
 This expands the AI boundary to include personal comments and history for company analysis. The
 existing posting parser and natural-language role editor retain their own input exclusions; comments
@@ -37,9 +37,10 @@ fallback. TTL deletion is asynchronous. Successful current results persist until
 invalidated. Task metadata and request receipts expire after seven days. Existing backup retention
 and account-erasure limitations remain described in the [saved-data boundary](job-postings-data-boundary.md).
 
-Evidence validates against supplied excerpts and role references. This catches invented references
+Evidence validates against supplied excerpts and role or company-comment references. This catches invented references
 but cannot guarantee correct interpretation, exhaustive extraction, or employer-wide applicability.
-Counts measure distinct supporting roles in the analyzed saved information. Missing data is not a
+Counts measure distinct supporting roles in the analyzed saved information; company comments never
+increase those counts. Company-comment-supported observations can appear without any saved roles. Missing data is not a
 negative claim. Personal observations remain distinguishable from employer statements.
 
 ## Setup and verification
@@ -54,3 +55,9 @@ multiple paid calls. Provider failures and uncertain paid outcomes require expli
 candidate/evidence sets can exceed validated capacity and produce a safe failure rather than partial
 results. Local tests and package inspection do not prove deployed provider access or model quality.
 Deployment and live paid evaluation are separate authorized operations.
+
+Company comments persist independently of role membership in the same owner-scoped DynamoDB table.
+Moving or deleting roles does not remove company comments; individual comment deletion removes its
+body and retains a content-free replay tombstone. There is no company deletion UI. Install compatible
+web evidence validators before the backend begins emitting company-comment evidence, then deploy the
+API and workers together. Old role evidence and durable snapshot cursors remain readable.

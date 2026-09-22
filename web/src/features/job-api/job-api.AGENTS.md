@@ -93,3 +93,10 @@ Analysis responses optionally include the server scheduling deadline. Older serv
 without a countdown; deploy the accepting frontend before a backend that emits this new field because
 older frontend response contracts are strict. Analyze now uses the existing refresh intent and its
 operation receipt; no new paid-work endpoint or automatic client timer request is introduced.
+
+Company comments use the same validated note envelopes through the company route allowlist, with
+company-scoped cache tags separate from role Notes. Mutations invalidate company comments and
+analysis; they do not change role versions. The company coordinator retains create IDs for explicit
+retries. Analysis evidence accepts existing role evidence and a company-comment variant, with
+company/comment identity and no fabricated role attribution. Bridge tests cover all comment methods,
+request shape, Origin protection and invalid paths.

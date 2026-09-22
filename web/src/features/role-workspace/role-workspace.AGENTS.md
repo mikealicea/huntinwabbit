@@ -55,7 +55,7 @@ Tests cover persistent choices/notes, conflicts, reloads and missing roles with 
 HTTP. Browser tests exercise direct routes, follow-ups, themes and responsive layout. Run web,
 state, auth, architecture, browser and documentation gates. Refresh/retry and deletion browser tests
 cover draft retention, reload, keyboard menu dismissal/focus and mobile menus/dialogs in both themes.
-No upload, submission or shared-company editing capability is claimed.
+Uploads and submissions remain unavailable; company comments belong to the company workspace.
 
 ## Update role chat
 
@@ -91,8 +91,8 @@ revision protects corrections from stale chat results and Undo.
 ## Notes timeline
 
 [RoleNotesContainer](RoleNotes.container.tsx) owns paginated RTK Query reads and direct mutations;
-[RoleNotes](RoleNotes.component.tsx) composes the notepad, status and newest-first entries.
-[NoteComposer](NoteComposer.component.tsx) provides Write/Preview using the shared safe Markdown
+[RoleNotes](RoleNotes.component.tsx) exports the shared Notes presentation, which composes the notepad, status and newest-first entries.
+[NoteComposer](../../shared/NoteComposer.component.tsx) provides Write/Preview using the shared safe Markdown
 renderer. Enter inserts a newline; Cmd+Enter submits a comment or saves an inline edit, using the
 same availability checks as the submit button. Composition and held-key repeats do not submit.
 The composer clears only on
@@ -101,7 +101,7 @@ are private to the authenticated role owner, without replies or attachments. The
 directly; separately enabled [company analysis](../company-workspace/company-workspace.AGENTS.md)
 uses saved comments as personal context.
 
-[NoteEntry](NoteEntry.component.tsx) owns inline edits and a deletion confirmation with initial Cancel
+[NoteEntry](../../shared/NoteEntry.component.tsx) owns inline edits and a deletion confirmation with initial Cancel
 focus. Cancel restores the action focus; successful deletion returns focus to the composer. Edits
 show an Edited indicator. A conflict retains the draft, displays the current saved comment and
 requires review before resubmission; deletion conflicts require canceling and reconfirming. If an

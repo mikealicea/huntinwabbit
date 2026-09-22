@@ -14,7 +14,8 @@ application tracking and background posting extraction. No sample dataset is loa
 - Confirm permanent deletion from the role workspace; deleted links can be saved again.
 - Drag handles and a stage selector; responsive layouts and light/dark themes.
 
-Tasks, resumes, submitted materials and shared company research are visibly unavailable. Unsaved drafts
+Company pages support saved Markdown comments and optional analysis of both company and role context.
+Tasks, resumes, submitted materials and structured company research are visibly unavailable. Unsaved drafts
 are temporary; accepted backend saves survive navigation and reload. Deleted postings have no restore or undo.
 The [product README](../README.md) records broader intended behavior.
 

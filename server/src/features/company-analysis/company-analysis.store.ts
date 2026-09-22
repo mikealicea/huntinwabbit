@@ -313,6 +313,7 @@ export function createCompanyAnalysis(deps: {
       version: 0,
       status: 'processing',
       phase: 'snapshot',
+      companyComments: 0,
       cursor: null,
       count: 0,
       index: 0,
@@ -558,10 +559,14 @@ export function createCompanyAnalysis(deps: {
         next.cursor = input.cursor;
         next.totalRoles += input.roles;
         next.analyzedRoles += input.usable;
+        next.companyComments += input.sources.filter(
+          (source) => source.source === 'company-comment',
+        ).length;
         if (!input.cursor) {
-          next.phase = next.analyzedRoles ? 'map' : 'publish';
+          next.phase =
+            next.analyzedRoles || next.companyComments ? 'map' : 'publish';
+          if (!next.analyzedRoles && !next.companyComments) next.count = 0;
           next.index = 0;
-          if (!next.analyzedRoles) next.count = 0;
         }
       } else if (state.phase === 'map') {
         if (state.index < state.count) {

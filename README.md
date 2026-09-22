@@ -10,10 +10,10 @@ The web app implements a live board, batch link capture and saved-role workspace
 Saved links and tracking edits persist through the backend; posting details are extracted asynchronously
 with agent-fetch and Redpill. The role workspace also accepts natural-language edits with saved
 chat history, partial updates and Undo. A Markdown notes composer saves timestamped comments with
-editing and deletion. User corrections survive posting refreshes. Company pages group saved roles
+editing and deletion on roles and companies. User corrections survive posting refreshes. Company pages group saved roles
 under persistent company identities, with automatic matching and manual corrections. Optional background
 analysis finds shared requirements and technologies, with evidence from saved roles and personal context. Tasks, resumes,
-submitted materials and freeform company research remain
+submitted materials and structured company research remain
 unavailable. `/` currently links into the app. See the [web README](web/README.md) for setup.
 
 This is a public, self-hostable repository. Configure your own Supabase authentication project and
@@ -137,5 +137,5 @@ ends, a postmortem should help capture what happened and what to learn for the n
   — the original ramble that started the design discussion.
 
 The web app connects the board, role workspace and quick-add flows to live backend data.
-Shared company research and contacts, resume-library experiences, detailed interview tracking, postmortems, and
+Structured company research and contacts, resume-library experiences, detailed interview tracking, postmortems, and
 referral discovery still need further design.

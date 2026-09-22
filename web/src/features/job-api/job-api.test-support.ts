@@ -12,6 +12,10 @@ export function mockPostingApi(initial = postingFixtures()) {
     initial.map((item) => [item.id, structuredClone(item)]),
   );
   const notes = new Map<string, RoleNote[]>();
+  const companyNotes = new Map<string, RoleNote[]>();
+  const companies = new Set(
+    initial.map((item) => item.companyAssociation?.company?.id).filter(Boolean),
+  );
   const sources = new Map<
     string,
     { text: string; sourceUrl: string; revision: string; updatedAt: string }
@@ -35,7 +39,9 @@ export function mockPostingApi(initial = postingFixtures()) {
     async (input: RequestInfo | URL, init?: RequestInit) => {
       const request = new Request(input, init);
       const url = new URL(request.url);
-      const id = url.pathname.split('/')[3];
+      const companyScope = url.pathname.split('/')[3] === 'companies';
+      const parts = url.pathname.split('/');
+      const id = parts[companyScope ? 4 : 3];
       const json = (body: unknown, status = 200) =>
         Response.json(body, { status });
       if (url.pathname.endsWith('/source-text')) {
@@ -49,11 +55,12 @@ export function mockPostingApi(initial = postingFixtures()) {
             })
           : json({}, 404);
       }
-      if (url.pathname.split('/')[4] === 'notes') {
+      if (parts[companyScope ? 5 : 4] === 'notes') {
         const role = records.get(id);
-        if (!role) return json({}, 404);
-        const list = notes.get(id) ?? [];
-        notes.set(id, list);
+        if (companyScope ? !companies.has(id) : !role) return json({}, 404);
+        const collection = companyScope ? companyNotes : notes;
+        const list = collection.get(id) ?? [];
+        collection.set(id, list);
         if (request.method === 'GET') {
           const after = Number(url.searchParams.get('cursor') ?? 0);
           return json({
@@ -63,7 +70,7 @@ export function mockPostingApi(initial = postingFixtures()) {
           });
         }
         const body = await request.json();
-        const noteId = url.pathname.split('/')[5] ?? body.id;
+        const noteId = parts[companyScope ? 6 : 5] ?? body.id;
         const note = list.find((value) => value.id === noteId);
         if (request.method === 'POST') {
           if (note)
@@ -78,8 +85,10 @@ export function mockPostingApi(initial = postingFixtures()) {
             updatedAt: '2026-09-22T12:00:00.000Z',
           };
           list.unshift(created);
-          role.applicationVersion++;
-          role.recordVersion++;
+          if (role && !companyScope) {
+            role.applicationVersion++;
+            role.recordVersion++;
+          }
           return json({ schemaVersion: 1, note: created }, 201);
         }
         if (!note)
@@ -87,10 +96,12 @@ export function mockPostingApi(initial = postingFixtures()) {
             ? new Response(null, { status: 204 })
             : json({}, 404);
         if (note.revision !== body.expectedRevision) return json({}, 409);
-        role.applicationVersion++;
-        role.recordVersion++;
+        if (role && !companyScope) {
+          role.applicationVersion++;
+          role.recordVersion++;
+        }
         if (request.method === 'DELETE') {
-          notes.set(
+          collection.set(
             id,
             list.filter((value) => value.id !== noteId),
           );
@@ -201,5 +212,5 @@ export function mockPostingApi(initial = postingFixtures()) {
     },
   );
   vi.stubGlobal('fetch', fetcher);
-  return { records, notes, sources, fetcher };
+  return { records, notes, companyNotes, companies, sources, fetcher };
 }

@@ -6,12 +6,20 @@ export const analysisRequestSchema = z.strictObject({
 export const analysisQuerySchema = z.strictObject({
   cursor: z.string().max(2048).optional(),
 });
-const evidence = z.strictObject({
-  roleId: z.uuid(),
-  roleTitle: z.string().max(4000),
-  source: z.enum(['posting', 'correction', 'personal', 'history']),
-  excerpt: z.string().min(1).max(600),
-});
+const evidence = z.union([
+  z.strictObject({
+    roleId: z.uuid(),
+    roleTitle: z.string().max(4000),
+    source: z.enum(['posting', 'correction', 'personal', 'history']),
+    excerpt: z.string().min(1).max(600),
+  }),
+  z.strictObject({
+    source: z.literal('company-comment'),
+    companyId: z.uuid(),
+    noteId: z.uuid(),
+    excerpt: z.string().min(1).max(600),
+  }),
+]);
 export const analysisResponseSchema = z.strictObject({
   schemaVersion: z.literal(1),
   status: z.enum([

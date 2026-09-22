@@ -9,7 +9,22 @@
     "completedAt": "2026-09-22T12:00:00Z",
     "progress": 4,
     "error": null,
-    "items": [],
+    "items": [
+      {
+        "category": "technology",
+        "label": "TypeScript",
+        "qualifier": "observed",
+        "explanation": "Fictional company observation",
+        "evidence": [
+          {
+            "source": "company-comment",
+            "companyId": "00000000-0000-4000-8000-000000000050",
+            "noteId": "00000000-0000-4000-8000-000000000060",
+            "excerpt": "TypeScript is used."
+          }
+        ]
+      }
+    ],
     "nextCursor": null
   },
   "scheduled": {

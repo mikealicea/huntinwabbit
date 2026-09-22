@@ -1,12 +1,11 @@
 import { useRef, useState } from 'react';
-import type { RoleNote } from '@/features/job-api/job-api.index';
-import { SafeMarkdown } from '@/shared/shared.index';
 import { NoteComposer } from './NoteComposer.component';
+import { SafeMarkdown } from './SafeMarkdown.component';
+import type { Note, NoteOutcome } from './shared.notes';
 
 function focusCancel(element: HTMLButtonElement | null) {
   element?.focus();
 }
-export type NoteOutcome = 'saved' | 'conflict' | 'failed';
 export function NoteEntry({
   note,
   disabled,
@@ -15,12 +14,12 @@ export function NoteEntry({
   onDraftChange,
   unavailable = false,
 }: {
-  note: RoleNote;
-  onDraftChange: (note: RoleNote | null) => void;
+  note: Note;
+  onDraftChange: (note: Note | null) => void;
   unavailable?: boolean;
   disabled: boolean;
-  onEdit: (note: RoleNote, body: string) => Promise<NoteOutcome>;
-  onDelete: (note: RoleNote) => Promise<NoteOutcome>;
+  onEdit: (note: Note, body: string) => Promise<NoteOutcome>;
+  onDelete: (note: Note) => Promise<NoteOutcome>;
 }) {
   const [draft, setDraft] = useState<{ body: string; revision: number } | null>(
     null,
