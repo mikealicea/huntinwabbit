@@ -142,3 +142,12 @@ describes the newly included personal text and notes.
 [Update tests](job-postings.updates.test.ts) cover edits, overrides, partial results, undo, conflicts,
 replay, uncertain claims, recovery, history, source identity, deletion and authenticated routes.
 Run server/build, documentation and package gates; fake storage does not prove AWS IAM or scheduling.
+
+## Company associations
+
+[Posting-company coordination](job-postings.companies.ts) owns versioned selection, membership reads
+and no-cost backfill. [Companies](../companies/companies.AGENTS.md) own identity and matching.
+Save/extraction/chat commits maintain membership transactionally with posting data; deletion removes
+membership but retains the company. Manual assignment/clear survives extraction. Chat company-name
+edits can reassign only this role, with association snapshots/revisions protecting Undo and newer
+manual selections. Generated employer facts are never rewritten merely to change membership.

@@ -73,3 +73,8 @@ users must review their draft before saving over a newly changed server note.
 
 [Chat tests](UpdateRole.test.tsx) exercise props and a fresh real store. Browser tests cover desktop
 and mobile, both themes, persisted history, partial updates, retry, refresh precedence and Undo.
+
+Company headings link to the associated company page. The connected Change company slot is owned
+by [company workspace](../company-workspace/company-workspace.AGENTS.md); selecting, creating or clearing
+an association leaves role history and original extracted company facts intact. The association
+revision protects corrections from stale chat results and Undo.

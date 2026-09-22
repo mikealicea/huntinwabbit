@@ -60,3 +60,9 @@ origin rules. History remains in RTK Query rather than a duplicate product slice
 reads invalidate posting caches so durable results appear on the board and role. Submission carries
 a client operation ID for acknowledgement recovery; the server owns paid work and ordering.
 The [role workspace barrel](../role-workspace/role-workspace.AGENTS.md) owns interaction details.
+
+Company detail/search/membership queries and versioned role association changes share this cache and
+bridge. [Company contracts](job-api.companies.contracts.ts) mirror the server schemas. The bridge
+allowlists company paths under its existing local route and forwards to the protected company API.
+Successful selection and posting mutations invalidate company queries; acknowledged deletion also
+removes the role from cached company pages. Older roles may omit associations.

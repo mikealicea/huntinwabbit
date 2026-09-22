@@ -84,7 +84,21 @@ export const parseResponseSchema = z.strictObject({
 });
 
 export type ParsedJob = z.infer<typeof jobSchema>;
-export type Extraction = z.infer<typeof extractionSchema>;
+export type Extraction = z.infer<typeof extractionSchema> & {
+  selectedCompanyId?: string;
+};
+export interface CompanyCandidate {
+  id: string;
+  name: string;
+  website: string | null;
+}
+export interface CompanyMatchContext {
+  candidates: (
+    text: string,
+    signal: AbortSignal,
+  ) => Promise<CompanyCandidate[]>;
+  matched: (id: string) => void;
+}
 export type ParseResponse = z.infer<typeof parseResponseSchema>;
 
 export interface FetchedPosting {
@@ -99,8 +113,10 @@ export type FetchPosting = (
 export type ExtractPosting = (
   content: string,
   signal: AbortSignal,
+  companies?: CompanyCandidate[],
 ) => Promise<Extraction>;
 export type ParsePosting = (
   url: string,
   signal: AbortSignal,
+  companyContext?: CompanyMatchContext,
 ) => Promise<ParseResponse>;

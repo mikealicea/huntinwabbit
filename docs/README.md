@@ -21,6 +21,8 @@ Do not maintain a second implementation in prose.
 
 ## Current explanations
 
+- [Company rollout and backfill](runbooks/company-backfill.md) — compatible rollout and no-cost association of existing roles.
+
 - [Local socket verification](runbooks/local-socket-verification.md) — running local test/build
   commands under a restricted sandbox and recovering a cached Turbopack permission failure.
 - [Development practices and parity](development-process.md) — the adopted process, its local owners,

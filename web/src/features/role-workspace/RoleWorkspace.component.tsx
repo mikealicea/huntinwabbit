@@ -22,6 +22,7 @@ export interface RoleWorkspaceProps {
   role: Opportunity;
   roleName: string;
   companyLabel: string;
+  companyControl?: ReactNode;
   nextActionLabel: string;
   onApplicationChange: (changes: Partial<ApplicationFields>) => unknown;
   saving?: boolean;
@@ -45,6 +46,7 @@ export function RoleWorkspace({
   role,
   roleName,
   companyLabel,
+  companyControl,
   nextActionLabel,
   onApplicationChange,
   onTaskCompletionChange,
@@ -62,8 +64,19 @@ export function RoleWorkspace({
       <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="mb-2 text-sm font-medium text-base-content/75">
-            {companyLabel}
+            {role.companyId ? (
+              <Link
+                className="inline-flex min-h-11 items-center hover:underline"
+                href={`/app/companies/${role.companyId}`}
+                aria-label={`View ${companyLabel} company`}
+              >
+                {companyLabel}
+              </Link>
+            ) : (
+              companyLabel
+            )}
           </p>
+          {companyControl}
           <h1 className="break-words text-3xl font-bold tracking-tight sm:text-4xl">
             {roleName}
           </h1>

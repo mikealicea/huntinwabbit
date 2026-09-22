@@ -6,6 +6,12 @@ import {
   fetchBaseQuery,
 } from '@reduxjs/toolkit/query/react';
 import {
+  type Company,
+  type CompanySelection,
+  companiesResponseSchema,
+  companyResponseSchema,
+} from './job-api.companies.contracts';
+import {
   type Application,
   itemResponseSchema,
   listResponseSchema,
@@ -46,15 +52,21 @@ const validatedQuery: BaseQueryFn<
           },
         };
   const schema =
-    api.endpoint === 'roleUpdates'
-      ? updateHistorySchema
-      : ['sendRoleUpdate', 'undoRoleUpdate'].includes(api.endpoint)
-        ? updateResultSchema
-        : api.endpoint === 'postings'
+    api.endpoint === 'company'
+      ? companyResponseSchema
+      : api.endpoint === 'companies'
+        ? companiesResponseSchema
+        : api.endpoint === 'companyRoles'
           ? listResponseSchema
-          : api.endpoint === 'savePosting'
-            ? saveResponseSchema
-            : itemResponseSchema;
+          : api.endpoint === 'roleUpdates'
+            ? updateHistorySchema
+            : ['sendRoleUpdate', 'undoRoleUpdate'].includes(api.endpoint)
+              ? updateResultSchema
+              : api.endpoint === 'postings'
+                ? listResponseSchema
+                : api.endpoint === 'savePosting'
+                  ? saveResponseSchema
+                  : itemResponseSchema;
   const parsed = schema.safeParse(result.data);
   return parsed.success
     ? { data: parsed.data }
@@ -70,6 +82,62 @@ export const postingApi = createApi({
   baseQuery: validatedQuery,
   tagTypes: ['Posting', 'Updates'],
   endpoints: (build) => ({
+    company: build.query<Company, string>({
+      query: (id) => `/companies/${id}`,
+      transformResponse: (value: unknown) =>
+        companyResponseSchema.parse(value).item,
+      providesTags: ['Posting'],
+    }),
+    companies: build.infiniteQuery<
+      ReturnType<typeof companiesResponseSchema.parse>,
+      string,
+      string | null
+    >({
+      infiniteQueryOptions: {
+        initialPageParam: null,
+        getNextPageParam: (last) => last.nextCursor ?? undefined,
+      },
+      query: ({ queryArg, pageParam }) => ({
+        url: '/companies',
+        params: {
+          limit: 50,
+          ...(queryArg ? { q: queryArg } : {}),
+          ...(pageParam ? { cursor: pageParam } : {}),
+        },
+      }),
+      transformResponse: (value: unknown) =>
+        companiesResponseSchema.parse(value),
+      providesTags: ['Posting'],
+    }),
+    companyRoles: build.infiniteQuery<
+      ReturnType<typeof listResponseSchema.parse>,
+      string,
+      string | null
+    >({
+      infiniteQueryOptions: {
+        initialPageParam: null,
+        getNextPageParam: (last) => last.nextCursor ?? undefined,
+      },
+      query: ({ queryArg, pageParam }) => ({
+        url: `/companies/${queryArg}/roles`,
+        params: { limit: 50, ...(pageParam ? { cursor: pageParam } : {}) },
+      }),
+      transformResponse: (value: unknown) => listResponseSchema.parse(value),
+      providesTags: ['Posting'],
+    }),
+    selectCompany: build.mutation<
+      SavedPosting,
+      CompanySelection & { id: string }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/${id}/company`,
+        method: 'PATCH',
+        body,
+      }),
+      transformResponse: (value: unknown) =>
+        itemResponseSchema.parse(value).item,
+      invalidatesTags: ['Posting'],
+    }),
     roleUpdates: build.infiniteQuery<
       ReturnType<typeof updateHistorySchema.parse>,
       string,
@@ -189,9 +257,23 @@ export const postingApi = createApi({
       { id: string; expectedApplicationVersion: number }
     >({
       query: ({ id, ...body }) => ({ url: `/${id}`, method: 'DELETE', body }),
-      async onQueryStarted({ id }, { dispatch, queryFulfilled }) {
+      async onQueryStarted({ id }, { dispatch, getState, queryFulfilled }) {
         try {
           await queryFulfilled;
+          for (const companyId of postingApi.util.selectCachedArgsForQuery(
+            getState(),
+            'companyRoles',
+          ))
+            dispatch(
+              postingApi.util.updateQueryData(
+                'companyRoles',
+                companyId,
+                (draft) => {
+                  for (const page of draft.pages)
+                    page.items = page.items.filter((item) => item.id !== id);
+                },
+              ),
+            );
           dispatch(
             postingApi.util.updateQueryData('postings', undefined, (draft) => {
               for (const page of draft.pages)
@@ -232,6 +314,10 @@ export const postingApi = createApi({
   }),
 });
 export const {
+  useCompanyQuery,
+  useCompaniesInfiniteQuery,
+  useCompanyRolesInfiniteQuery,
+  useSelectCompanyMutation,
   useRoleUpdatesInfiniteQuery,
   useSendRoleUpdateMutation,
   useUndoRoleUpdateMutation,

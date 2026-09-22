@@ -1,3 +1,7 @@
+export {
+  createPostingCompanies,
+  type PostingCompanies,
+} from './job-postings.companies.ts';
 export { jobPostingsTable } from './job-postings.config.ts';
 export {
   createDynamoPostingStore,
@@ -13,7 +17,6 @@ export {
 } from './job-postings.schemas.ts';
 export { createJobPostings } from './job-postings.service.ts';
 export { createRoleUpdatesRouter } from './job-postings.updates.router.ts';
-
 export { createRoleUpdates, type RoleUpdates } from './job-postings.updates.ts';
 export {
   handler as extractionHandler,

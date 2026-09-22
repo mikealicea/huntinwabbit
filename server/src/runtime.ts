@@ -3,6 +3,7 @@ import {
   authConfig,
   createAccessTokenVerifier,
 } from './features/auth/auth.index.ts';
+import { createCompanyStore } from './features/companies/companies.index.ts';
 import {
   createFetchPosting,
   createParsePosting,
@@ -13,6 +14,7 @@ import {
   createDynamoPostingStore,
   createDynamoTransport,
   createJobPostings,
+  createPostingCompanies,
   createRoleUpdates,
   jobPostingsTable,
 } from './features/job-postings/job-postings.index.ts';
@@ -29,21 +31,36 @@ export function buildRuntimeApp(
       })
     : undefined;
   const table = jobPostingsTable(env);
+  const send = createDynamoTransport();
+  const companies = table ? createCompanyStore(table, send) : undefined;
+  const postingCompanies =
+    table && companies
+      ? createPostingCompanies(table, send, companies)
+      : undefined;
   const jobPostings = table
     ? createJobPostings(
-        createDynamoPostingStore(table),
+        createDynamoPostingStore(table, send, companies),
         undefined,
         undefined,
         config.enabled,
       )
     : undefined;
   const roleUpdates = table
-    ? createRoleUpdates(table, createDynamoTransport(), config.enabled)
+    ? createRoleUpdates(
+        table,
+        send,
+        config.enabled,
+        undefined,
+        undefined,
+        companies,
+      )
     : undefined;
   return buildApp({
     verifyAccessToken,
     parsePosting,
     jobPostings,
     roleUpdates,
+    companies,
+    postingCompanies,
   });
 }

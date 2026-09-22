@@ -7,6 +7,7 @@ const initialPostings = JSON.parse(
   readFileSync(new URL('./postings.fixture.json', import.meta.url), 'utf8'),
 );
 const postings = new Map();
+const companies = new Map();
 const updateHistories = new Map();
 let postingSequence = 100;
 
@@ -77,7 +78,10 @@ const server = createServer(async (request, response) => {
   const token = request.headers.authorization?.replace('Bearer ', '');
   const active = sessions.get(token);
   if (url.pathname === '/health') return send(200, { ready: true });
-  if (url.pathname.startsWith('/job-postings')) {
+  if (
+    url.pathname.startsWith('/job-postings') ||
+    url.pathname.startsWith('/companies')
+  ) {
     if (!active) return error(401, 'unauthorized');
     const owner = active.account.id;
     if (!postings.has(owner))
@@ -88,7 +92,105 @@ const server = createServer(async (request, response) => {
         ),
       );
     const records = postings.get(owner);
+    if (!companies.has(owner)) {
+      const saved = new Map();
+      for (const item of records.values()) {
+        const name = item.parsedPosting?.job.company.name;
+        if (!name) continue;
+        let company = [...saved.values()].find(
+          (company) => company.name === name,
+        );
+        if (!company) {
+          company = {
+            id: randomUUID(),
+            name,
+            website: item.parsedPosting.job.company.website,
+            createdAt: item.createdAt,
+            updatedAt: item.updatedAt,
+          };
+          saved.set(company.id, company);
+        }
+        item.companyAssociation = {
+          company: {
+            id: company.id,
+            name: company.name,
+            website: company.website,
+          },
+          mode: 'automatic',
+          revision: 0,
+        };
+      }
+      companies.set(owner, saved);
+    }
+    const companyRecords = companies.get(owner);
+    if (url.pathname.startsWith('/companies')) {
+      const [, , companyId, child] = url.pathname.split('/');
+      if (request.method !== 'GET') return error(405, 'method_not_allowed');
+      if (!companyId)
+        return send(200, {
+          schemaVersion: 1,
+          items: [...companyRecords.values()].filter((c) =>
+            c.name
+              .toLowerCase()
+              .includes((url.searchParams.get('q') ?? '').toLowerCase()),
+          ),
+          nextCursor: null,
+        });
+      const company = companyRecords.get(companyId);
+      if (!company) return error(404, 'not_found');
+      if (child === 'roles')
+        return send(200, {
+          schemaVersion: 1,
+          items: [...records.values()]
+            .filter(
+              (item) => item.companyAssociation?.company?.id === companyId,
+            )
+            .sort(
+              (a, b) =>
+                b.createdAt.localeCompare(a.createdAt) ||
+                b.id.localeCompare(a.id),
+            ),
+          nextCursor: null,
+        });
+      return send(200, { schemaVersion: 1, item: company });
+    }
     const [, , id, operation] = url.pathname.split('/');
+    if (operation === 'company' && request.method === 'PATCH') {
+      const item = records.get(id);
+      if (!item) return error(404, 'not_found');
+      if (item.recordVersion !== body.expectedRecordVersion)
+        return error(409, 'conflict');
+      let company = null;
+      if (body.selection?.id) {
+        company = companyRecords.get(body.selection.id);
+        if (!company) return error(404, 'not_found');
+      }
+      if (body.selection?.create) {
+        company = [...companyRecords.values()].find(
+          (c) =>
+            c.name.toLowerCase() === body.selection.create.name.toLowerCase(),
+        );
+        if (!company) {
+          company = {
+            id: randomUUID(),
+            ...body.selection.create,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+          companyRecords.set(company.id, company);
+        }
+      }
+      item.companyAssociation = {
+        company: company
+          ? { id: company.id, name: company.name, website: company.website }
+          : null,
+        mode: 'manual',
+        revision: (item.companyAssociation?.revision ?? 0) + 1,
+      };
+      item.recordVersion++;
+      item.applicationVersion++;
+      return send(200, { schemaVersion: 1, item });
+    }
     if (operation === 'updates') {
       const role = records.get(id);
       if (!role) return error(404, 'not_found');

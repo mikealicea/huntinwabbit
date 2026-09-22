@@ -6,6 +6,11 @@ import {
 } from '@aws-sdk/lib-dynamodb';
 import { z } from 'zod';
 import { conflict } from '../../shared/shared.errors.ts';
+import {
+  type CompanyStore,
+  companyMembershipWrites,
+  companySummary,
+} from '../companies/companies.index.ts';
 import { normalizeJobUrl } from '../job-parsing/job-parsing.index.ts';
 import {
   type DynamoTransport,
@@ -24,6 +29,7 @@ import {
 } from './job-postings.schemas.ts';
 import {
   effectiveFields,
+  effectiveUpdateFields,
   same,
   writeField,
 } from './job-postings.updates.logic.ts';
@@ -72,6 +78,7 @@ export function createRoleUpdates(
   enabled: boolean,
   parse?: ParseUpdates,
   now = Date.now,
+  companies?: CompanyStore,
 ) {
   async function lookup(user: string, id: string) {
     const pk = `USER#${user}`;
@@ -277,7 +284,9 @@ export function createRoleUpdates(
     const data: UpdateData = {
       entry,
       timezone: input.timezone,
-      baseline: effectiveFields(found.item),
+      baseline: effectiveUpdateFields(found.item),
+      beforeCompanyAssociation: found.item.companyAssociation,
+      companyBaselineRevision: found.item.companyAssociation?.revision ?? 0,
       revisions: found.item.edits?.revisions ?? {},
       beforeOverrides: found.item.edits?.overrides ?? {},
       appliedRevisions: {},
@@ -354,7 +363,7 @@ export function createRoleUpdates(
       const next = structuredClone(item);
       const result = structuredClone(data);
       result.entry.skipped = output?.skipped ?? [];
-      const fields = effectiveFields(item);
+      const fields = effectiveUpdateFields(item);
       const changes = output?.changes ?? [];
       const counts = new Map<FieldName, number>();
       for (const change of changes)
@@ -362,6 +371,16 @@ export function createRoleUpdates(
       for (const change of changes) {
         const field = change.field;
         let value = change.value;
+        if (
+          (field === 'companyName' || field === 'companyWebsite') &&
+          (item.companyAssociation?.revision ?? 0) !==
+            (data.companyBaselineRevision ?? 0)
+        ) {
+          result.entry.skipped.push(
+            `${field}: company selection changed since this message was submitted.`,
+          );
+          continue;
+        }
         if ((counts.get(field) ?? 0) > 1) {
           result.entry.skipped.push(`${field}: conflicting instructions.`);
           continue;
@@ -410,6 +429,34 @@ export function createRoleUpdates(
           );
         }
       }
+      const companyNameChanged = result.entry.changes.some(
+        (change) => change.field === 'companyName',
+      );
+      const companyWebsiteChanged = result.entry.changes.some(
+        (change) => change.field === 'companyWebsite',
+      );
+      if (
+        companies &&
+        (companyNameChanged ||
+          (companyWebsiteChanged && item.companyAssociation?.mode !== 'manual'))
+      ) {
+        const values = effectiveFields(next);
+        const company = await companies.resolve(
+          job.pk,
+          values.companyName,
+          companyNameChanged && !companyWebsiteChanged
+            ? null
+            : values.companyWebsite,
+          signal(),
+        );
+        next.companyAssociation = {
+          company: companySummary(company),
+          mode: companyNameChanged ? 'manual' : 'automatic',
+          revision: (item.companyAssociation?.revision ?? 0) + 1,
+        };
+        result.beforeCompanyAssociation = item.companyAssociation;
+        result.appliedCompanyRevision = next.companyAssociation.revision;
+      }
       if (!next.edits) throw new Error('Missing edits');
       next.edits.pending = null;
       next.recordVersion++;
@@ -435,6 +482,13 @@ export function createRoleUpdates(
               postingPut(table, job.pk, next, row.data),
               putJob(job, result, job.data),
               ...(await urlWrites(job.pk, item, next)),
+              ...companyMembershipWrites(
+                table,
+                job.pk,
+                next,
+                item.companyAssociation,
+                next.companyAssociation,
+              ),
             ],
           }),
           signal(),
@@ -577,8 +631,22 @@ export function createRoleUpdates(
       if (data.entry.undoneAt) return data.entry;
       if (found.item.edits?.pending || !data.entry.changes.length)
         throw postingError('CONFLICT');
-      const fields = effectiveFields(found.item);
+      const fields = effectiveUpdateFields(found.item);
       const next = structuredClone(found.item);
+      if (data.appliedCompanyRevision !== undefined) {
+        if (
+          found.item.companyAssociation?.revision !==
+          data.appliedCompanyRevision
+        )
+          throw postingError('CONFLICT');
+        next.companyAssociation = {
+          ...(data.beforeCompanyAssociation ?? {
+            company: null,
+            mode: 'automatic' as const,
+          }),
+          revision: data.appliedCompanyRevision + 1,
+        };
+      }
       for (const change of data.entry.changes) {
         if (
           !same(fields[change.field], change.after) ||
@@ -617,6 +685,13 @@ export function createRoleUpdates(
               postingPut(table, found.pk, next, found.previous),
               putJob(job, result, job.data),
               ...(await urlWrites(found.pk, found.item, next)),
+              ...companyMembershipWrites(
+                table,
+                found.pk,
+                next,
+                found.item.companyAssociation,
+                next.companyAssociation,
+              ),
             ],
           }),
           signal(),

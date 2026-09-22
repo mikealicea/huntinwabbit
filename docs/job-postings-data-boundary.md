@@ -69,3 +69,12 @@ Natural-language edits add persistent messages, change receipts, field revisions
 Their processor boundary and history lifecycle are described in
 [role update data boundary](role-updates-data-boundary.md). Deleting a posting also schedules cleanup
 of its update history and idempotency pointers; no history survives intentionally in active storage.
+
+## Companies and membership
+
+Owner-scoped company profiles and role memberships share the retained DynamoDB table. Deleting or
+reassigning a role atomically removes its old membership but does not erase the company. Empty company
+profiles persist; no company deletion or account-erasure flow is provided. Associations remain separate
+from posting facts and do not alter other application histories. See the
+[company barrel](../server/src/features/companies/companies.AGENTS.md) and
+[backfill runbook](runbooks/company-backfill.md) for identity and rollout constraints.

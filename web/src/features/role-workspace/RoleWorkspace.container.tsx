@@ -1,5 +1,6 @@
 'use client';
 import { useRouter } from 'next/navigation';
+import { ChangeCompanyContainer } from '@/features/company-workspace/company-workspace.index';
 import {
   postingApi,
   RequestFeedback,
@@ -75,6 +76,12 @@ export function RoleWorkspaceContainer({ roleId }: { roleId: string }) {
         role={role}
         roleName={getRoleTitle(role)}
         companyLabel={getCompanyLabel(role, [])}
+        companyControl={
+          <ChangeCompanyContainer
+            posting={query.currentData}
+            disabled={deletion.isLoading || mutation.isLoading}
+          />
+        }
         nextActionLabel={getNextAction(role, today).label}
         onApplicationChange={change}
         saving={mutation.isLoading || deletion.isLoading}
