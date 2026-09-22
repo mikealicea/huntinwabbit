@@ -14,7 +14,7 @@ extraction jobs; its worker calls this parser and stores the validated result.
    receive ordinary retrieval traffic, including the submitted path/query and the server's network
    address. No user-supplied browser cookies or credentials are supported. Agent-fetch is a local
    library, not a hosted parsing service.
-3. The backend sends extracted posting text, including its embedded links or contact details, to
+3. The backend sends extracted posting text and any retained user-pasted page text, including their embedded links or contact details, to
    Redpill with a fixed extraction prompt and schema. The Redpill key authenticates only that trusted
    API request. Resumes, application notes, interest, priority and Supabase credentials are not inputs.
 4. Schema-validated job facts return to the caller. This parsing operation does not persist URLs, raw pages,
@@ -82,3 +82,24 @@ application history. Candidate website paths are excluded. Matching adds no seco
 This expands provider input to include saved company identity information; existing provider retention
 limitations still apply. Manual selection and existing-role backfill use no model.
 The [company barrel](../server/src/features/companies/companies.AGENTS.md) owns matching behavior.
+
+## Retained pasted webpage text
+
+Capture and saved-role refresh can supply copied visible webpage text. The backend still attempts
+retrieval, then sends labeled fetched and pasted sources in one existing Redpill completion. Pasted
+facts take precedence by extraction instruction; usable fetched facts can fill gaps. Page navigation
+and embedded instructions are untrusted input. No new processor or browser-cookie forwarding is added.
+Pastes can contain personal content present on the copied page; that content crosses the same provider
+boundary. Existing provider-retention limitations still apply.
+
+The parser itself retains nothing. The saved-postings feature retains the latest paste until explicitly
+replaced, removed or the role is deleted; ordinary refresh reuses it. Raw fetched text remains transient.
+Public provenance distinguishes pasted sources and safe fetch failures, and a failed retrieval has no
+fetch timestamp. A schema-valid merged result does not prove factual agreement or complete fidelity.
+
+The preparatory web-contract commit can ship on its own with the existing UI. Release those compatible
+web response readers before the API and extraction/recovery workers emit the new
+provenance or null fetch timestamp; enable capture and source-edit controls after that backend release.
+Old request shapes and stored records remain supported without backfill. Rollback readers must retain
+support for the new response shapes once such facts exist. Do not drop saved sources or facts to make
+an older release readable. Deployment and paid live inference checks are separate authorized actions.

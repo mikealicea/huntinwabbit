@@ -1,6 +1,7 @@
 import { parsingError } from './job-parsing.errors.ts';
 import {
   type ExtractPosting,
+  type FetchedPosting,
   type FetchPosting,
   type ParsePosting,
   type ParseResponse,
@@ -12,19 +13,26 @@ export function createParsePosting(dependencies: {
   fetchPosting: FetchPosting;
   extractPosting: ExtractPosting;
 }): ParsePosting {
-  return async (input, signal, companyContext) => {
+  return async (input, signal, companyContext, sourceText) => {
     const normalizedUrl = normalizeJobUrl(input);
     signal.throwIfAborted();
-    const fetched = await dependencies.fetchPosting(normalizedUrl, signal);
+    let fetched: FetchedPosting | undefined;
+    try {
+      fetched = await dependencies.fetchPosting(normalizedUrl, signal);
+    } catch (cause) {
+      signal.throwIfAborted();
+      if (!sourceText?.trim()) throw cause;
+    }
     signal.throwIfAborted();
     const candidates = await companyContext?.candidates(
-      fetched.content,
+      [sourceText, fetched?.content].filter(Boolean).join('\n'),
       signal,
     );
     const extraction = await dependencies.extractPosting(
-      fetched.content,
+      fetched?.content ?? '',
       signal,
       candidates,
+      sourceText,
     );
     signal.throwIfAborted();
     if (extraction.pageType === 'blocked') throw parsingError('SOURCE_BLOCKED');
@@ -45,7 +53,26 @@ export function createParsePosting(dependencies: {
     if (!job.compensation.length) warnings.push('MISSING_COMPENSATION');
     return parseResponseSchema.parse({
       schemaVersion: 1,
-      source: { normalizedUrl, fetchedAt: fetched.fetchedAt },
+      source: {
+        normalizedUrl,
+        fetchedAt: fetched?.fetchedAt ?? null,
+        ...(sourceText?.trim()
+          ? {
+              extractedAt: new Date().toISOString(),
+              inputs: [
+                ...(fetched && extraction.fetchedPageUsable !== false
+                  ? ['webpage']
+                  : []),
+                'pasted-text',
+              ],
+              ...(!fetched
+                ? { fetchWarning: 'FETCH_UNAVAILABLE' }
+                : extraction.fetchedPageUsable === false
+                  ? { fetchWarning: 'FETCHED_PAGE_UNUSABLE' }
+                  : {}),
+            }
+          : {}),
+      },
       job,
       warnings,
     });

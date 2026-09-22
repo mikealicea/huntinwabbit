@@ -12,6 +12,7 @@ export function PostingActions({
   deleting,
   deleteDisabled,
   onExtract,
+  onManageSource,
   onDelete,
   compact = false,
 }: {
@@ -22,6 +23,7 @@ export function PostingActions({
   deleting: boolean;
   deleteDisabled: boolean;
   onExtract?: () => void;
+  onManageSource?: () => void;
   onDelete?: (version: number) => Promise<DeleteOutcome>;
 }) {
   const dropdown = useRef<HTMLDetailsElement>(null);
@@ -115,6 +117,21 @@ export function PostingActions({
                       : role.posting
                         ? 'Refresh posting'
                         : 'Extract posting details'}
+              </button>
+            </li>
+          )}
+          {onManageSource && (
+            <li>
+              <button
+                type="button"
+                className="min-h-11"
+                disabled={deleting}
+                onClick={() => {
+                  closeDropdown();
+                  onManageSource();
+                }}
+              >
+                Manage pasted text
               </button>
             </li>
           )}

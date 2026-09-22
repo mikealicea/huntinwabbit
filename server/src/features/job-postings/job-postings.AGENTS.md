@@ -179,3 +179,29 @@ Undo containing a notes change is refused as a whole. Comments are never include
 Ship the API and extraction/recovery workers together before enabling the notes frontend. Follow the
 [company rollout](../../../../docs/runbooks/company-backfill.md) when also introducing associations. No new infrastructure
 or processor is introduced; packaging and deployed IAM verification remain separate from local tests.
+
+## Retained posting source
+
+[Source operations](job-postings.source.ts) retain the latest optional pasted page text in a separate
+owner-scoped table row, avoiding competition with generated facts for the posting record byte budget.
+The source is bound to the posting ID, record key, normalized URL and a revision. The authenticated
+source read returns text on demand; ordinary posting list/detail responses exclude it. Existing
+records have no source row and need no migration.
+
+Save persists text with the posting transaction. Explicit source replacement/removal and its new
+extraction generation also commit together, incrementing the application version so stale source edits
+and deletion reviews conflict. Input omission reuses retained text; URL mismatches require replacement
+or removal. Parsing-disabled source changes remain durable without publishing inference work.
+Pending work cannot accept competing source changes. Generation jobs pin a source revision; workers
+validate it before parsing and retain the usual claim and result fencing.
+
+Content-free operation receipts retain input hashes under a distinct JOB prefix, until role deletion.
+They recover exact submissions after uncertain acknowledgements, reject changed input under a reused
+ID, and never trigger inference. The worker skips receipt inserts; existing durable cleanup removes
+receipts. Raw source text is never copied into historical jobs. Removal and role deletion erase the
+live source row transactionally; table backups retain their existing lifecycle.
+
+[Source tests](job-postings.source.test.ts) exercise source isolation, duplicate saves, replay, uncertain
+writes, replacement/removal, disabled parsing, version and URL conflicts, worker revision fences,
+authentication, payload bounds and deletion cleanup. Existing lifecycle tests continue to cover
+concurrent tracking updates, uncertain claims and late results.

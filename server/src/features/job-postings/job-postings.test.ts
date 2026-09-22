@@ -277,7 +277,7 @@ describe('saved job postings HTTP contract', () => {
       ).status,
     ).toBe(201);
     expect(
-      (await save('example.test', 'alice', { padding: 'x'.repeat(270_000) }))
+      (await save('example.test', 'alice', { padding: 'x'.repeat(1_050_000) }))
         .status,
     ).toBe(413);
     expect(

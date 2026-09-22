@@ -1,5 +1,6 @@
 'use client';
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { ChangeCompanyContainer } from '@/features/company-workspace/company-workspace.index';
 import {
   postingApi,
@@ -21,10 +22,12 @@ import { RoleNotesContainer } from './RoleNotes.container';
 import { RoleNotFound } from './RoleNotFound.component';
 import { RoleStatus } from './RoleStatus.component';
 import { RoleWorkspace } from './RoleWorkspace.component';
+import { SourceTextContainer } from './SourceText.container';
 import { UnavailableSection } from './UnavailableSection.component';
 import { UpdateRoleContainer } from './UpdateRole.container';
 export function RoleWorkspaceContainer({ roleId }: { roleId: string }) {
   const router = useRouter();
+  const [sourceOpen, setSourceOpen] = useState(false);
   const [remove, deletion] = useDeletePostingMutation();
   const cached = postingApi.endpoints.posting.useQueryState(roleId);
   const pending = ['queued', 'processing'].includes(
@@ -67,6 +70,18 @@ export function RoleWorkspaceContainer({ roleId }: { roleId: string }) {
     <RoleWorkspace
       key={role.id}
       role={role}
+      onManageSource={() => setSourceOpen(true)}
+      sourceEditor={
+        <SourceTextContainer
+          key={role.id}
+          posting={query.currentData}
+          open={sourceOpen}
+          onClose={() => setSourceOpen(false)}
+          disabled={
+            deletion.isLoading || mutation.isLoading || extraction.isLoading
+          }
+        />
+      }
       status={
         <RoleStatus
           role={role}

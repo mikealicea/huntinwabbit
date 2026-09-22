@@ -47,3 +47,10 @@ Notes scenarios use the isolated API fixture to verify distinct persisted commen
 editing, Cmd+Enter submission, plain Enter newlines, permanent deletion, focus recovery and reloads
 in desktop/mobile layouts and both themes.
 Comment screenshots are review artifacts; no real notes or provider calls enter these tests.
+
+
+Pasted-source scenarios cover initially collapsed capture rows, the attached check without submission,
+folding on row focus changes, multi-link save, retained source editing/removal and reload, native dialog
+focus restoration, and desktop/mobile layouts in both themes. Screenshots show expanded and collapsed
+editors and the saved-role dialog. The fake API retains fictional pasted sources and simulates extraction;
+it does not establish model accuracy or real posting retrieval.

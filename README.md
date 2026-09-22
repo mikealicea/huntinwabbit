@@ -52,6 +52,9 @@ Adding opportunities should take almost no effort, even when collecting many at 
 
 - Paste a job-posting link into an individual field.
 - Optionally choose an interest level beside that link.
+- Expand Paste page text to add copied webpage text when a link may be inaccessible. The green check
+  folds the editor without saving; Save to Collected submits all rows. Retained pasted text takes
+  priority during extraction and can be replaced or removed from the saved role.
 - When the last link field is filled, another empty row appears with its own interest selector.
 - Save the entered roles to Collected; interest can always be added or changed later.
 

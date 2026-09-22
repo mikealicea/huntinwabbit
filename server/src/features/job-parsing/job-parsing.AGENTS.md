@@ -58,8 +58,8 @@ provider stops computing. A lost response has no durable recovery; an explicit c
 incur another charge. No user content or per-user result survives intentionally after a request.
 
 [Errors](job-parsing.errors.ts) own safe status/code/message mappings. Malformed or incomplete model
-output is a provider failure, never a fabricated job. Oversize sources fail instead of being silently
-truncated. The shared middleware maps malformed JSON and oversized bodies without exposing them;
+output is a provider failure, never a fabricated job. Oversize sources are never silently truncated; oversize fetched content may fall back to supplied
+pasted text. The shared middleware maps malformed JSON and oversized bodies without exposing them;
 existing unrelated errors retain their previous envelope. Authentication runs before body parsing,
 and all protected responses prohibit caching.
 
@@ -111,3 +111,21 @@ selection returns through the internal callback, outside the public parse-respon
 matching metadata is ignored without discarding valid posting facts. The synchronous parse endpoint
 has no company context. No company data enters posting fetch requests. See the
 [company barrel](../companies/companies.AGENTS.md) for ranking, persistence and correction semantics.
+
+## Combined fetched and pasted sources
+
+Durable callers may pass retained page text as a second internal source; the synchronous public
+URL-only request remains unchanged. Fetching is still attempted within the existing budget. A fetch
+failure, including oversize retrieval, can fall back to pasted text unless the caller aborted.
+The extractor receives independently bounded, separately labeled untrusted sources in one completion.
+Its prompt prefers pasted facts on conflict, uses same-role fetched facts to fill gaps, excludes page
+clutter, and avoids duplicating overlapping description passages. A blocked/expired/unrelated fetched
+page does not override a usable pasted posting. These are extraction instructions, not fidelity guarantees.
+
+The internal model response validates fetched-page usability. Public optional provenance records
+the supplied paste, fetched-page usability and safe fetch warnings; pasted-only results allow a null fetch timestamp
+and carry an extraction timestamp. Company shortlisting uses the available text from both sources.
+The parser remains stateless; [saved postings](../job-postings/job-postings.AGENTS.md) own raw pasted
+text retention, explicit replacements and deletion. No fetched page archive or second model call is
+introduced. [Source tests](job-parsing.source.test.ts) cover fallback, source separation, provenance,
+cancellation and prompt boundaries without contacting providers.

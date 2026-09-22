@@ -27,6 +27,7 @@ import { jobPostingsTable } from './job-postings.config.ts';
 import { type DynamoTransport, readRecord } from './job-postings.dynamodb.ts';
 import { postingPut, readRow } from './job-postings.operations.ts';
 import type { SavedPosting } from './job-postings.schemas.ts';
+import { readSource } from './job-postings.source.ts';
 import { effectiveFields } from './job-postings.updates.logic.ts';
 import { createRoleUpdateParser } from './job-postings.updates.redpill.ts';
 import type { ParseUpdates } from './job-postings.updates.schemas.ts';
@@ -37,6 +38,7 @@ const jobSchema = z.object({
   sk: z.string().startsWith('JOB#'),
   recordKey: z.string(),
   generation: z.uuid(),
+  sourceRevision: z.uuid().optional(),
   status: z.enum(['queued', 'processing', 'complete', 'failed']),
   dueAt: z.number().optional(),
   dueGroup: z.literal('PENDING').optional(),
@@ -164,7 +166,8 @@ export function createExtractionWorker(
   }
   return {
     async run(pk: string, sk: string) {
-      if (sk.startsWith('JOB#UPDATE-ID#')) return;
+      if (sk.startsWith('JOB#UPDATE-ID#') || sk.startsWith('JOB#SOURCE-ID#'))
+        return;
       if (sk.startsWith('JOB#UPDATE#')) return updates.run(pk, sk);
       const value = await readRow(
         table,
@@ -201,9 +204,26 @@ export function createExtractionWorker(
           posting.extraction.status !== 'processing'
         )
           return;
+        const parseSignal = AbortSignal.timeout(60_000);
+        const source = job.sourceRevision
+          ? await readSource(
+              table,
+              send,
+              pk,
+              posting,
+              AbortSignal.any([parseSignal, AbortSignal.timeout(10_000)]),
+            )
+          : null;
+        if (
+          job.sourceRevision &&
+          (!source ||
+            source.revision !== job.sourceRevision ||
+            source.sourceUrl !== posting.sourceUrl)
+        )
+          throw new Error('Posting source changed');
         result = await parse(
           posting.sourceUrl,
-          AbortSignal.timeout(60_000),
+          parseSignal,
           companies && posting.companyAssociation?.mode !== 'manual'
             ? {
                 candidates: async (text, signal) =>
@@ -213,6 +233,7 @@ export function createExtractionWorker(
                 },
               }
             : undefined,
+          source?.text,
         );
       } catch (cause) {
         await transition(

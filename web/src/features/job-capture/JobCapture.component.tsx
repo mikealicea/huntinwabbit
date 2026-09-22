@@ -1,4 +1,5 @@
-import type { FormEvent, Ref } from 'react';
+import Link from 'next/link';
+import { type FormEvent, type Ref, useRef } from 'react';
 import {
   INTEREST_LABELS,
   INTERESTS,
@@ -8,6 +9,10 @@ import { LoadingPulse } from '@/shared/shared.index';
 import type { CaptureRow } from './job-capture.validation';
 export interface JobCaptureProps {
   saving?: boolean;
+  expandedRow?: number | null;
+  onExpandedRowChange?: (id: number | null) => void;
+  onSourceTextChange?: (id: number, text: string) => void;
+  registerText?: (id: number, element: HTMLTextAreaElement | null) => void;
   isOpen: boolean;
   rows: CaptureRow[];
   errors: Record<number, string>;
@@ -23,6 +28,10 @@ export interface JobCaptureProps {
 }
 export function JobCapture({
   saving = false,
+  expandedRow = null,
+  onExpandedRowChange,
+  onSourceTextChange,
+  registerText,
   isOpen,
   rows,
   errors,
@@ -36,6 +45,7 @@ export function JobCapture({
   onUrlChange,
   onInterestChange,
 }: JobCaptureProps) {
+  const disclosures = useRef(new Map<number, HTMLButtonElement>());
   return (
     <section aria-label="Add job links" className="mb-8">
       <button
@@ -69,6 +79,10 @@ export function JobCapture({
             {rows.map((row, index) => (
               <div
                 key={row.id}
+                onFocusCapture={() => {
+                  if (expandedRow !== null && expandedRow !== row.id)
+                    onExpandedRowChange?.(null);
+                }}
                 className="grid items-start gap-3 sm:grid-cols-[minmax(0,1fr)_220px]"
               >
                 <div className="fieldset p-0">
@@ -129,6 +143,111 @@ export function JobCapture({
                       </option>
                     ))}
                   </select>
+                </div>
+                <div className="sm:col-span-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={saving}
+                      ref={(element) => {
+                        if (element) disclosures.current.set(row.id, element);
+                        else disclosures.current.delete(row.id);
+                      }}
+                      className="btn btn-ghost btn-sm min-h-11"
+                      aria-expanded={expandedRow === row.id}
+                      aria-controls={`${id}-paste-${row.id}`}
+                      aria-label={`${row.sourceText?.trim() ? 'Edit' : 'Paste'} page text for job link ${index + 1}`}
+                      onClick={() =>
+                        onExpandedRowChange?.(
+                          expandedRow === row.id ? null : row.id,
+                        )
+                      }
+                    >
+                      <span aria-hidden="true">
+                        {expandedRow === row.id ? '▾' : '▸'}
+                      </span>
+                      {row.sourceText?.trim()
+                        ? 'Edit page text'
+                        : 'Paste page text'}
+                    </button>
+                    {row.sourceText?.trim() && (
+                      <span className="text-sm text-base-content/75">
+                        Page text added
+                      </span>
+                    )}
+                  </div>
+                  <div
+                    id={`${id}-paste-${row.id}`}
+                    hidden={expandedRow !== row.id}
+                  >
+                    <label
+                      htmlFor={`${id}-text-${row.id}`}
+                      className="mb-2 block text-sm font-medium"
+                    >
+                      Page text for job link {index + 1}
+                    </label>
+                    <div className="overflow-hidden rounded-box border border-base-300 focus-within:outline-2 focus-within:outline-primary">
+                      <textarea
+                        id={`${id}-text-${row.id}`}
+                        ref={(element) => registerText?.(row.id, element)}
+                        className="block min-h-40 max-h-80 w-full resize-y bg-base-100 p-3 text-base focus:outline-none"
+                        disabled={saving}
+                        value={row.sourceText ?? ''}
+                        aria-describedby={`${id}-paste-help-${row.id}${errors[row.id] ? ` ${id}-error-${row.id}` : ''}`}
+                        onChange={(event) =>
+                          onSourceTextChange?.(row.id, event.target.value)
+                        }
+                      />
+                      <div className="flex items-center justify-between gap-3 border-t border-base-300 bg-base-200 px-3 py-1">
+                        <span className="text-xs text-base-content/75">
+                          Draft · saved with your link
+                        </span>
+                        <button
+                          type="button"
+                          className="btn btn-success btn-square min-h-11 min-w-11"
+                          disabled={saving}
+                          aria-label={`Done with pasted text for job link ${index + 1}`}
+                          onClick={() => {
+                            onExpandedRowChange?.(null);
+                            disclosures.current.get(row.id)?.focus();
+                          }}
+                        >
+                          <svg
+                            aria-hidden="true"
+                            width="22"
+                            height="22"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.5"
+                          >
+                            <path d="m5 12 4 4L19 6" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                    <p
+                      id={`${id}-paste-help-${row.id}`}
+                      className="mt-2 text-sm text-base-content/75"
+                    >
+                      Copy the visible webpage text here. We’ll also try the
+                      link; your pasted text takes priority. Up to 100,000
+                      characters (256 KiB). The check only folds this editor.
+                    </p>
+                  </div>
+                  {row.existingId && (
+                    <p role="status" className="mt-2 text-sm">
+                      This link is already saved. Your pasted draft is still
+                      here.{' '}
+                      <Link
+                        className="link"
+                        href={`/app/roles/${row.existingId}`}
+                      >
+                        Open saved role
+                      </Link>{' '}
+                      to manage its page text.
+                    </p>
+                  )}
                 </div>
               </div>
             ))}

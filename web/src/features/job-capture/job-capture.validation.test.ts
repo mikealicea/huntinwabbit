@@ -42,3 +42,22 @@ describe('capture validation', () => {
     ).toBe('Paste at least one job link.');
   });
 });
+
+it('requires a URL for pasted text and rejects character and UTF-8 overflows', () => {
+  expect(
+    validateCapture([
+      { id: 0, url: '', interest: 'not-set', sourceText: 'Posting' },
+    ]).errors[0],
+  ).toContain('Enter a job link');
+  for (const text of ['x'.repeat(100_001), '漢'.repeat(90_000)])
+    expect(
+      validateCapture([
+        {
+          id: 0,
+          url: 'example.test/job',
+          interest: 'not-set',
+          sourceText: text,
+        },
+      ]).errors[0],
+    ).toContain('Shorten');
+});

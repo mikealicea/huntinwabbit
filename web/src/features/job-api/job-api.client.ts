@@ -20,6 +20,7 @@ import {
   type RoleNote,
   type SavedPosting,
   saveResponseSchema,
+  sourceTextResponseSchema,
   type UpdateEntry,
   type UpdateMessage,
   updateHistorySchema,
@@ -55,25 +56,27 @@ const validatedQuery: BaseQueryFn<
           },
         };
   const schema =
-    api.endpoint === 'roleNotes'
-      ? notesPageSchema
-      : ['createNote', 'editNote'].includes(api.endpoint)
-        ? noteResultSchema
-        : api.endpoint === 'company'
-          ? companyResponseSchema
-          : api.endpoint === 'companies'
-            ? companiesResponseSchema
-            : api.endpoint === 'companyRoles'
-              ? listResponseSchema
-              : api.endpoint === 'roleUpdates'
-                ? updateHistorySchema
-                : ['sendRoleUpdate', 'undoRoleUpdate'].includes(api.endpoint)
-                  ? updateResultSchema
-                  : api.endpoint === 'postings'
-                    ? listResponseSchema
-                    : api.endpoint === 'savePosting'
-                      ? saveResponseSchema
-                      : itemResponseSchema;
+    api.endpoint === 'sourceText'
+      ? sourceTextResponseSchema
+      : api.endpoint === 'roleNotes'
+        ? notesPageSchema
+        : ['createNote', 'editNote'].includes(api.endpoint)
+          ? noteResultSchema
+          : api.endpoint === 'company'
+            ? companyResponseSchema
+            : api.endpoint === 'companies'
+              ? companiesResponseSchema
+              : api.endpoint === 'companyRoles'
+                ? listResponseSchema
+                : api.endpoint === 'roleUpdates'
+                  ? updateHistorySchema
+                  : ['sendRoleUpdate', 'undoRoleUpdate'].includes(api.endpoint)
+                    ? updateResultSchema
+                    : api.endpoint === 'postings'
+                      ? listResponseSchema
+                      : api.endpoint === 'savePosting'
+                        ? saveResponseSchema
+                        : itemResponseSchema;
   const parsed = schema.safeParse(result.data);
   return parsed.success
     ? { data: parsed.data }
@@ -89,6 +92,15 @@ export const postingApi = createApi({
   baseQuery: validatedQuery,
   tagTypes: ['Posting', 'Updates', 'Notes'],
   endpoints: (build) => ({
+    sourceText: build.query<
+      ReturnType<typeof sourceTextResponseSchema.parse>,
+      string
+    >({
+      query: (id) => `/${id}/source-text`,
+      transformResponse: (value: unknown) =>
+        sourceTextResponseSchema.parse(value),
+      providesTags: (_result, _error, id) => [{ type: 'Posting', id }],
+    }),
     company: build.query<Company, string>({
       query: (id) => `/companies/${id}`,
       transformResponse: (value: unknown) =>
@@ -288,6 +300,7 @@ export const postingApi = createApi({
         url: string;
         application: { interest: Application['interest'] };
         extract: true;
+        sourceText?: string;
       }
     >({
       query: (body) => ({ url: '', method: 'POST', body }),
@@ -355,7 +368,13 @@ export const postingApi = createApi({
     }),
     extractPosting: build.mutation<
       SavedPosting,
-      { id: string; expectedGeneration: string | null }
+      {
+        id: string;
+        expectedGeneration: string | null;
+        sourceText?: string | null;
+        expectedApplicationVersion?: number;
+        operationId?: string;
+      }
     >({
       query: ({ id, ...body }) => ({
         url: `/${id}/extraction`,
@@ -381,6 +400,7 @@ export const postingApi = createApi({
   }),
 });
 export const {
+  useSourceTextQuery,
   useRoleNotesInfiniteQuery,
   useCreateNoteMutation,
   useEditNoteMutation,

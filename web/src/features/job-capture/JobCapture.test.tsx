@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mockPostingApi } from '@/features/job-api/job-api.test-support';
@@ -111,4 +111,150 @@ it('retains failed rows and does not duplicate successful rows on retry', async 
     await screen.findByText(/0 saved. 1 already saved/),
   ).toBeInTheDocument();
   expect(api.records.size).toBe(1);
+});
+
+it('folds pasted drafts with the check and on row changes without saving, then submits them together', async () => {
+  const api = mockPostingApi([]);
+  const user = userEvent.setup();
+  render(
+    <StoreProvider>
+      <SearchBoardContainer />
+    </StoreProvider>,
+  );
+  await user.click(screen.getByRole('button', { name: 'Add job links' }));
+  await user.type(
+    screen.getByRole('textbox', { name: 'Job link 1' }),
+    'example.test/one',
+  );
+  expect(
+    screen.queryByRole('textbox', { name: 'Page text for job link 1' }),
+  ).not.toBeInTheDocument();
+  await user.click(
+    screen.getByRole('button', { name: 'Paste page text for job link 1' }),
+  );
+  await user.type(
+    screen.getByRole('textbox', { name: 'Page text for job link 1' }),
+    'First fictional posting',
+  );
+  await user.click(
+    screen.getByRole('button', {
+      name: 'Done with pasted text for job link 1',
+    }),
+  );
+  expect(
+    screen.getByRole('button', { name: 'Edit page text for job link 1' }),
+  ).toHaveFocus();
+  expect(
+    screen.queryByRole('textbox', { name: 'Page text for job link 1' }),
+  ).not.toBeInTheDocument();
+  expect(api.records.size).toBe(0);
+  await user.click(
+    screen.getByRole('button', { name: 'Edit page text for job link 1' }),
+  );
+  expect(
+    screen.getByRole('textbox', { name: 'Page text for job link 1' }),
+  ).toHaveValue('First fictional posting');
+  await user.type(
+    screen.getByRole('textbox', { name: 'Job link 2' }),
+    'example.test/two',
+  );
+  expect(
+    screen.queryByRole('textbox', { name: 'Page text for job link 1' }),
+  ).not.toBeInTheDocument();
+  await user.click(
+    screen.getByRole('button', { name: 'Paste page text for job link 2' }),
+  );
+  await user.type(
+    screen.getByRole('textbox', { name: 'Page text for job link 2' }),
+    'Second fictional posting',
+  );
+  await user.click(screen.getByRole('button', { name: 'Save to Collected' }));
+  await screen.findByText(/2 saved/);
+  expect([...api.sources.values()].map((source) => source.text)).toEqual([
+    'First fictional posting',
+    'Second fictional posting',
+  ]);
+});
+
+it('retains pasted text for duplicate links and offers the existing role', async () => {
+  const api = mockPostingApi([]);
+  const user = userEvent.setup();
+  render(
+    <StoreProvider>
+      <SearchBoardContainer />
+    </StoreProvider>,
+  );
+  await user.click(screen.getByRole('button', { name: 'Add job links' }));
+  await user.type(
+    screen.getByRole('textbox', { name: 'Job link 1' }),
+    'example.test/one',
+  );
+  await user.click(screen.getByRole('button', { name: 'Save to Collected' }));
+  await screen.findByText(/1 saved/);
+  await user.type(
+    screen.getByRole('textbox', { name: 'Job link 1' }),
+    'example.test/one',
+  );
+  await user.click(
+    screen.getByRole('button', { name: 'Paste page text for job link 1' }),
+  );
+  await user.type(
+    screen.getByRole('textbox', { name: 'Page text for job link 1' }),
+    'Keep this draft',
+  );
+  await user.click(screen.getByRole('button', { name: 'Save to Collected' }));
+  expect(
+    await screen.findByRole('link', { name: 'Open saved role' }),
+  ).toHaveAttribute('href', `/app/roles/${[...api.records.keys()][0]}`);
+  await user.click(
+    screen.getByRole('button', { name: 'Edit page text for job link 1' }),
+  );
+  expect(
+    screen.getByRole('textbox', { name: 'Page text for job link 1' }),
+  ).toHaveValue('Keep this draft');
+  expect(api.sources.size).toBe(0);
+});
+
+it('reopens an oversized pasted draft on submit and keeps failed-save text editable', async () => {
+  const api = mockPostingApi([]);
+  const user = userEvent.setup();
+  render(
+    <StoreProvider>
+      <SearchBoardContainer />
+    </StoreProvider>,
+  );
+  await user.click(screen.getByRole('button', { name: 'Add job links' }));
+  await user.type(
+    screen.getByRole('textbox', { name: 'Job link 1' }),
+    'fail.example/job',
+  );
+  await user.click(
+    screen.getByRole('button', { name: 'Paste page text for job link 1' }),
+  );
+  fireEvent.change(
+    screen.getByRole('textbox', { name: 'Page text for job link 1' }),
+    { target: { value: 'x'.repeat(100_001) } },
+  );
+  await user.click(
+    screen.getByRole('button', {
+      name: 'Done with pasted text for job link 1',
+    }),
+  );
+  await user.click(screen.getByRole('button', { name: 'Save to Collected' }));
+  expect(
+    screen.getByRole('textbox', { name: 'Page text for job link 1' }),
+  ).toHaveFocus();
+  expect(api.records.size).toBe(0);
+  fireEvent.change(
+    screen.getByRole('textbox', { name: 'Page text for job link 1' }),
+    { target: { value: 'Keep on failure' } },
+  );
+  await user.click(screen.getByRole('button', { name: 'Save to Collected' }));
+  await screen.findByText(/Some links need another try/);
+  await user.click(
+    screen.getByRole('button', { name: 'Edit page text for job link 1' }),
+  );
+  expect(
+    screen.getByRole('textbox', { name: 'Page text for job link 1' }),
+  ).toHaveValue('Keep on failure');
 });

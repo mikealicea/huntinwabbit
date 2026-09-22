@@ -70,3 +70,12 @@ Comments use allowlisted notes routes and independently paginated Notes cache ta
 bodies and revisions on both sides of the bridge; delete requires an empty 204. Successful or uncertain
 mutations invalidate notes and posting caches so role deletion reviews current application versions.
 Create IDs are retained by the notes container for explicit retry; the backend prevents duplication.
+
+
+Retained page text uses an owner-scoped source read and optional input on save/extraction. The source
+query shares posting invalidation but raw text is not embedded in list/detail records. Relevant write
+bodies have a larger bounded bridge allowance for JSON escaping; unrelated limits are unchanged.
+Source-changing extraction carries a reviewed application version and operation ID; unchanged retries
+retain their original inputs. Nullable fetch timestamps and optional provenance support pasted-only
+results while legacy responses remain readable. See the [parsing boundary](../../../../docs/job-parsing-data-boundary.md)
+for coordinated rollout and rollback requirements.
