@@ -3,6 +3,10 @@ import {
   analysisRequestSchema,
   analysisResponseSchema,
 } from './job-api.analysis.contracts';
+import {
+  guidanceRequestSchema,
+  guidanceResponseSchema,
+} from './job-api.guidance.contracts';
 import 'server-only';
 import { z } from 'zod';
 import {
@@ -95,6 +99,7 @@ export function createApiBridge(deps: {
         );
       const url = new URL(request.url);
       const suffix = url.pathname.slice('/api/job-postings'.length);
+      const isGuidance = suffix === '/source-guidance';
       const companyMatch =
         /^\/companies(?:\/([0-9a-f-]{36})(\/roles|\/analysis|\/notes(?:\/([0-9a-f-]{36}))?)?)?$/.exec(
           suffix,
@@ -108,6 +113,7 @@ export function createApiBridge(deps: {
       if (
         suffix &&
         !companyMatch &&
+        !isGuidance &&
         (!match || !z.uuid().safeParse(match[1]).success)
       )
         return failure(404, 'NOT_FOUND');
@@ -131,7 +137,10 @@ export function createApiBridge(deps: {
                 : undefined
         : undefined;
       if (isNotes && !noteAction) return failure(405, 'METHOD_NOT_ALLOWED');
+      if (isGuidance && request.method !== 'POST')
+        return failure(405, 'METHOD_NOT_ALLOWED');
       const action =
+        (isGuidance ? 'guidance' : undefined) ??
         (request.method === 'GET' && match?.[2] === '/source-text'
           ? 'sourceText'
           : undefined) ??
@@ -206,6 +215,7 @@ export function createApiBridge(deps: {
         } else if (url.search) return failure(400, 'INVALID_REQUEST');
         if (
           [
+            'guidance',
             'requestAnalysis',
             'save',
             'update',
@@ -228,27 +238,29 @@ export function createApiBridge(deps: {
             ['save', 'extract'].includes(action) ? 1024 * 1024 : 256 * 1024,
           );
           const schema =
-            action === 'requestAnalysis'
-              ? analysisRequestSchema
-              : action === 'createNote'
-                ? createNoteSchema
-                : action === 'editNote'
-                  ? editNoteSchema
-                  : action === 'deleteNote'
-                    ? deleteNoteSchema
-                    : action === 'selectCompany'
-                      ? companySelectionSchema
-                      : action === 'message'
-                        ? updateMessageSchema
-                        : action === 'undo'
-                          ? z.strictObject({})
-                          : action === 'save'
-                            ? saveRequestSchema
-                            : action === 'update'
-                              ? updateRequestSchema
-                              : action === 'delete'
-                                ? deleteRequestSchema
-                                : extractionRequestSchema;
+            action === 'guidance'
+              ? guidanceRequestSchema
+              : action === 'requestAnalysis'
+                ? analysisRequestSchema
+                : action === 'createNote'
+                  ? createNoteSchema
+                  : action === 'editNote'
+                    ? editNoteSchema
+                    : action === 'deleteNote'
+                      ? deleteNoteSchema
+                      : action === 'selectCompany'
+                        ? companySelectionSchema
+                        : action === 'message'
+                          ? updateMessageSchema
+                          : action === 'undo'
+                            ? z.strictObject({})
+                            : action === 'save'
+                              ? saveRequestSchema
+                              : action === 'update'
+                                ? updateRequestSchema
+                                : action === 'delete'
+                                  ? deleteRequestSchema
+                                  : extractionRequestSchema;
           body = JSON.stringify(schema.parse(value));
         }
       } catch {
@@ -281,29 +293,31 @@ export function createApiBridge(deps: {
           ? new Response(null, { status: 204, headers })
           : failure(502, 'INVALID_RESPONSE');
       const schema =
-        action === 'sourceText'
-          ? sourceTextResponseSchema
-          : ['analysis', 'requestAnalysis'].includes(action)
-            ? analysisResponseSchema
-            : action === 'notes'
-              ? notesPageSchema
-              : ['createNote', 'editNote'].includes(action)
-                ? noteResultSchema
-                : action === 'company'
-                  ? companyResponseSchema
-                  : action === 'companies'
-                    ? companiesResponseSchema
-                    : action === 'companyRoles'
-                      ? listResponseSchema
-                      : action === 'history'
-                        ? updateHistorySchema
-                        : ['message', 'undo'].includes(action)
-                          ? updateResultSchema
-                          : action === 'list'
-                            ? listResponseSchema
-                            : action === 'save'
-                              ? saveResponseSchema
-                              : itemResponseSchema;
+        action === 'guidance'
+          ? guidanceResponseSchema
+          : action === 'sourceText'
+            ? sourceTextResponseSchema
+            : ['analysis', 'requestAnalysis'].includes(action)
+              ? analysisResponseSchema
+              : action === 'notes'
+                ? notesPageSchema
+                : ['createNote', 'editNote'].includes(action)
+                  ? noteResultSchema
+                  : action === 'company'
+                    ? companyResponseSchema
+                    : action === 'companies'
+                      ? companiesResponseSchema
+                      : action === 'companyRoles'
+                        ? listResponseSchema
+                        : action === 'history'
+                          ? updateHistorySchema
+                          : ['message', 'undo'].includes(action)
+                            ? updateResultSchema
+                            : action === 'list'
+                              ? listResponseSchema
+                              : action === 'save'
+                                ? saveResponseSchema
+                                : itemResponseSchema;
       const result = schema.parse(await boundedJson(response, 2 * 1024 * 1024));
       return Response.json(result, { status: response.status, headers });
     } catch {

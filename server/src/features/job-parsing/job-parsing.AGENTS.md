@@ -4,7 +4,7 @@
 
 Turn a public job-posting link into consistent, validated facts through an authenticated synchronous
 REST request. This feature does not save an opportunity, update the web board, persist posting
-content, or own background work. Each request is independent, including repeated URLs. Missing
+content, or own background work. Each extraction request is independent, including repeated URLs; the optional shared guidance observer retains only hostname access outcomes. Missing
 facts remain missing; extraction is not verification of an employer's claims.
 
 The [router](job-parsing.router.ts) owns the route and HTTP lifecycle. The executable request,
@@ -125,7 +125,17 @@ page does not override a usable pasted posting. These are extraction instruction
 The internal model response validates fetched-page usability. Public optional provenance records
 the supplied paste, fetched-page usability and safe fetch warnings; pasted-only results allow a null fetch timestamp
 and carry an extraction timestamp. Company shortlisting uses the available text from both sources.
-The parser remains stateless; [saved postings](../job-postings/job-postings.AGENTS.md) own raw pasted
+Posting content remains transient in the parser; [saved postings](../job-postings/job-postings.AGENTS.md) own raw pasted
 text retention, explicit replacements and deletion. No fetched page archive or second model call is
 introduced. [Source tests](job-parsing.source.test.ts) cover fallback, source separation, provenance,
 cancellation and prompt boundaries without contacting providers.
+
+## Shared access observations
+
+The service accepts an injected observer from [source guidance](../source-guidance/source-guidance.AGENTS.md).
+Both runtime entry points install it. Explicit fetch blocks are observed even when pasted fallback
+succeeds. Combined-source model output now requires an independent fetched-page classification,
+consistent with its usability flag; neither pasted-only success nor generic unusability establishes
+host access. A usable fetched posting clears learned guidance. Public parse responses are unchanged.
+Observation failures are bounded and cannot replace the extraction outcome. No additional model call
+or automatic paid retry is introduced. [Guidance tests](job-parsing.guidance.test.ts) cover the seam.

@@ -34,3 +34,21 @@ with pasted drafts stay editable and link to the existing role; capture never ov
 retained source or silently discards the new draft. The saved-role source editor owns replacements.
 The [validation helper](job-capture.validation.ts) owns browser limits; backend schemas enforce them
 again. Copied visible text is supported, with no rich-HTML import, upload or clipboard permission.
+
+## Automatic page-text suggestions
+
+The container derives a hostname with [validation](job-capture.validation.ts), debounces the active
+row for 300ms and reads shared guidance through the API cache. Only the hostname leaves the draft;
+paths, query strings and pasted text are not sent for lookup. RTK Query deduplicates host lookups and
+refreshes entries older than 60 seconds when subscribed again. No local persistent registry exists.
+
+A recommendation shows advisory copy and expands the focused row without moving keyboard focus.
+A shown hint remains in place on blur so the Save button cannot move during a pointer click.
+A late result for an unfocused row waits until that row is focused again.
+Manual expansion and validation errors still focus the text editor. Folding an editor suppresses
+automatic reopening until that row's hostname changes. Draft text survives all disclosure changes.
+Only one editor opens; stale responses cannot expand a different hostname/row or reopen the form.
+Failures leave ordinary capture usable. Saving text remains optional and URL fetching still runs.
+Backend [source guidance](../../../../server/src/features/source-guidance/source-guidance.AGENTS.md)
+owns seeds and learning; capture never submits observations or stores a second copy of server data.
+[Guidance tests](job-capture.guidance.test.tsx) exercise real stores with an injected HTTP boundary.

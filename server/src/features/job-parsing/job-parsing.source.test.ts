@@ -117,6 +117,7 @@ describe('combined source extraction', () => {
                   pageType: 'job',
                   job: exampleJob(),
                   fetchedPageUsable: false,
+                  fetchedPageType: 'blocked',
                 }),
               },
             },
@@ -175,5 +176,54 @@ it.each([undefined, 'yes'])(
     await expect(
       extract('Fetched page', signal(), [], 'Pasted page'),
     ).rejects.toMatchObject({ code: 'INVALID_MODEL_OUTPUT' });
+  },
+);
+
+it.each([
+  ['job', true, true],
+  ['blocked', false, true],
+  ['expired', false, true],
+  ['not-job', false, true],
+  ['job', false, false],
+  ['blocked', true, false],
+  ['unknown', false, false],
+  [undefined, false, false],
+] as const)(
+  'validates the independent fetched classification %s with usability %s',
+  async (fetchedPageType, fetchedPageUsable, valid) => {
+    const extract = createRedpillExtractor('fictional-key', {
+      fetch: async () =>
+        Response.json({
+          choices: [
+            {
+              finish_reason: 'stop',
+              message: {
+                content: JSON.stringify({
+                  pageType: 'job',
+                  job: exampleJob(),
+                  fetchedPageType,
+                  fetchedPageUsable,
+                }),
+              },
+            },
+          ],
+        }),
+    });
+    const result = extract(
+      'Fictional fetched text',
+      signal(),
+      [],
+      'Fictional pasted posting',
+    );
+    if (valid)
+      await expect(result).resolves.toMatchObject({
+        pageType: 'job',
+        fetchedPageType,
+        fetchedPageUsable,
+      });
+    else
+      await expect(result).rejects.toMatchObject({
+        code: 'INVALID_MODEL_OUTPUT',
+      });
   },
 );

@@ -103,3 +103,10 @@ provenance or null fetch timestamp; enable capture and source-edit controls afte
 Old request shapes and stored records remain supported without backfill. Rollback readers must retain
 support for the new response shapes once such facts exist. Do not drop saved sources or facts to make
 an older release readable. Deployment and paid live inference checks are separate authorized actions.
+
+
+Shared [source guidance](../server/src/features/source-guidance/source-guidance.AGENTS.md) adds
+hostname-only access observations to both parser entry points. Combined-source model requests ask
+for an independent fetched-page classification in the same completion; no additional content or
+processor is added. Public parse responses are unchanged. Posting content remains transient here,
+while hostname metadata follows the [saved-data boundary](job-postings-data-boundary.md).

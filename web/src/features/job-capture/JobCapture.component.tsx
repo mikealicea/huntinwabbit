@@ -9,6 +9,8 @@ import { LoadingPulse } from '@/shared/shared.index';
 import type { CaptureRow } from './job-capture.validation';
 export interface JobCaptureProps {
   saving?: boolean;
+  recommendedRow?: number | null;
+  onRowFocus?: (id: number | null) => void;
   expandedRow?: number | null;
   onExpandedRowChange?: (id: number | null) => void;
   onSourceTextChange?: (id: number, text: string) => void;
@@ -28,6 +30,8 @@ export interface JobCaptureProps {
 }
 export function JobCapture({
   saving = false,
+  recommendedRow = null,
+  onRowFocus,
   expandedRow = null,
   onExpandedRowChange,
   onSourceTextChange,
@@ -79,7 +83,12 @@ export function JobCapture({
             {rows.map((row, index) => (
               <div
                 key={row.id}
+                onBlurCapture={(event) => {
+                  if (!event.currentTarget.contains(event.relatedTarget))
+                    onRowFocus?.(null);
+                }}
                 onFocusCapture={() => {
+                  onRowFocus?.(row.id);
                   if (expandedRow !== null && expandedRow !== row.id)
                     onExpandedRowChange?.(null);
                 }}
@@ -104,7 +113,14 @@ export function JobCapture({
                     value={row.url}
                     aria-invalid={Boolean(errors[row.id])}
                     aria-describedby={
-                      errors[row.id] ? `${id}-error-${row.id}` : undefined
+                      [
+                        errors[row.id] ? `${id}-error-${row.id}` : '',
+                        recommendedRow === row.id
+                          ? `${id}-guidance-${row.id}`
+                          : '',
+                      ]
+                        .filter(Boolean)
+                        .join(' ') || undefined
                     }
                     onChange={(event) =>
                       onUrlChange(row.id, event.target.value)
@@ -145,6 +161,16 @@ export function JobCapture({
                   </select>
                 </div>
                 <div className="sm:col-span-2">
+                  {recommendedRow === row.id && (
+                    <p
+                      id={`${id}-guidance-${row.id}`}
+                      role="status"
+                      className="mb-2 text-sm text-base-content/75"
+                    >
+                      This site may block scanning. Paste the full job
+                      description to help extract the details.
+                    </p>
+                  )}
                   <div className="flex flex-wrap items-center gap-2">
                     <button
                       type="button"

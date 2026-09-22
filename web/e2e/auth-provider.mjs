@@ -86,6 +86,14 @@ const server = createServer(async (request, response) => {
     url.pathname.startsWith('/companies')
   ) {
     if (!active) return error(401, 'unauthorized');
+    if (
+      url.pathname === '/job-postings/source-guidance' &&
+      request.method === 'POST'
+    )
+      return send(200, {
+        hostname: body.hostname,
+        recommendSourceText: body.hostname === 'indeed.com',
+      });
     const owner = active.account.id;
     if (!postings.has(owner))
       postings.set(

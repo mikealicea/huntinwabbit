@@ -64,3 +64,8 @@ They verify Markdown preview, keyboard submission, reload persistence, inline ed
 focus restoration, plus desktop columns and Notes-first mobile order in both themes. Company-comment
 analysis provenance and zero-role inference are tested through deterministic server/web contracts;
 browser fixtures do not establish deployed inference behavior.
+
+Source-guidance scenarios use a seeded Indeed response from the loopback fixture. They verify
+automatic disclosure without focus theft, keyboard navigation, manual dismissal, optional text save
+and desktop/mobile layouts in both themes. Screenshots are ignored review artifacts; fixture success
+does not establish real Indeed accessibility. Cross-user learning and recovery are server tests.

@@ -119,3 +119,19 @@ When enabled, company analysis processes these comments under the
 [company analysis boundary](company-analysis-data-boundary.md), including its snapshot cleanup and
 provider-retention limitations. Exact storage and mutation contracts belong to the
 [company barrel](../server/src/features/companies/companies.AGENTS.md).
+
+## Shared hostname guidance
+
+The [source-guidance feature](../server/src/features/source-guidance/source-guidance.AGENTS.md)
+retains normalized hostnames and minimal access-outcome ordering metadata in the existing encrypted,
+stage-specific DynamoDB table. These records are shared across this deployment's users, not across
+separate installations. They contain no user identity, posting URL path/query, job text or notes.
+They are independent of saved roles and survive role deletion. Successful fetched postings clear
+learned warnings but leave inactive metadata to fence delayed older observations. Records have no
+TTL; table backups retain their existing lifecycle. Indeed is a code-owned seed and is not cleared
+by scans. No new processor is introduced.
+
+Authenticated lookups accept one hostname in the request body and return only its recommendation;
+there is no list download or client write API. This reveals a site's shared recommendation, not who
+visited it or their roles. Only actual parser outcomes can update learned guidance. Advisory updates
+may be lost during storage outages and are not automatically replayed through paid extraction.
