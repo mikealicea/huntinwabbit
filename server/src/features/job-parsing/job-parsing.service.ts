@@ -1,3 +1,6 @@
+import { randomUUID } from 'node:crypto';
+import { AppError } from '../../shared/shared.errors.ts';
+import type { SourceObservation } from '../source-guidance/source-guidance.index.ts';
 import { parsingError } from './job-parsing.errors.ts';
 import {
   type ExtractPosting,
@@ -12,15 +15,32 @@ import { normalizeJobUrl } from './job-parsing.url.ts';
 export function createParsePosting(dependencies: {
   fetchPosting: FetchPosting;
   extractPosting: ExtractPosting;
+  observeSource?: (observation: SourceObservation) => Promise<void>;
 }): ParsePosting {
   return async (input, signal, companyContext, sourceText) => {
     const normalizedUrl = normalizeJobUrl(input);
     signal.throwIfAborted();
+    const order = `${Date.now()}#${randomUUID()}`;
+    async function observe(outcome: SourceObservation['outcome']) {
+      try {
+        await dependencies.observeSource?.({
+          hostname: new URL(normalizedUrl).hostname,
+          outcome,
+          order,
+        });
+      } catch {
+        console.warn(
+          JSON.stringify({ event: 'source_guidance.observation_failed' }),
+        );
+      }
+    }
     let fetched: FetchedPosting | undefined;
     try {
       fetched = await dependencies.fetchPosting(normalizedUrl, signal);
     } catch (cause) {
       signal.throwIfAborted();
+      if (cause instanceof AppError && cause.code === 'SOURCE_BLOCKED')
+        await observe('blocked');
       if (!sourceText?.trim()) throw cause;
     }
     signal.throwIfAborted();
@@ -35,6 +55,16 @@ export function createParsePosting(dependencies: {
       sourceText,
     );
     signal.throwIfAborted();
+    const fetchedType = sourceText?.trim()
+      ? extraction.fetchedPageType
+      : extraction.pageType;
+    if (
+      fetched &&
+      (fetchedType === 'blocked' ||
+        (fetchedType === 'job' &&
+          (extraction.job?.title || extraction.job?.description)))
+    )
+      await observe(fetchedType === 'blocked' ? 'blocked' : 'usable');
     if (extraction.pageType === 'blocked') throw parsingError('SOURCE_BLOCKED');
     if (extraction.pageType === 'expired') throw parsingError('SOURCE_EXPIRED');
     if (extraction.pageType === 'not-job') throw parsingError('NOT_A_JOB');

@@ -92,6 +92,7 @@ export type ParsedJob = z.infer<typeof jobSchema>;
 export type Extraction = z.infer<typeof extractionSchema> & {
   selectedCompanyId?: string;
   fetchedPageUsable?: boolean;
+  fetchedPageType?: 'job' | 'blocked' | 'expired' | 'not-job';
 };
 export interface CompanyCandidate {
   id: string;

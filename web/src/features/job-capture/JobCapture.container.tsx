@@ -1,10 +1,14 @@
 'use client';
 
 import { type FormEvent, useEffect, useId, useRef, useState } from 'react';
-import { useSavePostingMutation } from '@/features/job-api/job-api.index';
+import {
+  useSavePostingMutation,
+  useSourceGuidanceQuery,
+} from '@/features/job-api/job-api.index';
 import { JobCapture } from './JobCapture.component';
 import {
   type CaptureRow,
+  captureHostname,
   pageTextError,
   validateCapture,
 } from './job-capture.validation';
@@ -18,9 +22,56 @@ export function JobCaptureContainer() {
   ]);
   const [errors, setErrors] = useState<Record<number, string>>({});
   const [expandedRow, setExpandedRow] = useState<number | null>(null);
+  const [activeRow, setActiveRow] = useState<number | null>(null);
+  const [focusedRow, setFocusedRow] = useState<number | null>(null);
+  const [shownGuidance, setShownGuidance] = useState<{
+    rowId: number;
+    hostname: string;
+  } | null>(null);
+  const activeHostname = captureHostname(
+    rows.find((row) => row.id === activeRow)?.url ?? '',
+  );
+  const [lookupHostname, setLookupHostname] = useState('');
+  const suggested = useRef(new Map<number, string>());
+  const focusText = useRef(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setLookupHostname(activeHostname), 300);
+    return () => clearTimeout(timer);
+  }, [activeHostname]);
+  const { currentData: guidance } = useSourceGuidanceQuery(lookupHostname, {
+    skip:
+      !isOpen || saving || !lookupHostname || lookupHostname !== activeHostname,
+    refetchOnMountOrArgChange: 60,
+  });
+  const recommendedRow =
+    isOpen &&
+    activeHostname &&
+    guidance?.hostname === activeHostname &&
+    guidance.recommendSourceText &&
+    (focusedRow === activeRow ||
+      (shownGuidance?.rowId === activeRow &&
+        shownGuidance.hostname === activeHostname))
+      ? activeRow
+      : null;
+  useEffect(() => {
+    if (recommendedRow === null || focusedRow !== recommendedRow || saving)
+      return;
+    // Keep a displayed hint in place on blur so pointer clicks below it don't move.
+    setShownGuidance((current) =>
+      current?.rowId === recommendedRow && current.hostname === activeHostname
+        ? current
+        : { rowId: recommendedRow, hostname: activeHostname },
+    );
+    if (suggested.current.get(recommendedRow) === activeHostname) return;
+    suggested.current.set(recommendedRow, activeHostname);
+    focusText.current = false;
+    setExpandedRow(recommendedRow);
+  }, [recommendedRow, activeHostname, focusedRow, saving]);
   const texts = useRef(new Map<number, HTMLTextAreaElement>());
   useEffect(() => {
-    if (expandedRow !== null) texts.current.get(expandedRow)?.focus();
+    if (expandedRow !== null && focusText.current)
+      texts.current.get(expandedRow)?.focus();
+    focusText.current = false;
   }, [expandedRow]);
   const [notice, setNotice] = useState('');
   const rowSequence = useRef(1);
@@ -33,6 +84,11 @@ export function JobCaptureContainer() {
 
   function updateUrl(rowId: number, url: string) {
     setNotice('');
+    if (
+      captureHostname(rows.find((row) => row.id === rowId)?.url ?? '') !==
+      captureHostname(url)
+    )
+      suggested.current.delete(rowId);
     setErrors((current) => {
       const next = { ...current };
       delete next[rowId];
@@ -58,6 +114,7 @@ export function JobCaptureContainer() {
     const firstInvalid = rows.find((row) => result.errors[row.id]);
     if (firstInvalid) {
       if (pageTextError(firstInvalid.sourceText ?? '')) {
+        focusText.current = true;
         setExpandedRow(firstInvalid.id);
         texts.current.get(firstInvalid.id)?.focus();
       } else inputs.current.get(firstInvalid.id)?.focus();
@@ -111,7 +168,19 @@ export function JobCaptureContainer() {
     <JobCapture
       saving={saving}
       expandedRow={expandedRow}
-      onExpandedRowChange={setExpandedRow}
+      recommendedRow={recommendedRow}
+      onRowFocus={(rowId) => {
+        setFocusedRow(rowId);
+        if (rowId !== null) setActiveRow(rowId);
+      }}
+      onExpandedRowChange={(rowId) => {
+        if (expandedRow !== null) {
+          const row = rows.find((item) => item.id === expandedRow);
+          suggested.current.set(expandedRow, captureHostname(row?.url ?? ''));
+        }
+        focusText.current = rowId !== null;
+        setExpandedRow(rowId);
+      }}
       registerText={(rowId, element) => {
         if (element) texts.current.set(rowId, element);
         else texts.current.delete(rowId);

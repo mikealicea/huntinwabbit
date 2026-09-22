@@ -100,3 +100,10 @@ analysis; they do not change role versions. The company coordinator retains crea
 retries. Analysis evidence accepts existing role evidence and a company-comment variant, with
 company/comment identity and no fabricated role attribution. Bridge tests cover all comment methods,
 request shape, Origin protection and invalid paths.
+
+Shared hostname guidance uses a read-only POST through the existing authenticated/Origin-checked
+bridge, with [guidance contracts](job-api.guidance.contracts.ts) validated on both sides. It sends
+only a hostname in the body, exposes no enumeration or client observation writes, and prohibits
+HTTP caching. The RTK query caches guidance by hostname in the account-scoped store. Capture controls
+freshness and ignores mismatched responses. Older backends return unavailable without blocking
+capture. Public parsing and saved-role response contracts are unchanged.

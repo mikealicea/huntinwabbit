@@ -27,19 +27,22 @@ import {
   jobPostingsTable,
   withCompanyAnalysisInvalidation,
 } from './features/job-postings/job-postings.index.ts';
+import { createSourceGuidance } from './features/source-guidance/source-guidance.index.ts';
 
 export function buildRuntimeApp(
   env: Record<string, string | undefined> = process.env,
 ) {
   const verifyAccessToken = createAccessTokenVerifier(authConfig(env));
   const config = jobParsingConfig(env);
+  const table = jobPostingsTable(env);
+  const sourceGuidance = createSourceGuidance(table);
   const parsePosting = config.enabled
     ? createParsePosting({
         fetchPosting: createFetchPosting(),
+        observeSource: sourceGuidance.observe,
         extractPosting: createRedpillExtractor(config.apiKey),
       })
     : undefined;
-  const table = jobPostingsTable(env);
   const send = withCompanyAnalysisInvalidation(createDynamoTransport());
   const analysisConfig = companyAnalysisConfig(env);
   const companies = table ? createCompanyStore(table, send) : undefined;
@@ -75,6 +78,7 @@ export function buildRuntimeApp(
             company: companies.get,
           })
         : undefined,
+    sourceGuidance,
     verifyAccessToken,
     parsePosting,
     jobPostings,

@@ -74,3 +74,25 @@ export function pageTextError(text: string): string {
     ? 'Page text must be at most 100,000 characters and 256 KiB. Shorten it before saving.'
     : '';
 }
+
+// Match the server's host-only guidance key without sending private paths or queries.
+export function captureHostname(input: string): string {
+  try {
+    const hostname = new URL(normalizeCaptureUrl(input)).hostname
+      .toLowerCase()
+      .replace(/\.$/, '')
+      .replace(/^www\./, '');
+    if (
+      hostname.length > 253 ||
+      !hostname.includes('.') ||
+      /^[\d.]+$/.test(hostname) ||
+      !hostname
+        .split('.')
+        .every((label) => /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(label))
+    )
+      return '';
+    return hostname;
+  } catch {
+    return '';
+  }
+}

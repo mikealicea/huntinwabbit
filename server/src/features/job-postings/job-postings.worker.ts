@@ -22,6 +22,7 @@ import {
   type ParsePosting,
   type ParseResponse,
 } from '../job-parsing/job-parsing.index.ts';
+import { createSourceGuidance } from '../source-guidance/source-guidance.index.ts';
 import { withCompanyAnalysisInvalidation } from './job-postings.analysis.ts';
 import { cleanupDeletedPosting } from './job-postings.cleanup.ts';
 import { jobPostingsTable } from './job-postings.config.ts';
@@ -324,6 +325,7 @@ function runtime() {
     config.enabled
       ? createParsePosting({
           fetchPosting: createFetchPosting(),
+          observeSource: createSourceGuidance(table).observe,
           extractPosting: createRedpillExtractor(config.apiKey),
         })
       : undefined,

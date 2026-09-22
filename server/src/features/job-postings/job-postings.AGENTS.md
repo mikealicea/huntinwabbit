@@ -215,3 +215,11 @@ interface. [Company analysis](../company-analysis/company-analysis.AGENTS.md) ow
 results, deletion invalidation and cleanup. Test mutation effects through the decorated transport.
 The [storage fake](job-postings.test-support.ts) rejects unaliased `hidden` in update expressions,
 matching DynamoDB's reserved-word constraint for analysis invalidation and publication.
+
+## Shared source guidance
+
+Worker runtime composition injects the [shared guidance observer](../source-guidance/source-guidance.AGENTS.md)
+into parsing. It retains hostname-only access outcomes outside user partitions; role deletion and
+cleanup never target these records. Guidance transactions do not carry JOB prefixes or pending-index
+attributes and do not trigger extraction or company analysis. Advisory write failures do not change
+a posting's extraction result or authorize a retry. No saved-role schema or migration changes.
