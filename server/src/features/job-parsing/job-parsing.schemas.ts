@@ -50,6 +50,8 @@ export const jobSchema = z.strictObject({
   description: z.string().trim().min(1).max(60_000).nullable(),
   responsibilities: items,
   requirements: items,
+  // Older saved records predate technology extraction; absence is not an empty result.
+  technologies: items.optional(),
   preferredQualifications: items,
   benefits: items,
   compensation: z.array(compensationSchema).max(50),
@@ -61,7 +63,7 @@ export const jobSchema = z.strictObject({
 // Classification is internal: a challenge page must not become an empty job.
 export const extractionSchema = z.strictObject({
   pageType: z.enum(['job', 'expired', 'blocked', 'not-job']),
-  job: jobSchema.nullable(),
+  job: jobSchema.extend({ technologies: items }).nullable(),
 });
 
 export const parseResponseSchema = z.strictObject({

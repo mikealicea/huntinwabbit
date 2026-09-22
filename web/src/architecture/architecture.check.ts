@@ -14,7 +14,8 @@ const reactUI = new Set([
   'Fragment',
   'createElement',
 ]);
-const frameworkUI = new Set(['next/link', 'next/image']);
+// Declarative renderers only; new state/service adapters must remain in containers.
+const frameworkUI = new Set(['next/link', 'next/image', 'react-markdown']);
 const coordinationFile =
   /\.(?:container|provider|adapter|slice|store|actions|operations|session|proxy|client|server)(?:\.index)?\.[jt]sx?$/;
 

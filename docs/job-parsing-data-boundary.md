@@ -2,8 +2,8 @@
 
 The backend parses public job postings on demand. The [feature barrel](../server/src/features/job-parsing/job-parsing.AGENTS.md)
 owns current behavior and limitations; its linked schemas and adapters are the executable contracts.
-Web capture integration is not implemented. A separate explicit
-[saved-posting API](job-postings-data-boundary.md) can persist supplied parsing results.
+The [saved-posting API](job-postings-data-boundary.md) owns web capture persistence and durable
+extraction jobs; its worker calls this parser and stores the validated result.
 
 ## Data flow
 
@@ -54,3 +54,21 @@ Requests have no durable ledger or idempotency guarantee. A retry can repeat pai
 cancellation does not establish cancellation or refund at the provider. Transport hardening and
 distributed usage limits remain separate work. There is no feature-owned stored dataset to delete
 or retention migration to run.
+
+## Readability and compatibility
+
+The existing model completion extracts explicitly named technologies and formats the complete
+substantive description using Markdown headings, paragraphs and lists. It is instructed to preserve
+source wording and qualifications rather than summarize; schema validation cannot establish fidelity.
+The frontend renders Markdown without evaluating HTML or MDX, blocks embedded images, and restricts
+description links to credential-free HTTP(S) URLs. This introduces no additional processor or model call.
+
+Existing records keep their descriptions and may lack a technology list. Reading them does not trigger
+inference. Manual refresh replaces generated content only on success, retaining user corrections;
+there is no automatic or bulk reprocessing. Descriptions remain in the same editable string field.
+
+Deploy the updated frontend readers before enabling the new backend extraction contract: older strict
+frontend validators reject job payloads containing technologies. The version-one response envelope is
+unchanged, and the updated readers accept both old and new records. API and extraction workers must
+use matching updated schemas. Once new records or overrides are stored, rolling either application
+back requires readers that still accept technologies; do not drop saved facts to enable a rollback.

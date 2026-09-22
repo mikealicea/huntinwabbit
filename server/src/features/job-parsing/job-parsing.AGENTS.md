@@ -36,7 +36,11 @@ accepts supplied parse responses and owns durable extraction jobs whose worker c
 - [Redpill adapter](job-parsing.redpill.ts) exposes a bounded JSON-completion transport reused by
   saved-role updates. The URL extractor sends extracted page text with a schema-oriented prompt
   using JSON object mode with reasoning disabled. Source text is untrusted, tools are unavailable, output is bounded, and
-  the completion envelope, finish reason, JSON and job schema must all validate. Prompt isolation
+  the completion envelope, finish reason, JSON and job schema must all validate. New completions must
+  include explicitly named technologies with source qualifiers; older saved parse responses may omit
+  that field. The same completion formats the full description as Markdown headings, paragraphs and
+  lists, with instructions to retain substantive wording and detail, including content summarized
+  elsewhere. There is no separate formatting call. Prompt isolation
   reduces instruction confusion; schema validation does not prove factual accuracy.
 
 ## Lifetimes, failure and recovery

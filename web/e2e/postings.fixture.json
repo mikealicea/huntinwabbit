@@ -31,16 +31,24 @@
         },
         "title": "Senior Product Engineer",
         "locations": ["Remote · United States"],
-        "workArrangement": null,
+        "workArrangement": "remote",
         "employmentType": "Full time",
-        "description": "Build thoughtful customer-facing products with a small, collaborative engineering team. Work closely with design and own delivery from an early idea through release.",
+        "description": "## About the role\n\nBuild thoughtful customer-facing products with a small, collaborative engineering team.\n\n## What you will do\n\n- Work closely with design.\n- Own delivery from an early idea through release.\n\n### Our tools\n\nTypeScript is required; PostgreSQL experience is preferred. We use GitHub Actions for delivery.",
+        "technologies": [
+          "TypeScript (required)",
+          "PostgreSQL (preferred)",
+          "GitHub Actions"
+        ],
         "requirements": [
           "Product development and API design",
           "Clear communication across engineering and design",
           "Experience delivering reliable software"
         ],
-        "responsibilities": [],
-        "preferredQualifications": [],
+        "responsibilities": [
+          "Work closely with design",
+          "Own delivery through release"
+        ],
+        "preferredQualifications": ["PostgreSQL experience"],
         "benefits": [],
         "compensation": [
           {

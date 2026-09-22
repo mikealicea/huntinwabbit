@@ -23,7 +23,7 @@ async function setup(override?: (send: DynamoTransport) => DynamoTransport) {
   const send = override ? override(db.send) : db.send;
   const postings = createJobPostings(
     createDynamoPostingStore('test', send),
-    undefined,
+    () => '2026-09-21T00:00:00.000Z',
     undefined,
     true,
   );
@@ -124,12 +124,19 @@ describe('natural language role updates', () => {
     const entry = await s.updates.submit(
       'alice',
       s.item.id,
-      s.input('Clear location and update title'),
+      s.input(
+        'Clear location and technologies, and update title and description',
+      ),
     );
     await s.run(async () => ({
       changes: [
         { field: 'locations', value: [] },
         { field: 'title', value: 'Corrected title' },
+        { field: 'technologies', value: [] },
+        {
+          field: 'description',
+          value: '## Corrected overview\n\nKeep my wording.',
+        },
       ],
       skipped: [],
     }));
@@ -143,6 +150,8 @@ describe('natural language role updates', () => {
     if (!replacement) throw new Error();
     replacement.job.title = 'New extracted title';
     replacement.job.locations = ['Boston'];
+    replacement.job.technologies = ['TypeScript (required)'];
+    replacement.job.description = '## New overview\n\nNew posting wording.';
     await createExtractionWorker('test', s.send, async () => replacement).run(
       'USER#alice',
       `JOB#${refreshed.extraction.generation}`,
@@ -150,11 +159,15 @@ describe('natural language role updates', () => {
     expect(effectiveFields(await s.get())).toMatchObject({
       title: 'Corrected title',
       locations: [],
+      technologies: [],
+      description: '## Corrected overview\n\nKeep my wording.',
     });
     await s.updates.undo('alice', s.item.id, entry.id);
     expect(effectiveFields(await s.get())).toMatchObject({
       title: 'New extracted title',
       locations: ['Boston'],
+      technologies: ['TypeScript (required)'],
+      description: '## New overview\n\nNew posting wording.',
     });
   });
   it('rejects overwrite after intervening changes including changes away and back', async () => {

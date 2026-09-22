@@ -10,9 +10,14 @@ competing writes. Notes remain a local draft until Save notes succeeds; failure/
 that draft. A conflict refreshes server data and requires deliberate resubmission. Leaving the page
 can discard unsaved notes. Extraction only updates generated facts and never overwrites tracking.
 
-[JobDetails](JobDetails.component.tsx) displays all supplied locations, requirements, responsibilities,
-preferred qualifications, benefits and compensation bands. Source text renders as text, never injected
-HTML. Missing facts remain unknown. Queued/processing/failed/disabled states distinguish extraction
+[JobDetails](JobDetails.component.tsx) groups all locations, employment type, salary and work arrangement
+in a wrapping overview. Requirements (with distinct preferred qualifications), Tech stack, Responsibilities
+and Full job details follow in that order. Benefits, all compensation bands and posting metadata remain
+available below. Missing facts remain unknown; older records without technology extraction offer refresh.
+Technology labels preserve stated required/preferred distinctions.
+[PostingDescription](PostingDescription.component.tsx) renders Markdown with nested headings, paragraphs
+and lists, retaining plain-text line breaks. HTML stays inert text; images never load, and description
+links allow only credential-free HTTP(S) destinations. No raw HTML or MDX evaluation is used. Queued/processing/failed/disabled states distinguish extraction
 from link persistence; terminal failure offers an explicit retry. Completed postings offer refresh of
 the saved URL. Existing facts remain visible during refresh and after failure; success replaces generated facts while preserving user overrides.
 Unsaved note drafts survive refresh. Pending requests cannot submit another extraction.

@@ -17,7 +17,9 @@ handling through the real SDK against [auth-provider.mjs](auth-provider.mjs). Th
 loopback-only test process; its account/message helpers are never imported into the app. The Next.js
 test process receives explicit fake URL/key values so `.env.local` cannot target the shared project.
 Workspace tests sign in through the actual login form. Repeated drag tests wait for restored
-handle focus and inactive drag state before starting the next interaction. No test accounts or emails are created remotely.
+handle focus and inactive drag state before starting the next interaction. No test accounts or emails are created remotely. Job details checks cover section order, technology
+qualifiers, Markdown headings, reload, desktop/mobile layouts and 200% CSS zoom in both themes;
+screenshots support visual review and do not establish a screen-reader audit.
 
 Install Chromium with `npx playwright install chromium`, then run `npm run test:e2e` from `web/`
 under its mise runtime. The suite starts and stops its own Next development server on port 3100.

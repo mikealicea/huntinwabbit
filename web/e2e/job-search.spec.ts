@@ -54,6 +54,80 @@ async function moveProductRole(page: Page, targetStage: string) {
   await expect(handle).toHaveAttribute('aria-pressed', 'false');
 }
 
+for (const scheme of ['light', 'dark'] as const) {
+  test(`job details are ordered and readable on desktop and mobile in ${scheme}`, async ({
+    page,
+  }, testInfo) => {
+    await page.emulateMedia({ colorScheme: scheme });
+    await page
+      .getByRole('link', { name: 'Open Senior Product Engineer at Northstar' })
+      .click();
+    const details = page.getByRole('region', {
+      name: 'Job details',
+      exact: true,
+    });
+    const overview = details.getByLabel('Job overview');
+    await expect(overview).toContainText('170,000–210,000 USD / year');
+    await expect(overview).toContainText('Full time');
+    await expect(overview).toContainText('Remote');
+    await expect(details.getByRole('heading', { level: 3 })).toHaveText([
+      'Requirements',
+      'Tech stack',
+      'Responsibilities',
+      'Full job details',
+      'Compensation details',
+    ]);
+    await expect(
+      details.getByRole('heading', { name: 'About the role', level: 4 }),
+    ).toBeVisible();
+    await expect(
+      details.getByText('TypeScript (required)', { exact: true }),
+    ).toBeVisible();
+    await expect(
+      details.getByText('PostgreSQL (preferred)', { exact: true }),
+    ).toBeVisible();
+    for (const [name, width] of [
+      ['desktop', 1280],
+      ['mobile', 390],
+    ] as const) {
+      await page.setViewportSize({ width, height: 900 });
+      await expect(page.locator('html')).toHaveAttribute(
+        'data-theme',
+        scheme === 'dark' ? 'forest' : 'emerald',
+      );
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= window.innerWidth,
+        ),
+      ).toBe(true);
+      await page.screenshot({
+        path: testInfo.outputPath(`job-details-${name}-${scheme}.png`),
+        fullPage: true,
+      });
+    }
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.evaluate(() => {
+      document.documentElement.style.zoom = '2';
+    });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
+    await page.screenshot({
+      path: testInfo.outputPath(`job-details-zoom-${scheme}.png`),
+      fullPage: true,
+    });
+    await page.evaluate(() => {
+      document.documentElement.style.zoom = '';
+    });
+    await page.reload();
+    await expect(
+      details.getByRole('heading', { name: 'About the role' }),
+    ).toBeVisible();
+  });
+}
+
 test('landing entry, capture, role editing, navigation, and reload recovery', async ({
   page,
 }, testInfo) => {

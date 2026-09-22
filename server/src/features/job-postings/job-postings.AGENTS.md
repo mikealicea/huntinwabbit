@@ -44,7 +44,9 @@ The native Node worker reuses the existing agent-fetch/Redpill adapters. Parsing
 inside a 90-second Lambda. Provider failures become safe saved failure codes; no automatic paid retry
 or model repair occurs. Explicit user retry or refresh of completed details creates a new generation.
 Refresh retains previous generated facts until a successful replacement; user overrides are applied
-separately and survive replacement. Failure keeps the last good result and tracking fields. Active requests return the pending generation; stale terminal requests
+separately and survive replacement. This includes technology lists and formatted description corrections.
+Older records and pending update baselines can omit technologies; no default list is injected into
+saved overrides. Refresh is explicit, with no bulk backfill. Failure keeps the last good result and tracking fields. Active requests return the pending generation; stale terminal requests
 conflict. Completing inference without
 persisting its result is an uncertain outcome, not permission to repeat the model request.
 

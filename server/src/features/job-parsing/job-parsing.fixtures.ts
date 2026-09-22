@@ -1,7 +1,7 @@
-import type { ParsedJob } from './job-parsing.schemas.ts';
+import type { Extraction } from './job-parsing.schemas.ts';
 
 /** Fictional posting facts; no captured pages or personal application data. */
-export function exampleJob(): ParsedJob {
+export function exampleJob(): NonNullable<Extraction['job']> {
   return {
     company: { name: 'Example Research', website: null },
     title: 'Software Engineer',
@@ -11,6 +11,7 @@ export function exampleJob(): ParsedJob {
     description: 'Build reliable software for a fictional research team.',
     responsibilities: ['Build services.'],
     requirements: ['Experience developing software.'],
+    technologies: [],
     preferredQualifications: [],
     benefits: [],
     compensation: [],

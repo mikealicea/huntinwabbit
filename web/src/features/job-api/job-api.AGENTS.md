@@ -21,7 +21,10 @@ fetch posting websites, run inference or own durable extraction. Those belong to
   caches are prohibited. Tokens never enter client props or Redux.
 - [contracts](job-api.contracts.ts) validate requests and bounded responses. The backend's public
   [schemas](../../../../server/src/features/job-postings/job-postings.schemas.ts) are authoritative;
-  both sides validate the fictional browser fixture in tests. Update both contracts together.
+  both sides validate the fictional browser fixture in tests. Update both contracts together. Technology
+  extraction is optional when reading older records, while new model output requires it. Descriptions
+  accept Markdown as well as legacy plain text. See the [parsing boundary](../../../../docs/job-parsing-data-boundary.md)
+  for frontend-first rollout requirements.
 - [client](job-api.client.ts) owns the RTK Query cache, page cursors, mutations and invalidation.
   A fresh account-keyed store isolates users. Transport failures and malformed responses become safe
   errors without serializing upstream content. No mutation or paid extraction is automatically retried.

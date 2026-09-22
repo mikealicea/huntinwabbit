@@ -4,6 +4,7 @@ import { REDPILL_MODEL, REDPILL_URL } from './job-parsing.config.ts';
 import { exampleJob } from './job-parsing.fixtures.ts';
 import { createRedpillExtractor } from './job-parsing.redpill.ts';
 import {
+  jobSchema,
   MAX_MODEL_BYTES,
   MAX_SOURCE_CHARACTERS,
 } from './job-parsing.schemas.ts';
@@ -26,6 +27,48 @@ function completion(
 }
 
 describe('Redpill adapter', () => {
+  it('retains formatted full text and explicit technologies in one completion', async () => {
+    const job = {
+      ...exampleJob(),
+      description:
+        '## About the role\n\nBuild reliable software.\n\n## Qualifications\n\n- TypeScript required.\n- PostgreSQL preferred.',
+      technologies: ['TypeScript (required)', 'PostgreSQL (preferred)'],
+    };
+    const http = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(Response.json(completion({ pageType: 'job', job })));
+    expect(
+      await createRedpillExtractor('fixture-key', { fetch: http })(
+        'Fictional posting',
+        new AbortController().signal,
+      ),
+    ).toEqual({ pageType: 'job', job });
+    expect(http).toHaveBeenCalledOnce();
+    const prompt = JSON.parse(String(http.mock.calls[0]?.[1]?.body)).messages[0]
+      .content;
+    expect(prompt).toContain(
+      'retain ALL substantive posting wording and detail',
+    );
+    expect(prompt).toContain('Do not infer technologies');
+  });
+
+  it('reads legacy jobs without technologies but requires technologies from new inference', async () => {
+    const { technologies: _technologies, ...legacy } = exampleJob();
+    expect(jobSchema.parse(legacy)).not.toHaveProperty('technologies');
+    const http = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(
+        Response.json(completion({ pageType: 'job', job: legacy })),
+      );
+    await expect(
+      createRedpillExtractor('fixture-key', { fetch: http })(
+        'page',
+        new AbortController().signal,
+      ),
+    ).rejects.toMatchObject({ code: 'INVALID_MODEL_OUTPUT' });
+    expect(http).toHaveBeenCalledOnce();
+  });
+
   it('uses the verified JSON mode and treats page instructions only as untrusted data', async () => {
     const http = vi
       .fn<typeof fetch>()
@@ -63,6 +106,18 @@ describe('Redpill adapter', () => {
     completion(''),
     completion('```json\n{}\n```'),
     completion({ pageType: 'job', job: { title: 'Incomplete' } }),
+    completion({
+      pageType: 'job',
+      job: { ...exampleJob(), technologies: null },
+    }),
+    completion({
+      pageType: 'job',
+      job: { ...exampleJob(), technologies: [''] },
+    }),
+    completion({
+      pageType: 'job',
+      job: { ...exampleJob(), technologies: Array(201).fill('Example') },
+    }),
     completion({
       pageType: 'job',
       job: { ...exampleJob(), inventedField: true },

@@ -25,6 +25,7 @@ const labels: Record<string, string> = {
   closingDate: 'Closing date',
   followUpOn: 'Follow-up',
   compensation: 'Compensation',
+  technologies: 'Tech stack',
 };
 function valueText(value: unknown): string {
   if (value === null || value === undefined || value === '') return 'Not set';
