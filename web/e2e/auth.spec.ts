@@ -10,6 +10,39 @@ async function login(
   await page.getByRole('button', { name: 'Log in', exact: true }).click();
 }
 
+test('home redirects by verified session and requires cache revalidation', async ({
+  page,
+  context,
+}) => {
+  const response = await page.request.get('/', { maxRedirects: 0 });
+  expect(response.status()).toBe(307);
+  expect(
+    new URL(response.headers().location, 'http://127.0.0.1:3100').pathname,
+  ).toBe('/login');
+  // Next's development server replaces Cache-Control with its no-cache policy.
+  expect(response.headers()['cache-control']).toContain('no-cache');
+  expect(response.headers().pragma).toBe('no-cache');
+  await page.goto('/');
+  await expect(page).toHaveURL('/login');
+  const session = await (
+    await page.request.post('http://127.0.0.1:3101/__test/session', {
+      data: { email: 'workspace@example.test' },
+    })
+  ).json();
+  await context.addCookies([
+    {
+      name: 'huntinwabbit-auth',
+      value: `base64-${Buffer.from(JSON.stringify(session)).toString('base64url')}`,
+      domain: '127.0.0.1',
+      path: '/',
+      httpOnly: true,
+      sameSite: 'Lax',
+    },
+  ]);
+  await page.goto('/');
+  await expect(page).toHaveURL('/app');
+});
+
 test('protects deep links, persists sessions, redirects authenticated visitors, and signs out', async ({
   page,
   context,
@@ -233,7 +266,7 @@ test('refreshes an expired cookie through the real SDK and rejects a forged sess
       sameSite: 'Lax',
     },
   ]);
-  await page.goto('/app');
+  await page.goto('/');
   await expect(page).toHaveURL('/app');
   expect(
     (await context.cookies()).find(
@@ -253,8 +286,8 @@ test('refreshes an expired cookie through the real SDK and rejects a forged sess
       path: '/',
     },
   ]);
-  await page.goto('/app');
-  await expect(page).toHaveURL('/login?next=%2Fapp');
+  await page.goto('/');
+  await expect(page).toHaveURL('/login');
 });
 
 test('auth forms reflow on mobile in both themes with keyboard focus and enlarged text', async ({
@@ -306,8 +339,8 @@ test('fails closed during a verification outage and recovers without a login loo
   await request.post('http://127.0.0.1:3101/__test/account', {
     data: { email, lookupFailure: true },
   });
-  await page.goto('/app');
-  await expect(page).toHaveURL('/auth/unavailable?next=%2Fapp');
+  await page.goto('/');
+  await expect(page).toHaveURL('/auth/unavailable?next=%2F');
 });
 
 test('captures account pages for visual review at desktop and mobile sizes', async ({

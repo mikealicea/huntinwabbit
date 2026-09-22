@@ -26,7 +26,7 @@ The [header tests](../header/Header.test.tsx) cover a mocked switch from light t
 system preference. [Theme.test.tsx](Theme.test.tsx) exercises the real adapter with controlled browser boundaries:
 system changes, both switch directions, persisted preference, storage events and server hydration.
 `npm run test:state` covers every handwritten branch in this adapter and switch.
-The switch is mounted in the application header; global CSS and the provider also theme the landing
+The switch is mounted in the application header; global CSS and the provider also theme the auth pages
 and blog. Application data never shares theme storage. Browser checks are needed when changing these
 behaviors. Run the full gate in the [web guide](../../../AGENTS.md); follow the
 [accessibility guide](../../../docs/accessibility.AGENTS.md) for interaction or palette changes.

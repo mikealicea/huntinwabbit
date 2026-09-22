@@ -128,14 +128,13 @@ for (const scheme of ['light', 'dark'] as const) {
   });
 }
 
-test('landing entry, capture, role editing, navigation, and reload recovery', async ({
+test('home redirect, capture, role editing, navigation, and reload recovery', async ({
   page,
 }, testInfo) => {
   await page.goto('/');
   await expect(
     page.getByRole('navigation', { name: 'Primary navigation' }),
   ).toBeVisible();
-  await page.getByRole('link', { name: 'Open app' }).click();
   await expect(page).toHaveURL('/app');
   await page.screenshot({
     path: testInfo.outputPath('board-desktop.png'),
