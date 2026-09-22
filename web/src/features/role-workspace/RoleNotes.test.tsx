@@ -131,6 +131,12 @@ it('keeps an edit draft on conflict and requires review of the current revision'
     'My draft',
   );
   expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
+  const requestsBeforeShortcut = api.fetcher.mock.calls.length;
+  fireEvent.keyDown(screen.getByRole('textbox', { name: 'Edit comment' }), {
+    key: 'Enter',
+    metaKey: true,
+  });
+  expect(api.fetcher.mock.calls).toHaveLength(requestsBeforeShortcut);
   await user.click(
     screen.getByRole('button', { name: 'I reviewed the latest comment' }),
   );
@@ -182,7 +188,16 @@ it('loads older pages and retains newer text entered during submission', async (
   fireEvent.change(screen.getByRole('textbox', { name: 'Add a note' }), {
     target: { value: 'Submitted' },
   });
-  fireEvent.click(screen.getByRole('button', { name: 'Add comment' }));
+  const composer = screen.getByRole('textbox', { name: 'Add a note' });
+  const beforeSubmit = finish;
+  fireEvent.keyDown(composer, {
+    key: 'Enter',
+    metaKey: true,
+    isComposing: true,
+  });
+  fireEvent.keyDown(composer, { key: 'Enter', metaKey: true, repeat: true });
+  expect(finish).toBe(beforeSubmit);
+  fireEvent.keyDown(composer, { key: 'Enter', metaKey: true });
   fireEvent.change(screen.getByRole('textbox', { name: 'Add a note' }), {
     target: { value: 'New draft' },
   });

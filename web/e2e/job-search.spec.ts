@@ -905,7 +905,15 @@ for (const scheme of ['light', 'dark'] as const) {
     ).toContainText('Ask about the team');
     await expect(section.locator('img')).toHaveCount(0);
     await section.getByRole('button', { name: 'Write', exact: true }).click();
-    await section.getByRole('button', { name: 'Add comment' }).click();
+    const composer = section.getByRole('textbox', { name: 'Add a note' });
+    const draft = await composer.inputValue();
+    await composer.press('ControlOrMeta+End');
+    await composer.press('Enter');
+    await expect(composer).toHaveValue(`${draft}\n`);
+    await expect(
+      section.getByRole('article', { name: 'Comment', exact: true }),
+    ).toHaveCount(0);
+    await composer.press('Meta+Enter');
     await expect(
       section.getByText('Comment saved.', { exact: true }),
     ).toBeVisible();
@@ -925,7 +933,9 @@ for (const scheme of ['light', 'dark'] as const) {
         'Updated **interview prep**\n\n' +
           'Long fictional preparation text. '.repeat(10),
       );
-    await entry.getByRole('button', { name: 'Save changes' }).click();
+    await entry
+      .getByRole('textbox', { name: 'Edit comment' })
+      .press('Meta+Enter');
     await expect(entry).toContainText('Edited');
     await page.screenshot({
       path: testInfo.outputPath(`notes-desktop-${scheme}.png`),

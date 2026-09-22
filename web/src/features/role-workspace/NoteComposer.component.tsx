@@ -26,6 +26,7 @@ export function NoteComposer({
   const id = useId();
   const input = useRef<HTMLTextAreaElement>(null);
   const [preview, setPreview] = useState(false);
+  const canSubmit = !disabled && !submitDisabled && !pending && !!body.trim();
   useEffect(() => {
     if (focusOnMount) input.current?.focus();
   }, [focusOnMount]);
@@ -68,6 +69,17 @@ export function NoteComposer({
         placeholder="Interview thoughts, recruiter updates, things to remember…"
         aria-describedby={`${id}-hint`}
         onChange={(event) => onChange(event.target.value)}
+        onKeyDown={(event) => {
+          if (
+            event.key !== 'Enter' ||
+            !event.metaKey ||
+            event.nativeEvent.isComposing
+          ) {
+            return;
+          }
+          event.preventDefault();
+          if (canSubmit && !event.repeat) onSubmit();
+        }}
       />
       {preview && (
         <section
@@ -84,13 +96,14 @@ export function NoteComposer({
         </section>
       )}
       <p id={`${id}-hint`} className="text-xs text-base-content/75">
-        Markdown supported. {body.length.toLocaleString()} / 20,000 characters.
+        Markdown supported. Cmd+Enter to submit. {body.length.toLocaleString()}{' '}
+        / 20,000 characters.
       </p>
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
           className="btn btn-primary min-h-11"
-          disabled={disabled || submitDisabled || pending || !body.trim()}
+          disabled={!canSubmit}
           onClick={onSubmit}
         >
           {pending && <LoadingPulse />}

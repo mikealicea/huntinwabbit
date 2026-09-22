@@ -77,7 +77,9 @@ and mobile, both themes, persisted history, partial updates, retry, refresh prec
 [RoleNotesContainer](RoleNotes.container.tsx) owns paginated RTK Query reads and direct mutations;
 [RoleNotes](RoleNotes.component.tsx) composes the notepad, status and newest-first entries.
 [NoteComposer](NoteComposer.component.tsx) provides Write/Preview using the shared safe Markdown
-renderer. Enter inserts a newline; Add comment submits explicitly. The composer clears only on
+renderer. Enter inserts a newline; Cmd+Enter submits a comment or saves an inline edit, using the
+same availability checks as the submit button. Composition and held-key repeats do not submit.
+The composer clears only on
 acknowledged success and preserves text typed while the submitted snapshot was saving. Comments
 are private to the authenticated role owner, without replies, attachments or AI processing.
 
