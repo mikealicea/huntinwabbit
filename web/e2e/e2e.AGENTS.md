@@ -12,7 +12,7 @@ breadcrumb navigation without a session. Board status tests measure stable layou
 keyboard popover dismissal and desktop/mobile status screenshots. Account and workspace suites
 save desktop/mobile screenshots
 in ignored test output for visual review; these are review artifacts, not pixel-baseline assertions.
-[auth.spec.ts](auth.spec.ts) exercises account flows, protected routes, cookie refresh, and failure
+[auth.spec.ts](auth.spec.ts) exercises account flows, session-aware home redirects, protected routes, cookie refresh, and failure
 handling through the real SDK against [auth-provider.mjs](auth-provider.mjs). The provider is a
 loopback-only test process; its account/message helpers are never imported into the app. The Next.js
 test process receives explicit fake URL/key values so `.env.local` cannot target the shared project.

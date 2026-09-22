@@ -1,13 +1,18 @@
-# Landing entry
+# Home redirect
 
-[The root page](../../app/page.tsx) composes the shared [header](../header/header.AGENTS.md)
-above [HomePage.component.tsx](HomePage.component.tsx) at `/`. The header provides the brand,
-theme switch and Open app link to `/app`. The reserved landing content retains a screen-reader
-heading and fills the remaining viewport without forcing an extra screen of scroll.
-It does not mount the application shell or session provider, show sample cards, or implement
-marketing content. Opening the app still passes through the protected workspace route.
+[The root page](../../app/page.tsx) composes [HomePage.container.tsx](HomePage.container.tsx)
+at `/`. The server container uses verified identity from the
+[auth feature](../auth/auth.AGENTS.md) to redirect signed-out visitors to `/login` and signed-in
+visitors to `/app`. A verification outage uses the existing authentication-unavailable page with
+workspace retry; it must not masquerade as a signed-out session. No landing UI or application
+state is mounted at the root.
 
-[home.index.ts](home.index.ts) exports the presentation component. It has no state or requests.
-[HomePage.test.tsx](HomePage.test.tsx) verifies the composed navigation, entry destination and
-absence of sign-out; [browser tests](../../../e2e/job-search.spec.ts) exercise navigation into the
-application. Run the full gate in the [web guide](../../../AGENTS.md).
+[home.index.ts](home.index.ts) exports the server container. [Proxy](../../proxy.ts) includes `/`
+so session refresh cookies persist and responses prohibit caching. Workspace routes retain their
+own authentication guards.
+
+[HomePage.test.tsx](HomePage.test.tsx) verifies the three identity outcomes.
+[Auth browser tests](../../../e2e/auth.spec.ts) exercise anonymous/authenticated root navigation,
+expired-session refresh, forged sessions, cache headers and outages through the real SDK and
+loopback provider. [Workspace browser tests](../../../e2e/job-search.spec.ts) enter through the
+root redirect. Run the full gate and browser suite in the [web guide](../../../AGENTS.md).

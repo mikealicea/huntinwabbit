@@ -6,4 +6,4 @@ export { AuthUnavailablePageContainer } from './AuthUnavailablePage.container';
 export { submitAuth } from './auth.actions';
 export { authConfig } from './auth.config';
 export { refreshAuth } from './auth.proxy';
-export { backendSession, requireUser } from './auth.session';
+export { backendSession, requireUser, serverIdentity } from './auth.session';

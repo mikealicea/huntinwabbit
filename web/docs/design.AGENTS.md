@@ -13,7 +13,7 @@ data, not a source of implemented routes, persistence or a finalized design syst
   provider behavior. Keep CSS theme names and TypeScript mapping in agreement.
 - [PageShell](../src/shared/PageShell.component.tsx) owns the blog's main landmark and prose content width.
   [The application layout](../src/app/app/layout.tsx) owns the wider job-search shell and main landmark;
-  the landing entry owns its own minimal layout.
+  the root route redirects without rendering a landing layout.
 
 Use semantic colors and paired foreground/background tokens instead of per-feature color copies.
 The shared stylesheet strengthens form borders and placeholder contrast using the active theme's
@@ -47,4 +47,4 @@ animation dependency for an isolated component without a concrete need.
 
 Verify changed layouts with representative long text, empty and populated data, narrow and wide
 viewports, both themes and zoom. Record the actual browser checks in the handoff. The current theme
-and landing entry are implementation facts, not a requirement to preserve their visuals forever.
+is an implementation fact, not a requirement to preserve its visuals forever.

@@ -2,7 +2,7 @@
 
 Read the [root guide](../AGENTS.md) first for branch workflow, documentation ownership, product
 boundaries and handoff. This package is huntinwabbit's primary user interface. It currently contains
-an authenticated live job-search application under `/app`, a minimal landing entry at `/`, and an inherited
+an authenticated live job-search application under `/app`, an auth-aware redirect at `/`, and an inherited
 MDX blog. [The product README](../README.md) distinguishes implemented flows from longer-term intent.
 
 ## Executable owners
@@ -117,7 +117,7 @@ changes. Exact shapes remain in executable owners; barrels explain intent and im
 |---|---|
 | Shared presentation | [shared.AGENTS.md](src/shared/shared.AGENTS.md) |
 | Authentication | [auth.AGENTS.md](src/features/auth/auth.AGENTS.md) |
-| Landing entry | [home.AGENTS.md](src/features/home/home.AGENTS.md) |
+| Home redirect | [home.AGENTS.md](src/features/home/home.AGENTS.md) |
 | Live API and stage configuration | [job-api.AGENTS.md](src/features/job-api/job-api.AGENTS.md) |
 | Job-search presentation contracts | [job-search.AGENTS.md](src/features/job-search/job-search.AGENTS.md) |
 | Search board and dragging | [search-board.AGENTS.md](src/features/search-board/search-board.AGENTS.md) |

@@ -7,7 +7,7 @@ Do not put feature policy, Redux connections or external-state adapters in share
 [PageShell.component.tsx](PageShell.component.tsx) renders the blog's main landmark, content width
 and prose wrapper around supplied children. It has no state, persistence or side effects.
 [shared.index.ts](shared.index.ts) is the public entry point; the blog layout composes the shell.
-The application and landing pages keep their own distinct shells.
+The application keeps its own distinct shell; the root route redirects without rendering a shell.
 
 [LoadingPulse](LoadingPulse.component.tsx) provides a decorative pulsing dot beside visible loading
 text. Callers render it only for active work; reduced-motion preferences keep the dot static.

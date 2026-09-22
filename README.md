@@ -14,7 +14,7 @@ editing and deletion on roles and companies. User corrections survive posting re
 under persistent company identities, with automatic matching and manual corrections. Optional background
 analysis finds shared requirements and technologies, with evidence from saved roles and personal context. Tasks, resumes,
 submitted materials and structured company research remain
-unavailable. `/` currently links into the app. See the [web README](web/README.md) for setup.
+unavailable. `/` redirects signed-out visitors to `/login` and signed-in visitors to `/app`. See the [web README](web/README.md) for setup.
 
 This is a public, self-hostable repository. Configure your own Supabase authentication project and
 stage-specific AWS backend. Local frontend development targets the dev API selected by your ignored

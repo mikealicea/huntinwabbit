@@ -16,7 +16,9 @@ the processor boundary. Do not relax the shared project's policies for tests.
   outcomes. [auth.validation.ts](auth.validation.ts) owns input and redirect boundaries.
 - [auth.client.ts](auth.client.ts), [auth.config.ts](auth.config.ts) and
   [auth.session.ts](auth.session.ts) own per-request SDK construction, environment validation,
-  cookies and server verification. [auth.proxy.ts](auth.proxy.ts) persists refreshes before rendering.
+  cookies and server verification. [auth.proxy.ts](auth.proxy.ts) persists refreshes before rendering,
+  including the session-aware [home redirect](../home/home.AGENTS.md). The server barrel exposes
+  verified identity for that redirect; root responses share the auth no-cache policy.
 - [AuthPage.container.tsx](AuthPage.container.tsx) coordinates server identity and page selection;
   [AuthFrame.container.tsx](AuthFrame.container.tsx) supplies a theme-control slot to the
   [frame component](AuthFrame.component.tsx).
