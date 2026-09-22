@@ -47,3 +47,8 @@ Notes scenarios use the isolated API fixture to verify distinct persisted commen
 editing, Cmd+Enter submission, plain Enter newlines, permanent deletion, focus recovery and reloads
 in desktop/mobile layouts and both themes.
 Comment screenshots are review artifacts; no real notes or provider calls enter these tests.
+
+Company analysis uses deterministic fictional results from the loopback API. Company browser tests
+exercise initialization, evidence disclosure, explicit refresh, header status placement, scheduled
+countdown/expiry, Analyze now, keyboard details dismissal, reload, and narrow layouts in both
+themes. Analysis screenshots are ignored artifacts, not evidence of provider accuracy.

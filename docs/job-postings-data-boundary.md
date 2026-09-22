@@ -81,7 +81,8 @@ from posting facts and do not alter other application histories. See the
 ## Role comments
 
 The notes composer stores Markdown comments directly through the existing bridge/API in DynamoDB,
-without a provider call. Separate owner-scoped rows hold bodies, timestamps and revisions; lookup
+without a synchronous provider call. When company analysis is enabled, comment changes schedule
+background analysis that includes their contents; see the [company analysis boundary](company-analysis-data-boundary.md). Separate owner-scoped rows hold bodies, timestamps and revisions; lookup
 pointers hold original submission hashes for retry detection. Saved comments have no automatic expiry.
 Deleting a comment removes its body from active note storage but retains a content-free pointer/hash
 until role cleanup, preventing replay resurrection. Role deletion immediately denies access and
@@ -90,7 +91,8 @@ schedules cleanup of all note rows and pointers. Existing backup limitations abo
 Only application memory holds unsubmitted comment drafts. Markdown rendering performs no image
 fetches or HTML execution; following a user-selected external link contacts that destination.
 The legacy single notes field remains stored for old-record/API compatibility but is not shown or
-migrated. Updated AI workers exclude it from input and cannot change it; historical receipts remain
+migrated. Role-update AI workers exclude it from input and cannot change it; company analysis includes
+it as personal context; historical receipts remain
 readable. Release the updated API and extraction/recovery workers before enabling the notes frontend;
 the [combined company rollout](runbooks/company-backfill.md) first prepares compatible web readers. No live deployment or
 backfill is implied by these source changes.

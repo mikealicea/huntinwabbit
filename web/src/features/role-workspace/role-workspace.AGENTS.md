@@ -97,7 +97,9 @@ renderer. Enter inserts a newline; Cmd+Enter submits a comment or saves an inlin
 same availability checks as the submit button. Composition and held-key repeats do not submit.
 The composer clears only on
 acknowledged success and preserves text typed while the submitted snapshot was saving. Comments
-are private to the authenticated role owner, without replies, attachments or AI processing.
+are private to the authenticated role owner, without replies or attachments. The composer saves
+directly; separately enabled [company analysis](../company-workspace/company-workspace.AGENTS.md)
+uses saved comments as personal context.
 
 [NoteEntry](NoteEntry.component.tsx) owns inline edits and a deletion confirmation with initial Cancel
 focus. Cancel restores the action focus; successful deletion returns focus to the composer. Edits
