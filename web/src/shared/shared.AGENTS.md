@@ -16,3 +16,9 @@ It owns no request state or announcements.
 Run the web gates and architecture check when changing shared UI. The production build verifies
 blog layout composition; browser inspection is required for visual changes. Do not add wrapper
 containers to components that have no coordination responsibility.
+
+[SafeMarkdown](SafeMarkdown.component.tsx) renders supplied posting descriptions and comment bodies
+without HTML execution, images or MDX. It preserves paragraph line breaks and supports only absolute,
+credential-free HTTP(S) links, opened with noreferrer/noopener. Headings stay below workspace section
+headings. It owns no fetching or comment policy; the existing description and notes tests exercise
+this shared contract.

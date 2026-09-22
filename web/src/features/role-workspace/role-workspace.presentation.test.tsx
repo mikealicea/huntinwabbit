@@ -43,6 +43,7 @@ describe('workspace presentation without providers', () => {
         nextActionLabel="Supplied next action"
         onApplicationChange={onApplicationChange}
         onTaskCompletionChange={onTaskCompletionChange}
+        notes={<p>Notes slot</p>}
         materials={<p>Materials slot</p>}
         company={<p>Company slot</p>}
       />,
@@ -51,6 +52,7 @@ describe('workspace presentation without providers', () => {
       screen.getByRole('heading', { name: 'Supplied title' }),
     ).toBeVisible();
     expect(screen.getByText('Next: Supplied next action')).toBeVisible();
+    expect(screen.getByText('Notes slot')).toBeVisible();
     expect(screen.getByText('Materials slot')).toBeVisible();
     expect(screen.getByText('Company slot')).toBeVisible();
     fireEvent.change(screen.getByLabelText('Stage'), {
@@ -65,16 +67,11 @@ describe('workspace presentation without providers', () => {
     fireEvent.change(screen.getByLabelText('Next follow-up'), {
       target: { value: '2026-10-01' },
     });
-    fireEvent.change(screen.getByLabelText('Prep & interview notes'), {
-      target: { value: 'Fictional note' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'Save notes' }));
     expect(onApplicationChange.mock.calls).toEqual([
       [{ stage: 'applied' }],
       [{ interest: 'throwaway' }],
       [{ priority: 'low' }],
       [{ followUpOn: '2026-10-01' }],
-      [{ notes: 'Fictional note' }],
     ]);
     fireEvent.click(
       screen.getByRole('checkbox', { name: role.tasks[0].label }),

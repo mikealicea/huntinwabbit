@@ -11,8 +11,10 @@ import {
 } from './features/job-parsing/job-parsing.index.ts';
 import {
   createJobPostingsRouter,
+  createRoleNotesRouter,
   createRoleUpdatesRouter,
   type JobPostings,
+  type RoleNotes,
   type RoleUpdates,
 } from './features/job-postings/job-postings.index.ts';
 import { errorMiddleware } from './shared/shared.errors.ts';
@@ -23,6 +25,7 @@ export function buildApp(dependencies: {
   parsePosting?: ParsePosting;
   jobPostings?: JobPostings;
   roleUpdates?: RoleUpdates;
+  roleNotes?: RoleNotes;
 }): express.Express {
   const app = express();
 
@@ -33,6 +36,7 @@ export function buildApp(dependencies: {
   });
 
   app.use(requireAuthentication(dependencies.verifyAccessToken));
+  app.use(createRoleNotesRouter(dependencies.roleNotes));
   app.use(createRoleUpdatesRouter(dependencies.roleUpdates));
   app.use(createJobPostingsRouter(dependencies.jobPostings));
   app.use(express.json({ limit: '16kb' }));

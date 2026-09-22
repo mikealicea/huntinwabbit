@@ -13,6 +13,7 @@ import {
   createDynamoPostingStore,
   createDynamoTransport,
   createJobPostings,
+  createRoleNotes,
   createRoleUpdates,
   jobPostingsTable,
 } from './features/job-postings/job-postings.index.ts';
@@ -45,5 +46,8 @@ export function buildRuntimeApp(
     parsePosting,
     jobPostings,
     roleUpdates,
+    roleNotes: table
+      ? createRoleNotes(table, createDynamoTransport())
+      : undefined,
   });
 }

@@ -36,3 +36,8 @@ indexed in the [web guide](../AGENTS.md).
 Role chat scenarios use deterministic loopback operation responses, never live Redpill inference.
 They verify reload recovery, refresh precedence, partial summaries, explicit retry, Undo and native
 mobile-dialog focus/dismissal in both themes. Screenshots are retained in ignored test output.
+
+Notes scenarios use the isolated API fixture to verify distinct persisted comments, Markdown preview,
+editing, Cmd+Enter submission, plain Enter newlines, permanent deletion, focus recovery and reloads
+in desktop/mobile layouts and both themes.
+Comment screenshots are review artifacts; no real notes or provider calls enter these tests.

@@ -1,9 +1,13 @@
 export {
   postingApi,
+  useCreateNoteMutation,
+  useDeleteNoteMutation,
   useDeletePostingMutation,
+  useEditNoteMutation,
   useExtractPostingMutation,
   usePostingQuery,
   usePostingsInfiniteQuery,
+  useRoleNotesInfiniteQuery,
   useRoleUpdatesInfiniteQuery,
   useSavePostingMutation,
   useSendRoleUpdateMutation,
@@ -13,6 +17,7 @@ export {
 export type {
   Application,
   Job,
+  RoleNote,
   SavedPosting,
   UpdateEntry,
   UpdateMessage,

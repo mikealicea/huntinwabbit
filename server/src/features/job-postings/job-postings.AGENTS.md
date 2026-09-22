@@ -71,7 +71,7 @@ record. A lost acknowledgement is recovered through a strong ID-pointer read. Th
 be saved again with a new ID. Existing legacy records still require the documented ID-pointer backfill.
 
 [Cleanup](job-postings.cleanup.ts) runs through scheduled recovery and the existing pending index. It
-queries one bounded page of the owner's job keys per marker per pass, deleting only rows with the
+queries bounded job and role-note pages per marker per pass, deleting only rows with the
 original record key. Deletions and cursor progress commit atomically; concurrent/replayed cleanup
 checks the marker revision. Interrupted cleanup remains durable without a TTL and is exposed by the
 recovery error alarm. Older job metadata persists until cleanup succeeds; no source URL or notes enter
@@ -103,7 +103,7 @@ ordinary tests never write hosted records or call paid providers.
 The [update router](job-postings.updates.router.ts) accepts text and returns a durable operation,
 with owner-scoped paginated history and explicit Undo. [Update schemas](job-postings.updates.schemas.ts)
 own request, history, model and stored-job contracts; [posting schemas](job-postings.schemas.ts)
-own editable fields, overrides and revision stamps. Internal metadata and unimplemented materials,
+own editable fields, overrides and revision stamps. Internal metadata, notes/comments and unimplemented materials,
 tasks and shared company research are not editable. Company changes affect only this saved role.
 
 [Update operations](job-postings.updates.ts) atomically persist a message, idempotency pointer and
@@ -142,3 +142,31 @@ describes the newly included personal text and notes.
 [Update tests](job-postings.updates.test.ts) cover edits, overrides, partial results, undo, conflicts,
 replay, uncertain claims, recovery, history, source identity, deletion and authenticated routes.
 Run server/build, documentation and package gates; fake storage does not prove AWS IAM or scheduling.
+
+## Role comments
+
+[Note schemas](job-postings.notes.schemas.ts) and [router](job-postings.notes.router.ts) own direct
+create/list/edit/delete contracts; [operations](job-postings.notes.ts) enforce ownership and bounded
+storage access using the existing table. Notes are not extraction jobs and never trigger inference.
+The timeline is independently paginated, newest first, with owner/role-bound cursors. Stored entries
+and lookup pointers are validated. Missing and other-owner roles share the same unavailable response.
+
+Separate chronological rows hold Markdown bodies, timestamps and per-note revisions. ID pointers
+hold the original submission hash for replay checks. Deleted entries leave pointers without body
+content, preventing delayed create retries from resurrecting them. There is no comment trash or Undo.
+Edits and deletes compare note revisions. A repeated edit can recover only the exact next revision
+and body; other conflicts require review. Body whitespace is preserved, but blank entries are rejected.
+
+Each mutation conditionally updates the parent posting and advances its application/record versions.
+Unrelated role changes can be rebased; role deletion fences late writes. A deletion confirmation
+reviewed before a comment mutation therefore conflicts. Cleanup markers advance from historical jobs
+to role-specific note rows and pointers, with paginated progress committed atomically. Old markers
+without a phase start with jobs; the existing recovery error alarm covers failed cleanup.
+
+The legacy application notes field remains decodable and compatible with the old tracking API but
+is not displayed by the timeline. No migration is required. AI input excludes this field and historical
+receipts that changed it; new model output cannot change it. Legacy receipts remain readable, but
+Undo containing a notes change is refused as a whole. Comments are never included in AI input.
+[Notes tests](job-postings.notes.test.ts) cover ownership, replay, conflicts, pagination and cleanup.
+Ship the API and extraction/recovery workers together before enabling the updated frontend. No new infrastructure
+or processor is introduced; packaging and deployed IAM verification remain separate from local tests.

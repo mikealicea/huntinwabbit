@@ -184,10 +184,10 @@ test('landing entry, capture, role editing, navigation, and reload recovery', as
     .getByRole('combobox', { name: 'Priority', exact: true })
     .selectOption('high');
   await page
-    .getByRole('textbox', { name: 'Prep & interview notes' })
+    .getByRole('textbox', { name: 'Add a note' })
     .fill('Questions for the recruiter.');
-  await page.getByRole('button', { name: 'Save notes' }).click();
-  await expect(page.getByText('Notes saved.', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Add comment' }).click();
+  await expect(page.getByText('Comment saved.', { exact: true })).toBeVisible();
   await page.getByLabel('Next follow-up').fill('2026-10-01');
   await expect(page.getByLabel('Next follow-up')).toBeEnabled();
   await page.getByRole('link', { name: 'Search board', exact: true }).click();
@@ -197,13 +197,19 @@ test('landing entry, capture, role editing, navigation, and reload recovery', as
   await expect(moved).toBeVisible();
   await expect(moved).toContainText('Oct 1, 2026');
   await page.goBack();
+  await expect(page.getByRole('textbox', { name: 'Add a note' })).toHaveValue(
+    '',
+  );
   await expect(
-    page.getByRole('textbox', { name: 'Prep & interview notes' }),
-  ).toHaveValue('Questions for the recruiter.');
+    page.getByRole('article', { name: 'Comment', exact: true }),
+  ).toContainText('Questions for the recruiter.');
   await page.reload();
+  await expect(page.getByRole('textbox', { name: 'Add a note' })).toHaveValue(
+    '',
+  );
   await expect(
-    page.getByRole('textbox', { name: 'Prep & interview notes' }),
-  ).toHaveValue('Questions for the recruiter.');
+    page.getByRole('article', { name: 'Comment', exact: true }),
+  ).toContainText('Questions for the recruiter.');
   expect(page.url()).toBe(temporaryRoleUrl);
   await expect(
     page.getByRole('combobox', { name: 'Stage', exact: true }),
@@ -403,7 +409,7 @@ test('refresh retains facts and drafts on failure, then replaces facts on explic
   await page
     .getByRole('link', { name: 'Open Senior Product Engineer at Northstar' })
     .click();
-  const notes = page.getByRole('textbox', { name: 'Prep & interview notes' });
+  const notes = page.getByRole('textbox', { name: 'Add a note' });
   await notes.fill('Keep my unsaved preparation');
   await page.getByLabel('Posting actions').click();
   await page
@@ -428,10 +434,13 @@ test('refresh retains facts and drafts on failure, then replaces facts on explic
     { timeout: 10000 },
   );
   await expect(notes).toHaveValue('Keep my unsaved preparation');
-  await page.getByRole('button', { name: 'Save notes' }).click();
-  await expect(page.getByText('Notes saved.', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Add comment' }).click();
+  await expect(page.getByText('Comment saved.', { exact: true })).toBeVisible();
   await page.reload();
-  await expect(notes).toHaveValue('Keep my unsaved preparation');
+  await expect(notes).toHaveValue('');
+  await expect(
+    page.getByRole('article', { name: 'Comment', exact: true }),
+  ).toContainText('Keep my unsaved preparation');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(
     'Refreshed Product Engineer',
   );
@@ -870,5 +879,98 @@ for (const viewport of [
       ).toHaveText('Board up to date');
       expect(await positions()).toEqual(pendingPositions);
     }
+  });
+}
+
+for (const scheme of ['light', 'dark'] as const) {
+  test(`notes support Markdown, editing and deletion on desktop and mobile in ${scheme}`, async ({
+    page,
+  }, testInfo) => {
+    await page.emulateMedia({ colorScheme: scheme });
+    await page
+      .getByRole('link', { name: 'Open Senior Product Engineer at Northstar' })
+      .click();
+    const section = page.getByRole('region', { name: 'Notes', exact: true });
+    await expect(
+      section.getByText('No comments yet. Add your first note above.'),
+    ).toBeVisible();
+    await section
+      .getByRole('textbox', { name: 'Add a note' })
+      .fill(
+        '## Interview prep\n\n- **Ask about the team**\n- Review the [role](https://example.com/role)\n\n<script>inert</script>\n![blocked](https://example.com/image.png)',
+      );
+    await section.getByRole('button', { name: 'Preview', exact: true }).click();
+    await expect(
+      section.getByRole('region', { name: 'Add a note preview' }),
+    ).toContainText('Ask about the team');
+    await expect(section.locator('img')).toHaveCount(0);
+    await section.getByRole('button', { name: 'Write', exact: true }).click();
+    const composer = section.getByRole('textbox', { name: 'Add a note' });
+    const draft = await composer.inputValue();
+    await composer.press('ControlOrMeta+End');
+    await composer.press('Enter');
+    await expect(composer).toHaveValue(`${draft}\n`);
+    await expect(
+      section.getByRole('article', { name: 'Comment', exact: true }),
+    ).toHaveCount(0);
+    await composer.press('Meta+Enter');
+    await expect(
+      section.getByText('Comment saved.', { exact: true }),
+    ).toBeVisible();
+    await expect(
+      section.getByRole('textbox', { name: 'Add a note' }),
+    ).toHaveValue('');
+    await page.reload();
+    const entry = section.getByRole('article', {
+      name: 'Comment',
+      exact: true,
+    });
+    await expect(entry).toContainText('Interview prep');
+    await entry.getByRole('button', { name: 'Edit comment' }).click();
+    await entry
+      .getByRole('textbox', { name: 'Edit comment' })
+      .fill(
+        'Updated **interview prep**\n\n' +
+          'Long fictional preparation text. '.repeat(10),
+      );
+    await entry
+      .getByRole('textbox', { name: 'Edit comment' })
+      .press('Meta+Enter');
+    await expect(entry).toContainText('Edited');
+    await page.screenshot({
+      path: testInfo.outputPath(`notes-desktop-${scheme}.png`),
+      fullPage: true,
+    });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await section.scrollIntoViewIfNeeded();
+    await page.screenshot({
+      path: testInfo.outputPath(`notes-mobile-${scheme}.png`),
+      fullPage: true,
+    });
+    await page.evaluate(() => {
+      document.documentElement.style.zoom = '2';
+    });
+    await expect(
+      section.getByRole('button', { name: 'Add comment' }),
+    ).toBeVisible();
+    await page.evaluate(() => {
+      document.documentElement.style.zoom = '';
+    });
+    await entry.getByRole('button', { name: 'Delete comment' }).click();
+    await expect(
+      entry.getByRole('button', { name: 'Cancel deletion' }),
+    ).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(
+      entry.getByRole('button', { name: 'Delete comment' }),
+    ).toBeFocused();
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Enter');
+    await expect(entry).toHaveCount(0);
+    await page.reload();
+    await expect(
+      section.getByText('No comments yet. Add your first note above.'),
+    ).toBeVisible();
   });
 }
