@@ -28,6 +28,10 @@ a deployed capability. Deployment and live paid inference are separate authorize
 
 When a role has an explicit company selection, the chat's current employer name reflects that
 selection, so a later instruction can correct it even when the original posting named a different
-company. The role-update request includes that selected name; it does not include the company
-directory, company IDs, or other roles at the company. Company association snapshots stay in storage
+company. The worker also ranks a shortlist from the account's company directory using the message
+and current employer, website and description. At most twenty candidates reach the same completion,
+each containing a temporary reference, bounded name and employer website hostname. Company IDs,
+company comments and other roles are excluded. This adds no second inference call or new processor.
+Candidates are matching evidence, not a source for filling missing posting facts; uncertain or
+invalid selections fall back to ordinary company resolution. Company association snapshots stay in storage
 for conflict-safe Undo. See the [company barrel](../server/src/features/companies/companies.AGENTS.md).

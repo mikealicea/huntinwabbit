@@ -87,3 +87,16 @@ It saves one real link without requesting parsing, verifies duplicates, detail, 
 conflicts and list privacy, then revokes its own session. The saved smoke record is retained because
 there is no delete API. It never logs payloads, tokens or account identifiers. Browser extraction
 checks are separate paid operations and must name their attempt budget and target.
+
+## Contextual company matching smoke
+
+[company-matching.live.ts](company-matching.live.ts) checks the deployed chat worker with the dedicated
+E2E account. Set `COMPANY_MATCHING_LIVE_TARGET` to the reviewed `E2E_API_URL` origin and run
+`mise exec -- node --env-file=.env.e2e e2e/company-matching.live.ts`. This explicit live mutation
+submits at most four chat completions, without automatic retry or posting fetch. It checks short/long
+employer names in both directions, Undo, an unrelated similar name and a client mention. It deletes
+its synthetic roles and revokes its session in teardown; four empty company profiles remain after
+a successful run because company deletion is unavailable. Enabled company analysis may independently
+run in response to fixture mutations, so the four-call limit applies to chat submissions only.
+The suite uses production schemas and emits only outcome categories/counts. It is excluded from
+ordinary offline tests and the authentication E2E suite. It does not inspect or modify personal roles.

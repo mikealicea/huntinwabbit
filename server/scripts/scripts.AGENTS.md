@@ -42,3 +42,12 @@ Storage package checks also verify company-analysis handler/stream configuration
 update/condition permissions. Company backfill invalidates analysis revisions transactionally; if
 analysis workers are enabled, applied membership changes can schedule paid analysis. Keep analysis
 disabled during an association-only migration. Dry-run remains read-only.
+
+[reassign-company.ts](reassign-company.ts) corrects one explicitly reviewed role association. It
+requires account, region, table, role, source company, target company and expected record version,
+with the owner supplied through the operator environment. The default is read-only dry-run. Applied
+corrections use the picker coordinator and analysis-invalidation adapter, preserving company records
+and role content. Repeating an already-applied correction does not write again. It does not merge
+company notes or retry extraction; configured background company analysis can run after reassignment.
+[Tests](reassign-company.test.ts) cover dry-run, target/owner/version guards, concurrent changes and
+replay. Follow the [targeted correction procedure](../../docs/runbooks/company-backfill.md).
