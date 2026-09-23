@@ -64,3 +64,27 @@ multiple-role membership with a dedicated test account only when that target is 
 When performing an association-only backfill, keep `COMPANY_ANALYSIS_ENABLED=false` for deployed
 analysis workers. Applied membership changes now invalidate company analysis transactionally and can
 schedule paid analysis when that capability is enabled. Dry-run does not schedule analysis.
+
+## Targeted association correction
+
+Use [reassign-company.ts](../../server/scripts/reassign-company.ts) for a reviewed role already linked
+to the wrong company. Unlike backfill, it replaces an existing association. This is not a company merge:
+the old profile and its comments remain, and source facts, overrides, chat history and extraction
+state are preserved. Configured analysis is invalidated for both companies and can schedule paid work;
+include this side effect in the authorized correction scope.
+
+Read the current role and both companies under the same verified owner. Keep its record version and
+source/target IDs in local operator input, never checked-in examples. With `COMPANY_MIGRATION_USER_ID`
+set and the explicit deployment account verified, preview from `server/`:
+
+```sh
+mise exec -- node scripts/reassign-company.ts \
+  --table YOUR_TABLE --region YOUR_REGION --account YOUR_ACCOUNT_ID \
+  --role ROLE_UUID --from SOURCE_COMPANY_UUID --to TARGET_COMPANY_UUID \
+  --version REVIEWED_RECORD_VERSION
+```
+
+Run the identical reviewed command with `--apply` to commit. A source/version mismatch aborts rather
+than rebasing over new edits. The command verifies the resulting association; independently read the
+affected company memberships and any related role to confirm grouping. A repeated apply already at
+the target succeeds without another mutation. Output contains status only, never identities or content.

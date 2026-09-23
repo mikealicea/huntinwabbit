@@ -151,6 +151,14 @@ Save/extraction/chat commits maintain membership transactionally with posting da
 membership but retains the company. Manual assignment/clear survives extraction. Chat company-name
 edits can reassign only this role, with association snapshots/revisions protecting Undo and newer
 manual selections. Generated employer facts are never rewritten merely to change membership.
+Chat supplies owner-scoped company candidates to its existing completion, recognizing employer-name
+variants from posting context without another paid call. Invalid matching metadata falls back to
+ordinary resolution without discarding valid edits. Unrelated edits never apply a suggestion, and
+skipped identity edits or conflicting employer domains prevent using it. Undo checks the applied
+source name separately from the selected company's display name. Candidate lookup shares the
+completion deadline; a lookup failure fails the operation without submitting inference.
+See [matching tests](../companies/companies.chat-matching.test.ts) and the
+[role-update data boundary](../../../../docs/role-updates-data-boundary.md).
 ## Role comments
 
 [Note schemas](job-postings.notes.schemas.ts) and [router](job-postings.notes.router.ts) own direct

@@ -33,10 +33,16 @@ match only without conflicting domain evidence; compatible name variants can mat
 Ambiguous matches create a separate company. Missing names remain unassigned. Source/ATS hosts are
 never used as employer domains. Corporate suffix removal only broadens compatible names/candidates.
 
-Durable extraction ranks a bounded shortlist from page text before the existing model call. Temporary
-references, bounded names and website hostnames reach Redpill; internal IDs and application data do
-not. The extractor accepts only supplied references; invalid matching metadata does not invalidate
-otherwise valid job facts. The manual picker and backfill do not call the model directly; their membership writes can schedule separately enabled company analysis.
+Durable extraction and role-update chat rank a bounded shortlist before their existing model call.
+Temporary references, bounded names and website hostnames reach Redpill; internal IDs and application
+data do not enter the candidate list. Chat ranks using the submitted text and current employer,
+website and description; its ordinary editable-role/history inputs retain their separate data boundary.
+Both adapters accept only supplied references; invalid matching metadata does not invalidate otherwise
+valid facts or edits. Chat applies a suggestion only during an accepted employer change, with matching
+final identity fields and no conflicting supplied employer domain. A name prefix, shared hosting
+domain or mention of a partner/client/subsidiary alone is insufficient; uncertain matches fall back
+to conservative name/domain resolution. Model instructions are not an identity guarantee.
+The manual picker and backfill do not call the model directly; their membership writes can schedule separately enabled company analysis.
 
 An explicit selection, creation or clear is manual and survives refreshes. Company-name chat edits
 can replace it; website-only edits cannot move a manual association. Association revisions fence
@@ -47,6 +53,10 @@ changed since that operation. Another role at the company is never rewritten imp
 
 [Tests](companies.test.ts) exercise identity, contention, ownership, pagination, HTTP validation,
 selection, extraction, chat/Undo and migration replay using injected storage and model boundaries.
+[Chat matching regressions](companies.chat-matching.test.ts) cover branded-name variants, owner
+isolation, bounded provider data, invalid suggestions, conflicting domains, concurrent manual
+corrections, Undo and lost completion acknowledgements. The opt-in [live smoke](../../../e2e/company-matching.live.ts)
+checks real model matching and non-matching examples against a reviewed deployment.
 Run server gates/build, web/browser integration and documentation checks. Package checks establish
 bundling/configuration only; no offline test proves deployed IAM or model accuracy.
 The [rollout runbook](../../../../docs/runbooks/company-backfill.md) owns compatibility and explicit

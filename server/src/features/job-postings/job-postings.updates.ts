@@ -8,8 +8,10 @@ import { z } from 'zod';
 import { conflict } from '../../shared/shared.errors.ts';
 import {
   type CompanyStore,
+  companyDomain,
   companyMembershipWrites,
   companySummary,
+  shortlistCompanies,
 } from '../companies/companies.index.ts';
 import { normalizeJobUrl } from '../job-parsing/job-parsing.index.ts';
 import {
@@ -352,6 +354,7 @@ export function createRoleUpdates(
     data: UpdateData,
     output?: z.infer<typeof modelUpdatesSchema>,
     error?: string,
+    suggestedCompany?: { id: string; website: string | null },
   ) {
     for (let attempt = 0; attempt < 3; attempt++) {
       const current = await readRow(table, send, job.pk, job.sk, signal());
@@ -447,13 +450,32 @@ export function createRoleUpdates(
           (companyWebsiteChanged && item.companyAssociation?.mode !== 'manual'))
       ) {
         const values = effectiveFields(next);
+        const website =
+          companyNameChanged && !companyWebsiteChanged
+            ? null
+            : values.companyWebsite;
+        // A suggestion describes the model's resulting identity, not a partially
+        // applied or stale identity. Keep ordinary matching when any identity edit was skipped.
+        const identityApplied = changes
+          .filter(
+            (change) =>
+              change.field === 'companyName' ||
+              change.field === 'companyWebsite',
+          )
+          .every((change) => same(values[change.field], change.value));
+        const domain = companyDomain(website);
+        const suggestedDomain = companyDomain(
+          suggestedCompany?.website ?? null,
+        );
         const company = await companies.resolve(
           job.pk,
           values.companyName,
-          companyNameChanged && !companyWebsiteChanged
-            ? null
-            : values.companyWebsite,
+          website,
           signal(),
+          identityApplied &&
+            !(domain && suggestedDomain && domain !== suggestedDomain)
+            ? suggestedCompany?.id
+            : undefined,
         );
         next.companyAssociation = {
           company: companySummary(company),
@@ -594,6 +616,21 @@ export function createRoleUpdates(
         context.unshift(entry);
       }
       const { notes: _notes, ...current } = data.baseline;
+      const parseSignal = AbortSignal.timeout(60_000);
+      const candidates = companies
+        ? shortlistCompanies(
+            await companies.all(pk, parseSignal),
+            [
+              data.entry.text,
+              current.companyName,
+              current.companyWebsite,
+              current.description,
+            ]
+              .filter(Boolean)
+              .join('\n'),
+          )
+        : [];
+      let suggestedCompany: { id: string; website: string | null } | undefined;
       const output = modelUpdatesSchema.parse(
         await parse(
           {
@@ -602,10 +639,25 @@ export function createRoleUpdates(
             history: context,
             today,
           },
-          AbortSignal.timeout(60_000),
+          parseSignal,
+          candidates.length
+            ? {
+                candidates,
+                matched: (id) => {
+                  const company = candidates.find(
+                    (candidate) => candidate.id === id,
+                  );
+                  if (company)
+                    suggestedCompany = {
+                      id: company.id,
+                      website: company.website,
+                    };
+                },
+              }
+            : undefined,
         ),
       );
-      await finish(processing, claimed, output);
+      await finish(processing, claimed, output, undefined, suggestedCompany);
     } catch {
       await finish(
         processing,
@@ -641,7 +693,9 @@ export function createRoleUpdates(
         throw postingError('CONFLICT');
       if (data.entry.changes.some((change) => change.field === 'notes'))
         throw postingError('CONFLICT');
-      const fields = effectiveUpdateFields(found.item);
+      // Receipts contain the applied source name, which can differ from the
+      // selected company's display name after contextual matching.
+      const fields = effectiveFields(found.item);
       const next = structuredClone(found.item);
       if (data.appliedCompanyRevision !== undefined) {
         if (

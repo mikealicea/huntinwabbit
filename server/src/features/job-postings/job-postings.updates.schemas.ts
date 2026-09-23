@@ -1,5 +1,8 @@
 import { z } from 'zod';
-import { companyAssociationSchema } from '../companies/companies.index.ts';
+import {
+  type Company,
+  companyAssociationSchema,
+} from '../companies/companies.index.ts';
 import {
   editableFieldsSchema,
   fieldNameSchema,
@@ -96,4 +99,8 @@ export type ParseUpdates = (
     today: string;
   },
   signal: AbortSignal,
+  companyContext?: {
+    candidates: Company[];
+    matched: (id: string) => void;
+  },
 ) => Promise<z.infer<typeof modelUpdatesSchema>>;
