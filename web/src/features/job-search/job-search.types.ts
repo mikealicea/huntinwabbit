@@ -1,4 +1,8 @@
-import type { Job, SavedPosting } from '@/features/job-api/job-api.index';
+import type {
+  InterviewProcess,
+  Job,
+  SavedPosting,
+} from '@/features/job-api/job-api.index';
 export const STAGES = [
   'collected',
   'applied',
@@ -90,6 +94,7 @@ export interface RoleTask {
 }
 
 export interface ApplicationFields {
+  interviewProcess?: InterviewProcess | null;
   stage: Stage;
   interest: Interest;
   priority: Priority;

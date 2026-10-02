@@ -16,6 +16,7 @@ import {
   createParsePosting,
   createRedpillExtractor,
   jobParsingConfig,
+  redpillCompletionConfig,
 } from './features/job-parsing/job-parsing.index.ts';
 import {
   createDynamoPostingStore,
@@ -40,7 +41,10 @@ export function buildRuntimeApp(
     ? createParsePosting({
         fetchPosting: createFetchPosting(),
         observeSource: sourceGuidance.observe,
-        extractPosting: createRedpillExtractor(config.apiKey),
+        extractPosting: createRedpillExtractor(
+          config.apiKey,
+          redpillCompletionConfig(env),
+        ),
       })
     : undefined;
   const send = withCompanyAnalysisInvalidation(createDynamoTransport());

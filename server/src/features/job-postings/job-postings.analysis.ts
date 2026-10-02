@@ -13,6 +13,7 @@ import {
   type SavedPosting,
   storedPostingSchema,
 } from './job-postings.schemas.ts';
+import { hydrateUpdateBody } from './job-postings.update-bodies.ts';
 import { effectiveFields } from './job-postings.updates.logic.ts';
 import { updateDataSchema } from './job-postings.updates.schemas.ts';
 
@@ -316,26 +317,39 @@ export function createCompanyAnalysisInputs(
           signal,
         ),
       );
-    const sources = result.Items.map((item) => {
-      if (
-        item.pk !== pk ||
-        item.recordKey !== recordKey ||
-        !item.sk.startsWith(prefix)
-      )
-        throw new Error('Invalid analysis source');
-      if (cursor.phase === 'notes')
-        return source('personal', noteSchema.parse(JSON.parse(item.data)).body);
-      const data = updateDataSchema.parse(JSON.parse(item.data));
-      return source(
-        'history',
-        JSON.stringify({
-          message: data.entry.text,
-          status: data.entry.status,
-          undoneAt: data.entry.undoneAt,
-          changes: data.entry.changes,
-        }),
-      );
-    });
+    const sources = await Promise.all(
+      result.Items.map(async (item) => {
+        if (
+          item.pk !== pk ||
+          item.recordKey !== recordKey ||
+          !item.sk.startsWith(prefix)
+        )
+          throw new Error('Invalid analysis source');
+        if (cursor.phase === 'notes')
+          return source(
+            'personal',
+            noteSchema.parse(JSON.parse(item.data)).body,
+          );
+        const data = await hydrateUpdateBody(
+          table,
+          send,
+          pk,
+          recordKey,
+          roleId,
+          updateDataSchema.parse(JSON.parse(item.data)),
+          signal,
+        );
+        return source(
+          'history',
+          JSON.stringify({
+            message: data.entry.text,
+            status: data.entry.status,
+            undoneAt: data.entry.undoneAt,
+            changes: data.entry.changes,
+          }),
+        );
+      }),
+    );
     const usable = cursor.usable || sources.length > 0;
     if (result.LastEvaluatedKey) {
       if (

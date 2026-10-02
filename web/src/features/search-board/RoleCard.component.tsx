@@ -95,6 +95,14 @@ export function RoleCard({
         {showStage && (
           <p className="text-xs font-medium">{STAGE_LABELS[role.stage]}</p>
         )}
+        {role.stage === 'interviewing' && role.interviewProcess && (
+          <p className="text-sm font-medium">
+            Interview ·{' '}
+            {role.interviewProcess.stages.find(
+              (stage) => stage.id === role.interviewProcess?.currentStageId,
+            )?.name ?? 'Choose current stage'}
+          </p>
+        )}
         {feedback}
         <h3 className="text-base font-semibold leading-snug">
           <Link

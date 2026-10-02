@@ -1,4 +1,7 @@
-export { jobParsingConfig } from './job-parsing.config.ts';
+export {
+  jobParsingConfig,
+  redpillCompletionConfig,
+} from './job-parsing.config.ts';
 export { createFetchPosting } from './job-parsing.fetch.ts';
 export {
   createRedpillCompletion,

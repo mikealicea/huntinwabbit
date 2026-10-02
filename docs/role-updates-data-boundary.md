@@ -35,3 +35,23 @@ company comments and other roles are excluded. This adds no second inference cal
 Candidates are matching evidence, not a source for filling missing posting facts; uncertain or
 invalid selections fall back to ordinary company resolution. Company association snapshots stay in storage
 for conflict-safe Undo. See the [company barrel](../server/src/features/companies/companies.AGENTS.md).
+
+## Recruiter transcripts and interview processes
+
+The interview setup dialog submits pasted recruiter transcripts through the same saved-role update
+pipeline, with an intent that permits only interview-process changes. Ordinary Update role also
+accepts transcripts. The Notes composer does not trigger this extraction. Clear stages save
+automatically with a change receipt and conflict-safe Undo; uncertain current position stays unknown.
+The [interview feature](../web/src/features/interview-process/interview-process.AGENTS.md) owns the UI.
+
+New message bodies are stored once in separate owner/role/operation-bound rows; operation snapshots
+reference them instead of duplicating long text. History and inference read the complete submitted
+body. Existing inline history remains readable. Bodies persist until role deletion and are included
+in its durable cleanup; Undo does not erase the transcript. The optional company-analysis feature
+continues to include update history, including transcripts, under its
+[existing data boundary](company-analysis-data-boundary.md). No new processor or retention promise is added.
+
+Frontend contracts accept the new optional fields before backend publication. API and extraction,
+recovery and analysis workers must ship compatible body readers together; older artifacts cannot read
+new separated history. Rollback must retain those readers. Model selection is shared across the app
+through the [parsing configuration](../server/src/features/job-parsing/job-parsing.config.ts).

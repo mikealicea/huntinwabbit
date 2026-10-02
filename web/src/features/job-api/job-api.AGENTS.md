@@ -107,3 +107,10 @@ only a hostname in the body, exposes no enumeration or client observation writes
 HTTP caching. The RTK query caches guidance by hostname in the account-scoped store. Capture controls
 freshness and ignores mismatched responses. Older backends return unavailable without blocking
 capture. Public parsing and saved-role response contracts are unchanged.
+
+Interview processes use the existing tracking PATCH and an atomic optional application field.
+Focused transcript submissions add interview-process intent to the existing update endpoint. Both
+sides validate process membership and full-text limits; the bridge allows larger message bodies to
+account for JSON escaping while retaining bounded responses. Saved operation bodies are hydrated by
+the backend, so the public history text contract is unchanged. Ship these accepting web contracts
+before backend output includes the new fields, then enable the UI against the updated API/workers.

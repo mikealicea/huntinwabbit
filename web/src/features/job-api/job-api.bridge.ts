@@ -235,7 +235,9 @@ export function createApiBridge(deps: {
             return failure(415, 'UNSUPPORTED_MEDIA_TYPE');
           const value = await boundedJson(
             request,
-            ['save', 'extract'].includes(action) ? 1024 * 1024 : 256 * 1024,
+            ['save', 'extract', 'message'].includes(action)
+              ? 1024 * 1024
+              : 256 * 1024,
           );
           const schema =
             action === 'guidance'

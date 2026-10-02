@@ -28,3 +28,7 @@ empty overrides remain empty.
 Saved company associations supply the canonical company ID and card/header label. Legacy records
 without an association use effective posting names. Explicitly cleared associations remain unknown;
 their source facts are preserved for inspection rather than silently restoring membership.
+
+Application presentation also carries the optional role-owned interview process unchanged from the
+API. Its stage IDs, order and current selection are independent of the application-stage enum.
+Legacy records omit the process; presentation treats them as awaiting setup.

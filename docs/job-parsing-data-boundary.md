@@ -110,3 +110,17 @@ hostname-only access observations to both parser entry points. Combined-source m
 for an independent fetched-page classification in the same completion; no additional content or
 processor is added. Public parse responses are unchanged. Posting content remains transient here,
 while hostname metadata follows the [saved-data boundary](job-postings-data-boundary.md).
+
+## Configurable app-wide model
+
+[Configuration](../server/src/features/job-parsing/job-parsing.config.ts) owns the accepted model IDs
+and trusted endpoints. The optional REDPILL_MODEL setting applies to posting extraction, role updates
+and company analysis, with the existing DeepSeek route as the default. GLM 5.3 selects Redpill's TEE
+endpoint and omits the DeepSeek-specific reasoning parameter; validation, deadlines and explicit retry
+semantics remain in the shared adapter. There is no automatic model fallback.
+
+Redpill lists `z-ai/glm-5.3` and its TEE endpoint in its
+[model documentation](https://redpill.ai/models/z-ai/glm-5.3), checked 2026-10-02. That listing is
+provider evidence, not application verification of retention, attestation or confidentiality. This
+repository still does not verify provider receipts or enforce provider erasure. Use the checked-in
+environment example and deploy the chosen setting consistently across inference functions.

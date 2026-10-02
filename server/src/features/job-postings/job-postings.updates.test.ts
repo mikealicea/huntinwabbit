@@ -657,3 +657,307 @@ it('excludes notes from provider context, skips stale model note changes and kee
     return { changes: [{ field: 'priority', value: 'low' }], skipped: [] };
   });
 });
+
+describe('interview processes and full transcripts', () => {
+  const stageA = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  const stageB = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+  const process = {
+    stages: [
+      { id: stageA, name: 'Recruiter' },
+      { id: stageB, name: 'Technical' },
+    ],
+    currentStageId: stageA,
+  };
+  it('persists manual stages and position independently, rejects stale writes, and keeps them through application-stage changes', async () => {
+    const s = await setup();
+    let item = await s.postings.update(
+      'alice',
+      s.item.id,
+      {
+        expectedApplicationVersion: 0,
+        changes: { interviewProcess: process, stage: 'interviewing' },
+      },
+      signal(),
+    );
+    item = await s.postings.update(
+      'alice',
+      item.id,
+      {
+        expectedApplicationVersion: item.applicationVersion,
+        changes: { interviewProcess: { ...process, currentStageId: stageB } },
+      },
+      signal(),
+    );
+    await expect(
+      s.postings.update(
+        'alice',
+        item.id,
+        {
+          expectedApplicationVersion: 0,
+          changes: { interviewProcess: process },
+        },
+        signal(),
+      ),
+    ).rejects.toMatchObject({ statusCode: 409 });
+    item = await s.postings.update(
+      'alice',
+      item.id,
+      {
+        expectedApplicationVersion: item.applicationVersion,
+        changes: { stage: 'closed' },
+      },
+      signal(),
+    );
+    expect(item.application.interviewProcess?.currentStageId).toBe(stageB);
+    expect(item.application.interest).toBe(s.item.application.interest);
+  });
+  it('extracts new stages from an intact long transcript, limits focused updates and supports Undo', async () => {
+    const s = await setup();
+    const message = {
+      ...s.input('Recruiter transcript. '.repeat(4000).trim()),
+      intent: 'interview-process' as const,
+    };
+    const entry = await s.updates.submit('alice', s.item.id, message);
+    const bodies = [...s.rows.values()].filter((row) =>
+      String(row.sk).startsWith('JOB#UPDATE-BODY#'),
+    );
+    expect(bodies).toHaveLength(1);
+    expect(bodies[0]?.text).toBe(message.text);
+    const job = [...s.rows.values()].find((row) =>
+      String(row.sk).startsWith('JOB#UPDATE#'),
+    );
+    expect(JSON.parse(String(job?.data)).entry.text).toBe('');
+    const parse = vi.fn<ParseUpdates>(async (input) => {
+      expect(input.text).toBe(message.text);
+      expect(input.intent).toBe('interview-process');
+      return {
+        changes: [
+          {
+            field: 'interviewProcess',
+            value: {
+              stages: [
+                { id: 'new-1', name: 'Recruiter' },
+                { id: 'new-2', name: 'VP — if needed' },
+              ],
+              currentStageId: null,
+            },
+          },
+          { field: 'priority', value: 'high' },
+        ],
+        skipped: [],
+      };
+    });
+    await s.run(parse);
+    expect((await s.get()).application.interviewProcess).toMatchObject({
+      stages: [{ name: 'Recruiter' }, { name: 'VP — if needed' }],
+      currentStageId: null,
+    });
+    expect((await s.get()).application.priority).toBe(
+      s.item.application.priority,
+    );
+    expect((await s.history()).items[0]?.text).toBe(message.text);
+    expect((await s.history()).items[0]?.status).toBe('partial');
+    await expect(
+      s.updates.submit('alice', s.item.id, message),
+    ).resolves.toMatchObject({ id: entry.id });
+    await expect(
+      s.updates.submit('alice', s.item.id, { ...message, intent: undefined }),
+    ).rejects.toMatchObject({ statusCode: 409 });
+    await s.updates.undo('alice', s.item.id, entry.id);
+    expect((await s.get()).application.interviewProcess).toBeNull();
+    expect(parse).toHaveBeenCalledTimes(1);
+  });
+  it('retains stage identity when renaming and reordering; later manual movement blocks Undo', async () => {
+    const s = await setup();
+    await s.postings.update(
+      'alice',
+      s.item.id,
+      { expectedApplicationVersion: 0, changes: { interviewProcess: process } },
+      signal(),
+    );
+    const entry = await s.updates.submit(
+      'alice',
+      s.item.id,
+      s.input('Rename technical to Pair programming'),
+    );
+    await s.run(async () => ({
+      changes: [
+        {
+          field: 'interviewProcess',
+          value: {
+            stages: [
+              { id: stageB, name: 'Pair programming' },
+              process.stages[0],
+            ],
+          },
+        },
+      ],
+      skipped: [],
+    }));
+    let item = await s.get();
+    expect(item.application.interviewProcess).toEqual({
+      stages: [{ id: stageB, name: 'Pair programming' }, process.stages[0]],
+      currentStageId: stageA,
+    });
+    item = await s.postings.update(
+      'alice',
+      item.id,
+      {
+        expectedApplicationVersion: item.applicationVersion,
+        changes: { interviewProcess: { ...process, currentStageId: stageB } },
+      },
+      signal(),
+    );
+    await expect(
+      s.updates.undo('alice', item.id, entry.id),
+    ).rejects.toMatchObject({ statusCode: 409 });
+  });
+  it('does not apply a stale AI process over a manual move, including away-and-back moves', async () => {
+    const s = await setup();
+    await s.postings.update(
+      'alice',
+      s.item.id,
+      { expectedApplicationVersion: 0, changes: { interviewProcess: process } },
+      signal(),
+    );
+    await s.updates.submit(
+      'alice',
+      s.item.id,
+      s.input('Update the interview process'),
+    );
+    for (const currentStageId of [stageB, stageA]) {
+      const item = await s.get();
+      await s.postings.update(
+        'alice',
+        item.id,
+        {
+          expectedApplicationVersion: item.applicationVersion,
+          changes: { interviewProcess: { ...process, currentStageId } },
+        },
+        signal(),
+      );
+    }
+    await s.run(async () => ({
+      changes: [
+        {
+          field: 'interviewProcess',
+          value: { ...process, currentStageId: stageB },
+        },
+      ],
+      skipped: [],
+    }));
+    expect((await s.get()).application.interviewProcess).toEqual(process);
+    expect((await s.history()).items[0]?.skipped.join(' ')).toContain(
+      'changed since',
+    );
+  });
+  it('bounds long text without truncation and never dispatches body rows as inference jobs', async () => {
+    const s = await setup();
+    await expect(
+      s.updates.submit('alice', s.item.id, s.input('x'.repeat(100_001))),
+    ).rejects.toThrow();
+    await expect(
+      s.updates.submit('alice', s.item.id, s.input('界'.repeat(90_000))),
+    ).rejects.toThrow();
+    const input = s.input('x'.repeat(100_000));
+    await s.updates.submit('alice', s.item.id, input);
+    const parse = vi.fn<ParseUpdates>();
+    await createExtractionWorker(
+      'test',
+      s.send,
+      undefined,
+      Date.now,
+      parse,
+    ).run('USER#alice', `JOB#UPDATE-BODY#${s.item.id}#${input.operationId}`);
+    expect(parse).not.toHaveBeenCalled();
+    const item = await s.get();
+    await s.postings.delete(
+      'alice',
+      item.id,
+      item.applicationVersion,
+      signal(),
+    );
+    await createExtractionWorker(
+      'test',
+      s.send,
+      undefined,
+      () => Date.now() + 1_000_000,
+    ).recover();
+    expect(
+      [...s.rows.values()].some((row) =>
+        String(row.sk).startsWith('JOB#UPDATE-BODY#'),
+      ),
+    ).toBe(false);
+  });
+  it('paginates escaped long messages within the bridge response limit without losing entries', async () => {
+    const s = await setup();
+    const ids: string[] = [];
+    for (let i = 0; i < 5; i++) {
+      const entry = await s.updates.submit(
+        'alice',
+        s.item.id,
+        s.input(`Start${'\u0000'.repeat(99_000)}`),
+      );
+      ids.push(entry.id);
+      await s.run(async () => ({ changes: [], skipped: [] }));
+    }
+    let cursor: string | undefined;
+    const seen: string[] = [];
+    do {
+      const page = await s.updates.history('alice', s.item.id, { cursor });
+      expect(Buffer.byteLength(JSON.stringify(page))).toBeLessThan(
+        2 * 1024 * 1024,
+      );
+      seen.push(...page.items.map((entry) => entry.id));
+      cursor = page.nextCursor ?? undefined;
+    } while (cursor);
+    expect(seen).toEqual(ids.reverse());
+  });
+});
+
+it('keeps legacy inline messages readable and fails a missing separated body before inference', async () => {
+  const s = await setup();
+  const entry = await s.updates.submit(
+    'alice',
+    s.item.id,
+    s.input('Legacy message'),
+  );
+  const job = [...s.rows.values()].find((row) =>
+    String(row.sk).startsWith('JOB#UPDATE#'),
+  );
+  if (!job) throw new Error('Missing job');
+  const data = JSON.parse(String(job.data));
+  delete data.bodyStored;
+  data.entry.text = 'Legacy message';
+  job.data = JSON.stringify(data);
+  await s.run(async (input) => {
+    expect(input.text).toBe('Legacy message');
+    return { changes: [], skipped: [] };
+  });
+  expect((await s.history()).items[0]).toMatchObject({
+    id: entry.id,
+    text: 'Legacy message',
+  });
+  const next = await s.updates.submit(
+    'alice',
+    s.item.id,
+    s.input('Missing body'),
+  );
+  const body = [...s.rows.entries()].find(
+    ([, row]) =>
+      String(row.sk).endsWith(next.id) &&
+      String(row.sk).startsWith('JOB#UPDATE-BODY#'),
+  );
+  if (!body) throw new Error('Missing body row');
+  s.rows.delete(body[0]);
+  const parse = vi.fn<ParseUpdates>();
+  await s.run(parse);
+  expect(parse).not.toHaveBeenCalled();
+  expect((await s.get()).edits?.pending).toBeNull();
+  const failed = [...s.rows.values()].find(
+    (row) =>
+      String(row.sk).startsWith('JOB#UPDATE#') &&
+      String(row.sk).endsWith(next.id),
+  );
+  expect(failed?.status).toBe('failed');
+});

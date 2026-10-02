@@ -114,3 +114,8 @@ Install web validators that accept both evidence variants before deploying a bac
 company-comment evidence. Deploy API and workers from the same revision; old backend responses remain
 readable. No bulk migration or paid backfill is required. Empty-company observations, mixed evidence,
 comment pagination, disabled inference and edits/deletions during inference have deterministic tests.
+
+Role-update input hydration reads both legacy inline messages and separated full-transcript bodies
+through the saved-postings adapter. The analysis worker uses the app-wide configured Redpill model.
+These changes retain the existing history data boundary, source batching and validation. Deploy this
+compatible reader alongside new role-update writers before accepting separated messages.

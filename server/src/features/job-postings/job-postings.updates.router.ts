@@ -23,7 +23,7 @@ export function createRoleUpdatesRouter(updates?: RoleUpdates) {
   for (const undo of [false, true])
     router.post(
       undo ? `${path}/:operation/undo` : path,
-      express.json({ limit: '128kb' }),
+      express.json({ limit: undo ? '16kb' : '1mb' }),
       async (req, res: Response<unknown, AuthLocals>) => {
         if (!req.is('application/json')) {
           res

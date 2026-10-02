@@ -32,6 +32,7 @@ export function effectiveFields(item: SavedPosting): EditableFields {
     companyWebsite: company.website,
     ...item.edits?.overrides,
     ...item.application,
+    interviewProcess: item.application.interviewProcess ?? null,
     sourceUrl: item.sourceUrl,
   });
 }

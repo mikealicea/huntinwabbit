@@ -21,6 +21,7 @@ import {
   storageOperation,
 } from './job-postings.dynamodb.ts';
 import { postingError } from './job-postings.errors.ts';
+import { normalizeInterviewProcess } from './job-postings.interviews.ts';
 import { postingPut, readRow } from './job-postings.operations.ts';
 import {
   applicationSchema,
@@ -29,6 +30,10 @@ import {
   MAX_RECORD_BYTES,
   type SavedPosting,
 } from './job-postings.schemas.ts';
+import {
+  hydrateUpdateBody,
+  updateBodyKey,
+} from './job-postings.update-bodies.ts';
 import {
   effectiveFields,
   effectiveUpdateFields,
@@ -55,7 +60,13 @@ const pointerKey = (id: string, operation: string) =>
 const hash = (value: string) =>
   createHash('sha256').update(value).digest('hex');
 function boundedData(value: UpdateData) {
-  const data = JSON.stringify(updateDataSchema.parse(value));
+  const data = JSON.stringify(
+    updateDataSchema.parse(
+      value.bodyStored
+        ? { ...value, entry: { ...value.entry, text: '' } }
+        : value,
+    ),
+  );
   if (Buffer.byteLength(data) > MAX_RECORD_BYTES)
     throw postingError('POSTING_TOO_LARGE');
   return data;
@@ -111,6 +122,15 @@ export function createRoleUpdates(
     const result = readJob(value, pk, pointer.jobKey);
     if (result.job.roleId !== id || result.data.entry.id !== operation)
       throw postingError('INVALID_STORED_POSTING');
+    result.data = await hydrateUpdateBody(
+      table,
+      send,
+      pk,
+      result.job.recordKey,
+      id,
+      result.data,
+      signal(),
+    );
     return result;
   }
   function putJob(
@@ -230,12 +250,31 @@ export function createRoleUpdates(
           signal(),
         ),
       );
-    const items = page.Items.map((value) => {
+    const items: UpdateEntry[] = [];
+    let bytes = 0;
+    let last = page.LastEvaluatedKey;
+    for (const value of page.Items) {
       const key = z.object({ sk: z.string() }).parse(value).sk;
       if (!key.startsWith(prefix)) throw postingError('INVALID_STORED_POSTING');
-      return readJob(value, pk, key).data.entry;
-    });
-    const last = page.LastEvaluatedKey;
+      const result = readJob(value, pk, key);
+      const data = await hydrateUpdateBody(
+        table,
+        send,
+        pk,
+        result.job.recordKey,
+        id,
+        result.data,
+        signal(),
+      );
+      const size = Buffer.byteLength(JSON.stringify(data.entry));
+      if (items.length && bytes + size > 1_500_000) {
+        const previous = page.Items[items.length - 1];
+        last = { pk, sk: z.object({ sk: z.string() }).parse(previous).sk };
+        break;
+      }
+      items.push(data.entry);
+      bytes += size;
+    }
     if (last && (last.pk !== pk || !last.sk.startsWith(prefix)))
       throw postingError('INVALID_CURSOR');
     return {
@@ -256,6 +295,7 @@ export function createRoleUpdates(
       if (
         previous.data.entry.text !== input.text ||
         previous.data.timezone !== input.timezone ||
+        previous.data.entry.intent !== input.intent ||
         previous.data.entry.retryOf !== input.retryOf
       )
         throw postingError('CONFLICT');
@@ -267,13 +307,15 @@ export function createRoleUpdates(
       const original = await getOperation(found.pk, id, input.retryOf);
       if (
         original?.data.entry.status !== 'failed' ||
-        original.data.entry.text !== input.text
+        original.data.entry.text !== input.text ||
+        original.data.entry.intent !== input.intent
       )
         throw postingError('INVALID_REQUEST');
     }
     const entry: UpdateEntry = {
       id: input.operationId,
       text: input.text,
+      ...(input.intent ? { intent: input.intent } : {}),
       createdAt: new Date(now()).toISOString(),
       status: 'queued',
       changes: [],
@@ -284,6 +326,7 @@ export function createRoleUpdates(
     };
     const sk = `JOB#UPDATE#${id}#${entry.createdAt}#${entry.id}`;
     const data: UpdateData = {
+      bodyStored: true,
       entry,
       timezone: input.timezone,
       baseline: effectiveUpdateFields(found.item),
@@ -321,6 +364,18 @@ export function createRoleUpdates(
                 TableName: table,
                 Item: {
                   pk: found.pk,
+                  sk: updateBodyKey(id, entry.id),
+                  recordKey: recordKey(next),
+                  text: input.text,
+                },
+                ConditionExpression: 'attribute_not_exists(pk)',
+              },
+            },
+            {
+              Put: {
+                TableName: table,
+                Item: {
+                  pk: found.pk,
                   sk: pointerKey(id, entry.id),
                   recordKey: recordKey(next),
                   jobKey: sk,
@@ -339,6 +394,7 @@ export function createRoleUpdates(
         if (
           recovered.data.entry.text !== input.text ||
           recovered.data.timezone !== input.timezone ||
+          recovered.data.entry.intent !== input.intent ||
           recovered.data.entry.retryOf !== input.retryOf
         )
           throw postingError('CONFLICT');
@@ -373,6 +429,15 @@ export function createRoleUpdates(
         counts.set(change.field, (counts.get(change.field) ?? 0) + 1);
       for (const change of changes) {
         const field = change.field;
+        if (
+          data.entry.intent === 'interview-process' &&
+          field !== 'interviewProcess'
+        ) {
+          result.entry.skipped.push(
+            `${field}: this submission only updates interview stages.`,
+          );
+          continue;
+        }
         if (field === 'notes') {
           result.entry.skipped.push(
             'Notes: use the Notes composer to add a comment.',
@@ -404,6 +469,8 @@ export function createRoleUpdates(
           continue;
         }
         try {
+          if (field === 'interviewProcess')
+            value = normalizeInterviewProcess(value, fields.interviewProcess);
           if (field === 'sourceUrl')
             value = normalizeJobUrl(z.string().parse(value));
           value = editableFieldsSchema.shape[field].parse(value);
@@ -554,8 +621,9 @@ export function createRoleUpdates(
   async function run(pk: string, sk: string) {
     const value = await readRow(table, send, pk, sk, signal());
     if (!value) return;
-    const { job, data } = readJob(value, pk, sk);
+    const { job, data: stored } = readJob(value, pk, sk);
     if (job.status !== 'queued') return;
+    const data = stored;
     if (!parse) {
       await finish(job, data, undefined, 'Role updates are unavailable.');
       return;
@@ -592,6 +660,17 @@ export function createRoleUpdates(
       data: boundedData(claimed),
     };
     try {
+      const hydrated = await hydrateUpdateBody(
+        table,
+        send,
+        pk,
+        job.recordKey,
+        job.roleId,
+        data,
+        signal(),
+      );
+      data.entry.text = hydrated.entry.text;
+      claimed.entry.text = hydrated.entry.text;
       const recent = await history(pk.slice('USER#'.length), job.roleId, {});
       const parts = new Intl.DateTimeFormat('en-CA', {
         timeZone: data.timezone,
@@ -635,6 +714,7 @@ export function createRoleUpdates(
         await parse(
           {
             text: data.entry.text,
+            ...(data.entry.intent ? { intent: data.entry.intent } : {}),
             current,
             history: context,
             today,

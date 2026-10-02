@@ -2,6 +2,7 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { ChangeCompanyContainer } from '@/features/company-workspace/company-workspace.index';
+import { InterviewProcessContainer } from '@/features/interview-process/interview-process.index';
 import {
   postingApi,
   RequestFeedback,
@@ -160,6 +161,16 @@ export function RoleWorkspaceContainer({ roleId }: { roleId: string }) {
           roleId={role.id}
           disabled={deletion.isLoading}
         />
+      }
+      interviewProcess={
+        role.stage === 'interviewing' && (
+          <InterviewProcessContainer
+            posting={query.currentData}
+            title={getRoleTitle(role)}
+            company={getCompanyLabel(role, [])}
+            disabled={deletion.isLoading || mutation.isLoading}
+          />
+        )
       }
       updates={
         <UpdateRoleContainer

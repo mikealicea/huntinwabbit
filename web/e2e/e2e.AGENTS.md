@@ -69,3 +69,8 @@ Source-guidance scenarios use a seeded Indeed response from the loopback fixture
 automatic disclosure without focus theft, keyboard navigation, manual dismissal, optional text save
 and desktop/mobile layouts in both themes. Screenshots are ignored review artifacts; fixture success
 does not establish real Indeed accessibility. Cross-user learning and recovery are server tests.
+
+[Interview tests](interview-process.spec.ts) verify the role-level board's placement, transcript setup,
+manual columns, pointer moves, keyboard cancellation/movement, reloads and preservation outside
+Interviewing. Desktop/mobile screenshots cover both themes. Inference responses remain deterministic
+and fictional; provider compatibility is outside the browser fixture.

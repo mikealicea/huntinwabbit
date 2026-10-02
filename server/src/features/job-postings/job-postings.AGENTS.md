@@ -231,3 +231,37 @@ into parsing. It retains hostname-only access outcomes outside user partitions; 
 cleanup never target these records. Guidance transactions do not carry JOB prefixes or pending-index
 attributes and do not trigger extraction or company analysis. Advisory write failures do not change
 a posting's extraction result or authorize a retry. No saved-role schema or migration changes.
+
+## Interview processes and long update messages
+
+The application schema owns an optional interview process: ordered named stages with stable IDs and
+one nullable current-stage reference. Older records omit it. Manual edits use the existing versioned
+tracking route; posting extraction cannot replace it. Leaving Interviewing retains the process.
+The process is one revision-stamped field, so a later manual card move prevents a stale AI result
+or Undo from overwriting it. Moving through columns records position, not completed interviews.
+
+[Interview normalization](job-postings.interviews.ts) resolves model references to server-generated
+IDs for new stages and preserves existing IDs during rename/reorder. Schemas reject duplicate IDs
+and dangling positions. The prompt preserves unknown/conditional information, asks for clear revision
+intent before removing existing stages, and does not infer progress from a list of future rounds.
+Focused submissions only apply interview-process changes; the worker enforces this restriction even
+if the model proposes other fields. General role updates also support this field.
+
+New submissions atomically save their raw text in an immutable owner/role/operation-bound body row
+alongside the job and idempotency pointer. [Body reader](job-postings.update-bodies.ts) hydrates text
+for replay, inference, history and company-analysis inputs. Job snapshots omit the body, retaining a
+storage marker; legacy inline bodies remain readable. Body rows use a distinct JOB prefix, have no
+TTL, never dispatch inference, and are deleted by existing role cleanup. A missing/corrupt body cannot
+be treated as empty input; worker failure clears pending state without calling the provider.
+
+History pages also respect a serialized byte budget so escaped long messages fit through the web
+bridge; cursors resume after the last returned entry. Request schemas and route/bridge parsers own
+full-transcript limits. Accepted text is never truncated; recent historical context remains bounded.
+No additional model call or processor is introduced. Existing company-analysis input hydration retains
+its prior inclusion of role-update history. See the [processor boundary](../../../../docs/role-updates-data-boundary.md).
+
+[Interview tests](job-postings.interviews.test.ts) and [update tests](job-postings.updates.test.ts)
+cover identity, manual moves, stale edits, Undo, intact long messages, escaped-text pagination,
+operation replay and body cleanup. Deploy compatible readers in the API, extraction/recovery and
+analysis workers together before accepting new submissions; old workers cannot interpret separated
+bodies. Rollback requires retaining these readers. No data backfill or new infrastructure is required.

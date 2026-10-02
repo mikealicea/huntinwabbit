@@ -64,8 +64,11 @@ export function createRedpillCompletion(
     fetch?: typeof fetch;
     timeoutMs?: number;
     maxSourceCharacters?: number;
+    model?: string;
+    endpoint?: string;
   } = {},
 ) {
+  const model = options.model ?? REDPILL_MODEL;
   return async (
     instructions: string,
     content: string,
@@ -85,25 +88,28 @@ export function createRedpillCompletion(
     );
     try {
       signal.throwIfAborted();
-      const response = await (options.fetch ?? fetch)(REDPILL_URL, {
-        method: 'POST',
-        redirect: 'error',
-        signal,
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
+      const response = await (options.fetch ?? fetch)(
+        options.endpoint ?? REDPILL_URL,
+        {
+          method: 'POST',
+          redirect: 'error',
+          signal,
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model,
+            response_format: { type: 'json_object' },
+            ...(model === REDPILL_MODEL ? { reasoning_effort: 'none' } : {}),
+            max_tokens: 8_192,
+            messages: [
+              { role: 'system', content: instructions },
+              { role: 'user', content },
+            ],
+          }),
         },
-        body: JSON.stringify({
-          model: REDPILL_MODEL,
-          response_format: { type: 'json_object' },
-          reasoning_effort: 'none',
-          max_tokens: 8_192,
-          messages: [
-            { role: 'system', content: instructions },
-            { role: 'user', content },
-          ],
-        }),
-      });
+      );
       if (!response.ok) {
         await response.body?.cancel().catch(() => undefined);
         throw parsingError(
@@ -135,7 +141,12 @@ export function createRedpillCompletion(
 
 export function createRedpillExtractor(
   apiKey: string,
-  options: { fetch?: typeof fetch; timeoutMs?: number } = {},
+  options: {
+    fetch?: typeof fetch;
+    timeoutMs?: number;
+    model?: string;
+    endpoint?: string;
+  } = {},
 ): ExtractPosting {
   const complete = createRedpillCompletion(apiKey, {
     ...options,
