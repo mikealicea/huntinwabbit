@@ -10,7 +10,8 @@ competing tracking writes. Notes use an independent comment timeline, described 
 can discard unsaved comment drafts. Extraction only updates generated facts and never overwrites tracking.
 
 [JobDetails](JobDetails.component.tsx) groups all locations, employment type, salary and work arrangement
-in a wrapping overview. Requirements (with distinct preferred qualifications), Tech stack, Responsibilities
+in a wrapping overview. The original posting link sits alongside the Job details heading, wrapping
+when space is limited, and opens in a new tab. Requirements (with distinct preferred qualifications), Tech stack, Responsibilities
 and Full job details follow in that order. Benefits, all compensation bands and posting metadata remain
 available below. Missing facts remain unknown; older records without technology extraction offer refresh.
 Technology labels preserve stated required/preferred distinctions.

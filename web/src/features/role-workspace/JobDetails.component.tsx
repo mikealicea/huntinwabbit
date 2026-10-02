@@ -13,9 +13,25 @@ export function JobDetails({ role }: { role: Opportunity }) {
       aria-labelledby="job-details-title"
     >
       <div className="card-body gap-4 p-5 sm:p-6">
-        <h2 id="job-details-title" className="card-title">
-          Job details
-        </h2>
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+          <h2 id="job-details-title" className="card-title">
+            Job details
+          </h2>
+          {role.sourceUrl && (
+            <a
+              href={role.sourceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="link inline-flex min-h-11 items-center text-sm"
+            >
+              Open original posting
+              <span className="sr-only"> (opens in a new tab)</span>
+              <span aria-hidden="true" className="ml-2">
+                ↗
+              </span>
+            </a>
+          )}
+        </div>
         {posting ? (
           <>
             <dl
@@ -173,20 +189,6 @@ export function JobDetails({ role }: { role: Opportunity }) {
               </div>
             )}
           </>
-        )}
-        {role.sourceUrl && (
-          <a
-            href={role.sourceUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="link inline-flex min-h-11 items-center text-sm"
-          >
-            Open original posting
-            <span className="sr-only"> (opens in a new tab)</span>
-            <span aria-hidden="true" className="ml-2">
-              ↗
-            </span>
-          </a>
         )}
       </div>
     </section>
