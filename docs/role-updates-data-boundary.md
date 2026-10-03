@@ -4,8 +4,8 @@ Saved-role updates accept typed or pasted text. The authenticated server stores 
 before a worker sends it to Redpill. It also sends the current editable posting and tracking fields
 (excluding the legacy notes field), the request's local date and a bounded selection of recent completed
 conversation entries that did not change legacy notes.
-The separate comment timeline and unsaved browser drafts are not sent. Notes requests in chat are
-unsupported and direct users to the Notes composer; explicitly pasted chat text still goes to Redpill. Credentials remain server-side; no file upload or URL retrieval
+The separate comment timeline and unsaved browser drafts are not sent. Timeline comment requests in chat direct users to the Notes composer; stage-specific
+information can update interview-stage context; explicitly pasted chat text still goes to Redpill. Credentials remain server-side; no file upload or URL retrieval
 is performed by this interaction.
 
 This extends the existing [Redpill parsing boundary](job-parsing-data-boundary.md) from public posting
@@ -55,3 +55,10 @@ Frontend contracts accept the new optional fields before backend publication. AP
 recovery and analysis workers must ship compatible body readers together; older artifacts cannot read
 new separated history. Rollback must retain those readers. Model selection is shared across the app
 through the [parsing configuration](../server/src/features/job-parsing/job-parsing.config.ts).
+
+
+Optional interview-stage context is part of the current editable process and therefore reaches the
+existing Redpill update request and before/after history. It can contain named interviewers, preparation
+instructions and other personal details explicitly supplied in transcripts or later updates. Linked
+stage comments remain in the separate comment timeline and are excluded from role-update inference.
+No automatic replay of older transcripts or classification of comments is performed.

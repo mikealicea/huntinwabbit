@@ -305,3 +305,57 @@ describe.each(['role', 'company'] as const)('%s comments', (scope) => {
     );
   });
 });
+
+it('shares a linked comment between the role timeline and its step, and reassigns it without duplication', async () => {
+  const api = mockPostingApi();
+  const roleId = postingFixtures()[0].id;
+  const stages = [
+    { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', name: 'Technical' },
+    { id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', name: 'Team' },
+  ];
+  const user = userEvent.setup();
+  render(
+    <StoreProvider>
+      <RoleNotesContainer roleId={roleId} stages={stages} />
+      <RoleNotesContainer roleId={roleId} interviewStageId={stages[0].id} />
+    </StoreProvider>,
+  );
+  const role = within(document.getElementById('role-notes') as HTMLElement);
+  const stage = within(
+    document.getElementById('interview-stage-notes') as HTMLElement,
+  );
+  await stage.findByText(/No comments yet/);
+  await user.type(
+    stage.getByRole('textbox', { name: 'Add a note' }),
+    'Ask about testing.',
+  );
+  await user.click(stage.getByRole('button', { name: 'Add comment' }));
+  const comment = await role.findByRole('article', { name: 'Comment' });
+  expect(
+    within(comment).getByRole('combobox', { name: 'Interview step' }),
+  ).toHaveValue(stages[0].id);
+  expect(api.notes.get(roleId)).toHaveLength(1);
+  await user.selectOptions(
+    within(comment).getByRole('combobox', { name: 'Interview step' }),
+    stages[1].id,
+  );
+  await waitFor(() =>
+    expect(
+      stage.queryByRole('article', { name: 'Comment' }),
+    ).not.toBeInTheDocument(),
+  );
+  expect(api.notes.get(roleId)?.[0].interviewStageId).toBe(stages[1].id);
+  await user.selectOptions(
+    role.getAllByRole('combobox', { name: 'Interview step' })[0],
+    stages[0].id,
+  );
+  await user.type(
+    role.getByRole('textbox', { name: 'Add a note' }),
+    'Practice the project walkthrough.',
+  );
+  await user.click(role.getByRole('button', { name: 'Add comment' }));
+  expect(
+    await stage.findByRole('article', { name: 'Comment' }),
+  ).toHaveTextContent('Practice the project walkthrough.');
+  expect(api.notes.get(roleId)).toHaveLength(2);
+});

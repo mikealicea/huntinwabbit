@@ -13,6 +13,7 @@ export const modelInterviewProcessSchema = z
         z.strictObject({
           id: z.string().min(1).max(120),
           name: z.string().trim().min(1).max(120),
+          context: z.string().max(4000).optional(),
         }),
       )
       .min(1)
@@ -46,7 +47,12 @@ export function normalizeInterviewProcess(
     const existing =
       previous?.stages.find((old) => old.id === stage.id) ??
       previous?.stages.find((old) => old.name === stage.name);
-    return { id: existing?.id ?? newId(), name: stage.name };
+    return {
+      ...existing,
+      id: existing?.id ?? newId(),
+      name: stage.name,
+      ...(stage.context !== undefined ? { context: stage.context } : {}),
+    };
   });
   const selected = proposed.stages.findIndex(
     (stage) => stage.id === proposed.currentStageId,

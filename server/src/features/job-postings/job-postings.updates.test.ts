@@ -8,6 +8,7 @@ import {
   type DynamoTransport,
 } from './job-postings.dynamodb.ts';
 import { parsedPostingFixture } from './job-postings.fixtures.ts';
+import { createRoleNotes } from './job-postings.notes.ts';
 import { saveRequestSchema } from './job-postings.schemas.ts';
 import { createJobPostings } from './job-postings.service.ts';
 import { memoryPostings } from './job-postings.test-support.ts';
@@ -736,7 +737,12 @@ describe('interview processes and full transcripts', () => {
             field: 'interviewProcess',
             value: {
               stages: [
-                { id: 'new-1', name: 'Recruiter' },
+                {
+                  id: 'new-1',
+                  name: 'Recruiter',
+                  context:
+                    '30 minutes with the recruiter. Discuss role expectations.',
+                },
                 { id: 'new-2', name: 'VP — if needed' },
               ],
               currentStageId: null,
@@ -749,7 +755,13 @@ describe('interview processes and full transcripts', () => {
     });
     await s.run(parse);
     expect((await s.get()).application.interviewProcess).toMatchObject({
-      stages: [{ name: 'Recruiter' }, { name: 'VP — if needed' }],
+      stages: [
+        {
+          name: 'Recruiter',
+          context: '30 minutes with the recruiter. Discuss role expectations.',
+        },
+        { name: 'VP — if needed' },
+      ],
       currentStageId: null,
     });
     expect((await s.get()).application.priority).toBe(
@@ -960,4 +972,59 @@ it('keeps legacy inline messages readable and fails a missing separated body bef
       String(row.sk).endsWith(next.id),
   );
   expect(failed?.status).toBe('failed');
+});
+
+it('updates stage context with Undo while preserving independently saved step comments', async () => {
+  const s = await setup();
+  const stageId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  const process = {
+    stages: [
+      {
+        id: stageId,
+        name: 'Technical',
+        context: '45 minutes. Bring a project.',
+      },
+    ],
+    currentStageId: stageId,
+  };
+  await s.postings.update(
+    'alice',
+    s.item.id,
+    { expectedApplicationVersion: 0, changes: { interviewProcess: process } },
+    signal(),
+  );
+  const entry = await s.updates.submit(
+    'alice',
+    s.item.id,
+    s.input('The technical interview is now 60 minutes.'),
+  );
+  const notes = createRoleNotes('test', s.send);
+  await notes.create('alice', s.item.id, {
+    id: randomUUID(),
+    body: 'Ask about testing culture.',
+    interviewStageId: stageId,
+  });
+  await s.run(async () => ({
+    changes: [
+      {
+        field: 'interviewProcess',
+        value: {
+          ...process,
+          stages: [
+            { ...process.stages[0], context: '60 minutes. Bring a project.' },
+          ],
+        },
+      },
+    ],
+    skipped: [],
+  }));
+  expect((await s.get()).application.interviewProcess?.stages[0]?.context).toBe(
+    '60 minutes. Bring a project.',
+  );
+  await s.updates.undo('alice', s.item.id, entry.id);
+  expect((await s.get()).application.interviewProcess).toEqual(process);
+  expect(
+    (await notes.list('alice', s.item.id, { interviewStageId: stageId }))
+      .items[0]?.body,
+  ).toBe('Ask about testing culture.');
 });

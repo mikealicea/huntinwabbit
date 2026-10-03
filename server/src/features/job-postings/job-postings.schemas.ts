@@ -39,6 +39,7 @@ export const interviewProcessSchema = z
         z.strictObject({
           id: z.uuid(),
           name: z.string().trim().min(1).max(120),
+          context: z.string().max(4000).optional(),
         }),
       )
       .min(1)

@@ -20,6 +20,7 @@ import {
   InterviewProcess,
 } from './InterviewProcess.component';
 import { InterviewSetup } from './InterviewSetup.component';
+import { InterviewStage } from './InterviewStage.component';
 
 function InterviewCardContainer({
   title,
@@ -51,12 +52,14 @@ function InterviewColumnContainer({
   selected,
   children,
   busy,
+  onOpen,
 }: {
   id: string;
   name: string;
   selected: boolean;
   children: ReactNode;
   busy: boolean;
+  onOpen: () => void;
 }) {
   const { ref, isDropTarget } = useDroppable({
     id,
@@ -65,6 +68,7 @@ function InterviewColumnContainer({
   });
   return (
     <InterviewColumn
+      onOpen={onOpen}
       stageId={id}
       name={name}
       selected={selected}
@@ -98,11 +102,13 @@ export function InterviewProcessContainer({
   title,
   company,
   disabled = false,
+  renderStageNotes,
 }: {
   posting: SavedPosting;
   title: string;
   company: string;
   disabled?: boolean;
+  renderStageNotes?: (stageId: string) => ReactNode;
 }) {
   const process = posting.application.interviewProcess ?? null;
   const [update, saving] = useUpdatePostingMutation();
@@ -111,6 +117,8 @@ export function InterviewProcessContainer({
     process: Process | null;
     version: number;
   } | null>(null);
+  const [openStage, setOpenStage] = useState<string | null>(null);
+  const stageOpener = useRef<HTMLElement | null>(null);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const attempt = useRef<UpdateMessage | null>(null);
@@ -207,18 +215,34 @@ export function InterviewProcessContainer({
         void move(id);
       }}
       setup={
-        editor && (
-          <InterviewSetup
-            initial={editor.process}
-            busy={busy}
-            error={error}
-            onClose={close}
-            onSave={async (value) => {
-              if (await save(value, editor.version)) close();
-            }}
-            onTranscript={transcript}
-          />
-        )
+        <>
+          {openStage && (
+            <InterviewStage
+              stage={process?.stages.find((stage) => stage.id === openStage)}
+              notes={renderStageNotes?.(openStage)}
+              onClose={() => {
+                setOpenStage(null);
+                requestAnimationFrame(() => {
+                  if (stageOpener.current?.isConnected)
+                    stageOpener.current.focus();
+                  else document.getElementById('interview-setup')?.focus();
+                });
+              }}
+            />
+          )}
+          {editor && (
+            <InterviewSetup
+              initial={editor.process}
+              busy={busy}
+              error={error}
+              onClose={close}
+              onSave={async (value) => {
+                if (await save(value, editor.version)) close();
+              }}
+              onTranscript={transcript}
+            />
+          )}
+        </>
       }
     >
       {process && (
@@ -260,6 +284,13 @@ export function InterviewProcessContainer({
             {process.stages.map((stage) => (
               <InterviewColumnContainer
                 key={stage.id}
+                onOpen={() => {
+                  stageOpener.current =
+                    document.activeElement instanceof HTMLElement
+                      ? document.activeElement
+                      : null;
+                  setOpenStage(stage.id);
+                }}
                 id={stage.id}
                 name={stage.name}
                 selected={stage.id === process.currentStageId}

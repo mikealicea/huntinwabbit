@@ -53,3 +53,48 @@ describe('interview process integrity', () => {
     ).toBe(false);
   });
 });
+
+it('keeps stage context when omitted by a later model update and accepts explicit corrections', () => {
+  const known = {
+    ...previous,
+    stages: [
+      {
+        id,
+        name: 'Recruiter',
+        context: '45 minutes with the hiring manager. Prepare questions.',
+      },
+    ],
+  };
+  expect(
+    normalizeInterviewProcess(
+      { stages: [{ id, name: 'Hiring manager' }] },
+      known,
+    )?.stages[0],
+  ).toEqual({ ...known.stages[0], name: 'Hiring manager' });
+  expect(
+    normalizeInterviewProcess(
+      {
+        stages: [
+          {
+            id,
+            name: 'Hiring manager',
+            context: '60 minutes. Prepare questions.',
+          },
+        ],
+      },
+      known,
+    )?.stages[0]?.context,
+  ).toBe('60 minutes. Prepare questions.');
+  expect(
+    normalizeInterviewProcess(
+      { stages: [{ id, name: 'Recruiter', context: '' }] },
+      known,
+    )?.stages[0]?.context,
+  ).toBe('');
+  expect(() =>
+    normalizeInterviewProcess(
+      { stages: [{ id, name: 'Recruiter', context: 'x'.repeat(4001) }] },
+      known,
+    ),
+  ).toThrow();
+});

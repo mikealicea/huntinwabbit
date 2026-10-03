@@ -114,3 +114,11 @@ sides validate process membership and full-text limits; the bridge allows larger
 account for JSON escaping while retaining bounded responses. Saved operation bodies are hydrated by
 the backend, so the public history text contract is unchanged. Ship these accepting web contracts
 before backend output includes the new fields, then enable the UI against the updated API/workers.
+
+
+Role notes accept an optional interview-step association and optional server-side stage filter. The
+same note ID/revision appears in role and step views; role-scoped cache tags invalidate every filtered
+view on mutation. Cursors are bound to the filter, and empty filtered pages can still have older rows.
+Stage context and note links are optional for legacy records. Deploy compatible readers before writers,
+including company-analysis readers of role comments. No additional routes, processors or storage are
+introduced; note writes remain direct and process context uses the existing versioned update path.

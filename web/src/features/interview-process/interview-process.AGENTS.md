@@ -2,8 +2,7 @@
 
 A role in Interviewing has one card moving through its own named stages. The board appears below
 Stage/Interest/Priority and above Job details. Leaving Interviewing hides it without deleting the
-process. The main search card displays its current interview stage. Preparation, schedules, stage
-notes and completion history are not implemented; moving forward or backward only selects a stage.
+process. The main search card displays its current interview stage. Preparation tasks, schedules and completion history are not implemented; moving forward or backward only selects a stage.
 
 [Container](InterviewProcess.container.tsx) coordinates the existing versioned posting mutation,
 focused update submission and drag adapter. [Presentation](InterviewProcess.component.tsx) renders
@@ -35,3 +34,26 @@ and conflict feedback. [Browser tests](../../../e2e/interview-process.spec.ts) c
 setup, moves, cancellation, reloads, role-stage preservation and both themes at desktop/mobile widths.
 Run web, state, architecture, browser and documentation gates. Browser fixtures use synthetic transcripts
 and deterministic inference; no provider requests or hosted data are used.
+
+## Step context and comments
+
+Each column heading opens [InterviewStage](InterviewStage.component.tsx), a native dialog with its
+saved Markdown stage details and the role's comment timeline filtered to that stable stage ID. Opening
+any step does not move the current card. Role-workspace composition supplies the connected notes slot;
+this feature never duplicates comments or imports role-workspace containers. Dialogs restore the opener
+on Close/Escape, falling back to setup if a background process edit removed the column. A removed-step
+message keeps mounted drafts available for copying; closing discards unsaved drafts as disclosed.
+
+Optional stage context holds stated interview format, duration, people, topics and preparation details.
+Transcript setup and later Update role messages can populate it through the existing AI update and Undo
+flow. Omitted context is preserved during normalization, and manual rename/reorder retains it. Context
+is rendered by SafeMarkdown; it does not execute HTML or fetch embedded images. Older stages have no
+context until explicitly updated; no automatic transcript replay or backfill occurs.
+
+Step comments use the same role note rows and revisions as the main Notes section. Saves and edits
+invalidate both views. Removing a stage never deletes its comments; the main timeline labels their link
+as a removed step and permits reassignment or clearing. Undo of process changes does not undo comments.
+Stage query pagination may have no matching entries on a page but still offer older comments.
+Browser scenarios cover details, creation from both views, editing, reload, Escape/focus, mobile, zoom
+and both themes. Unit/server tests cover removed-stage drafts, stable links, revisions, replay, bounded
+pagination and process Undo without comment loss. Screen-reader verification remains separate.

@@ -20,6 +20,7 @@ export type NotesTransport = (
   signal: AbortSignal,
 ) => Promise<unknown>;
 type ErrorCode =
+  | 'INVALID_REQUEST'
   | 'NOT_FOUND'
   | 'CONFLICT'
   | 'INVALID_CURSOR'
@@ -52,6 +53,7 @@ const pointerSchema = z.strictObject({
   recordKey: z.string(),
   entryKey: z.string(),
   originalHash: z.string().regex(/^[a-f0-9]{64}$/),
+  originalStageId: z.uuid().nullable().optional(),
   deleted: z.boolean(),
 });
 const rowSchema = z.strictObject({
@@ -64,6 +66,7 @@ const cursorSchema = z.strictObject({
   owner: z.string(),
   roleId: z.uuid(),
   after: z.string(),
+  interviewStageId: z.uuid().optional(),
 });
 type Writes = NonNullable<TransactWriteCommandInput['TransactItems']>;
 
@@ -78,6 +81,9 @@ export function createNotesStore<
   error: postingError,
   prefix,
   now = Date.now,
+  validateStage = (_found, stageId) => {
+    if (stageId) throw postingError('INVALID_REQUEST');
+  },
 }: {
   table: string;
   send: NotesTransport;
@@ -87,6 +93,7 @@ export function createNotesStore<
   error: (code: ErrorCode, cause?: unknown) => Error;
   prefix: string;
   now?: () => number;
+  validateStage?: (found: T, stageId: string | null | undefined) => void;
 }) {
   function entry(
     value: unknown,
@@ -143,6 +150,7 @@ export function createNotesStore<
     signal: AbortSignal,
   ) {
     const found = await lookup(user, roleId, signal);
+    validateStage(found, input.interviewStageId);
     const entryPrefix = `${prefix}#${roleId}#ENTRY#`;
     let after: string | undefined;
     if (input.cursor) {
@@ -153,6 +161,7 @@ export function createNotesStore<
         if (
           cursor.owner !== hash(found.pk) ||
           cursor.roleId !== roleId ||
+          cursor.interviewStageId !== input.interviewStageId ||
           !cursor.after.startsWith(entryPrefix)
         )
           throw new Error();
@@ -198,10 +207,19 @@ export function createNotesStore<
     await lookup(user, roleId, signal);
     return notesPageSchema.parse({
       schemaVersion: 1,
-      items,
+      items: input.interviewStageId
+        ? items.filter(
+            (note) => note.interviewStageId === input.interviewStageId,
+          )
+        : items,
       nextCursor: last
         ? Buffer.from(
-            JSON.stringify({ owner: hash(found.pk), roleId, after: last.sk }),
+            JSON.stringify({
+              owner: hash(found.pk),
+              roleId,
+              after: last.sk,
+              interviewStageId: input.interviewStageId,
+            }),
           ).toString('base64url')
         : null,
     });
@@ -214,6 +232,7 @@ export function createNotesStore<
     body: string | undefined,
     revision: number | undefined,
     signal: AbortSignal,
+    stageId?: string | null,
   ): Promise<Note | null> {
     for (let attempt = 0; attempt < 3; attempt++) {
       const found = await lookup(user, roleId, signal);
@@ -236,7 +255,10 @@ export function createNotesStore<
         ? entry(raw, found.pk, pointer.entryKey, roleId, postingKey)
         : undefined;
       if (action === 'create' && pointer) {
-        if (pointer.originalHash !== hash(body ?? ''))
+        if (
+          pointer.originalHash !== hash(body ?? '') ||
+          (pointer.originalStageId ?? null) !== (stageId ?? null)
+        )
           throw postingError('CONFLICT');
         return old ?? null;
       }
@@ -249,11 +271,19 @@ export function createNotesStore<
         if (
           action === 'edit' &&
           old.revision === (revision ?? 0) + 1 &&
-          old.body === body
+          old.body === body &&
+          (stageId === undefined || (old.interviewStageId ?? null) === stageId)
         )
           return old;
         throw postingError('CONFLICT');
       }
+      // Retained links survive stage removal; only new/reassigned links must exist.
+      if (
+        action !== 'delete' &&
+        (action === 'create' ||
+          (stageId !== undefined && stageId !== old?.interviewStageId))
+      )
+        validateStage(found, stageId);
       const timestamp = new Date(now()).toISOString();
       const note =
         action === 'delete'
@@ -261,6 +291,11 @@ export function createNotesStore<
           : noteSchema.parse({
               id: noteId,
               body,
+              ...(stageId !== undefined
+                ? { interviewStageId: stageId }
+                : old?.interviewStageId !== undefined
+                  ? { interviewStageId: old.interviewStageId }
+                  : {}),
               createdAt: old?.createdAt ?? timestamp,
               updatedAt: timestamp,
               revision: (old?.revision ?? 0) + 1,
@@ -306,6 +341,9 @@ export function createNotesStore<
               recordKey: postingKey,
               entryKey,
               originalHash: pointer?.originalHash ?? hash(body ?? ''),
+              originalStageId: pointer
+                ? (pointer.originalStageId ?? null)
+                : (stageId ?? null),
               deleted: action === 'delete',
             },
             ...(pointer
@@ -340,7 +378,16 @@ export function createNotesStore<
     ) => {
       const valid = createNoteSchema.parse(input);
       return bounded((signal) =>
-        mutate(user, id, valid.id, 'create', valid.body, undefined, signal),
+        mutate(
+          user,
+          id,
+          valid.id,
+          'create',
+          valid.body,
+          undefined,
+          signal,
+          valid.interviewStageId,
+        ),
       );
     },
     edit: (
@@ -359,6 +406,7 @@ export function createNotesStore<
           valid.body,
           valid.expectedRevision,
           signal,
+          valid.interviewStageId,
         ),
       );
     },

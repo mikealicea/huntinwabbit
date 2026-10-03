@@ -8,7 +8,10 @@ import {
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { usePostingQuery } from '@/features/job-api/job-api.index';
+import {
+  type SavedPosting,
+  usePostingQuery,
+} from '@/features/job-api/job-api.index';
 import {
   mockPostingApi,
   postingFixtures,
@@ -16,6 +19,7 @@ import {
 import { StoreProvider } from '@/state/state.index';
 import { InterviewProcessContainer } from './InterviewProcess.container';
 import { InterviewSetup } from './InterviewSetup.component';
+import { InterviewStage } from './InterviewStage.component';
 
 beforeEach(() => {
   HTMLDialogElement.prototype.showModal = function () {
@@ -51,7 +55,7 @@ function Connected({ roleId }: { roleId: string }) {
 }
 it('creates manual stages and persists card movement with a real store', async () => {
   const api = mockPostingApi();
-  const posting = postingFixtures()[0];
+  const posting: SavedPosting = postingFixtures()[0];
   const user = userEvent.setup();
   render(
     <StoreProvider>
@@ -171,7 +175,7 @@ it('submits full transcripts intact and rejects oversize text without truncating
   expect(screen.getByRole('alert')).toHaveTextContent('100,000');
 });
 it('retains saved position and displays a recoverable error after a failed move', async () => {
-  const posting = postingFixtures()[0];
+  const posting: SavedPosting = postingFixtures()[0];
   posting.application.interviewProcess = process;
   const api = mockPostingApi([posting]);
   const fetcher = api.fetcher;
@@ -200,4 +204,57 @@ it('retains saved position and displays a recoverable error after a failed move'
   expect(
     api.records.get(posting.id)?.application.interviewProcess?.currentStageId,
   ).toBe(id);
+});
+
+it('opens details for a future step without moving the card and restores the opener on close', async () => {
+  const posting: SavedPosting = postingFixtures()[0];
+  posting.application.interviewProcess = {
+    ...process,
+    stages: [
+      process.stages[0],
+      {
+        ...process.stages[1],
+        context: '**Duration:** 60 minutes. Prepare a project.',
+      },
+    ],
+  };
+  const api = mockPostingApi([posting]);
+  const user = userEvent.setup();
+  render(
+    <StoreProvider>
+      <Connected roleId={posting.id} />
+    </StoreProvider>,
+  );
+  const open = await screen.findByRole('button', {
+    name: 'Open Technical notes and details',
+  });
+  await user.click(open);
+  const dialog = screen.getByRole('dialog', { name: 'Technical' });
+  expect(within(dialog).getByText(/60 minutes/)).toBeVisible();
+  expect(within(dialog).getByRole('button', { name: 'Close' })).toHaveFocus();
+  expect(
+    api.records.get(posting.id)?.application.interviewProcess?.currentStageId,
+  ).toBe(id);
+  await user.click(within(dialog).getByRole('button', { name: 'Close' }));
+  await waitFor(() => expect(open).toHaveFocus());
+});
+it('keeps notes mounted if their step is removed while the details dialog is open', () => {
+  const view = render(
+    <InterviewStage
+      stage={{ name: 'Technical' }}
+      notes={<textarea aria-label="Draft" defaultValue="Keep my draft" />}
+      onClose={vi.fn()}
+    />,
+  );
+  view.rerender(
+    <InterviewStage
+      stage={undefined}
+      notes={<textarea aria-label="Draft" defaultValue="Keep my draft" />}
+      onClose={vi.fn()}
+    />,
+  );
+  expect(screen.getByRole('textbox', { name: 'Draft' })).toHaveValue(
+    'Keep my draft',
+  );
+  expect(screen.getByRole('status')).toHaveTextContent('step was removed');
 });

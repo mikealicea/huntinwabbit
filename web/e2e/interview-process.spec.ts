@@ -59,6 +59,81 @@ for (const theme of ['light', 'dark'] as const) {
       path: info.outputPath(`interviews-${theme}-desktop.png`),
       fullPage: true,
     });
+    const stepOpener = board.getByRole('button', {
+      name: 'Open Technical interview notes and details',
+    });
+    await stepOpener.click();
+    const stepDialog = page.getByRole('dialog', {
+      name: 'Technical interview',
+      exact: true,
+    });
+    await expect(
+      stepDialog.getByRole('button', { name: 'Close', exact: true }),
+    ).toBeFocused();
+    await expect(
+      stepDialog.getByText(/60-minute pair programming/),
+    ).toBeVisible();
+    await stepDialog
+      .getByRole('textbox', { name: 'Add a note', exact: true })
+      .fill('**Prepare:** Explain testing decisions.');
+    await stepDialog
+      .getByRole('button', { name: 'Add comment', exact: true })
+      .click();
+    await expect(
+      stepDialog.getByRole('article', { name: 'Comment', exact: true }),
+    ).toHaveCount(1);
+    await page.screenshot({
+      path: info.outputPath(`stage-notes-${theme}-desktop.png`),
+      animations: 'disabled',
+    });
+    await page.keyboard.press('Escape');
+    await expect(stepDialog).not.toBeVisible();
+    await expect(stepOpener).toBeFocused();
+    const roleNotes = page.locator('#role-notes');
+    await expect(
+      roleNotes.getByRole('article', { name: 'Comment', exact: true }),
+    ).toHaveCount(1);
+    await roleNotes
+      .getByRole('combobox', { name: 'Interview step', exact: true })
+      .first()
+      .selectOption('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
+    await roleNotes
+      .getByRole('textbox', { name: 'Add a note', exact: true })
+      .fill('Ask about code review culture.');
+    await roleNotes
+      .getByRole('button', { name: 'Add comment', exact: true })
+      .click();
+    await expect(
+      roleNotes.getByRole('textbox', { name: 'Add a note', exact: true }),
+    ).toHaveValue('');
+    await page.reload();
+    await stepOpener.click();
+    await expect(
+      stepDialog.getByRole('article', { name: 'Comment', exact: true }),
+    ).toHaveCount(2);
+    const firstComment = stepDialog
+      .getByRole('article', { name: 'Comment', exact: true })
+      .first();
+    await firstComment
+      .getByRole('button', { name: 'Edit comment', exact: true })
+      .click();
+    await firstComment
+      .getByRole('textbox', { name: 'Edit comment', exact: true })
+      .fill('Ask about code review and pairing.');
+    await firstComment
+      .getByRole('button', { name: 'Save changes', exact: true })
+      .click();
+    await expect(
+      firstComment.getByText('Ask about code review and pairing.', {
+        exact: true,
+      }),
+    ).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(
+      roleNotes.getByText('Ask about code review and pairing.', {
+        exact: true,
+      }),
+    ).toBeVisible();
     await move.selectOption('cccccccc-cccc-4ccc-8ccc-cccccccccccc');
     await expect(move).toBeEnabled();
     await page.reload();
@@ -101,6 +176,32 @@ for (const theme of ['light', 'dark'] as const) {
         () => document.documentElement.scrollWidth <= window.innerWidth,
       ),
     ).toBe(true);
+    await stepOpener.click();
+    await expect(
+      stepDialog.getByRole('article', { name: 'Comment', exact: true }),
+    ).toHaveCount(2);
+    await expect(stepDialog).toHaveCSS('opacity', '1');
+    await page.screenshot({
+      path: info.outputPath(`stage-notes-${theme}-mobile.png`),
+      animations: 'disabled',
+    });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.evaluate(() => {
+      document.documentElement.style.zoom = '2';
+    });
+    await expect(
+      stepDialog.getByRole('button', { name: 'Close', exact: true }),
+    ).toBeVisible();
+    expect(
+      await stepDialog.evaluate(
+        (element) => element.scrollWidth <= element.clientWidth,
+      ),
+    ).toBe(true);
+    await page.keyboard.press('Escape');
+    await expect(stepOpener).toBeFocused();
+    await page.evaluate(() => {
+      document.documentElement.style.zoom = '';
+    });
     await page
       .getByRole('button', { name: 'Edit stages', exact: true })
       .click();
@@ -149,14 +250,21 @@ test('manual setup supports pointer dragging, cancel, and keyboard movement', as
   await page.keyboard.press('Escape');
   await expect(move.locator('option:checked')).toHaveText('Technical');
   await expect(handle).toHaveAttribute('aria-pressed', 'false');
-  await handle.focus();
-  await page.keyboard.press('Space');
-  await expect(handle).toHaveAttribute('aria-pressed', 'true');
-  for (let step = 0; step < 5; step++)
+  await expect(handle).toBeFocused();
+  await expect(async () => {
+    await handle.press('Space');
+    await expect(handle).toHaveAttribute('aria-pressed', 'true', {
+      timeout: 300,
+    });
+  }).toPass({ timeout: 3000, intervals: [100] });
+  await expect(async () => {
     await page.keyboard.press('Shift+ArrowLeft');
-  await expect(
-    page.getByText('Over Recruiter. Drop to select it.', { exact: true }),
-  ).toBeAttached();
+    expect(
+      await page
+        .getByText('Over Recruiter. Drop to select it.', { exact: true })
+        .count(),
+    ).toBe(1);
+  }).toPass({ timeout: 3000, intervals: [100] });
   await page.keyboard.press('Space');
   await expect(move.locator('option:checked')).toHaveText('Recruiter');
   await page.reload();

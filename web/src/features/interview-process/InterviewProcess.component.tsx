@@ -97,6 +97,7 @@ export function InterviewColumn({
   active,
   dropRef,
   children,
+  onOpen,
 }: {
   stageId: string;
   name: string;
@@ -104,6 +105,7 @@ export function InterviewColumn({
   active: boolean;
   dropRef: Ref<HTMLDivElement>;
   children: ReactNode;
+  onOpen?: () => void;
 }) {
   return (
     <div
@@ -112,7 +114,23 @@ export function InterviewColumn({
       data-current={selected || undefined}
       className={`min-h-44 w-60 shrink-0 rounded-xl border p-3 ${active ? 'border-primary bg-primary/10' : 'border-base-300 bg-base-200/50'}`}
     >
-      <h3 className="mb-3 break-words font-semibold">{name}</h3>
+      <h3 aria-label={name} className="mb-3 break-words font-semibold">
+        {onOpen ? (
+          <button
+            type="button"
+            className="w-full rounded-md text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"
+            onClick={onOpen}
+            aria-label={`Open ${name} notes and details`}
+          >
+            <span className="block">{name}</span>
+            <span className="mt-1 block text-xs font-normal text-base-content/75">
+              Notes &amp; details →
+            </span>
+          </button>
+        ) : (
+          name
+        )}
+      </h3>
       {children}
     </div>
   );

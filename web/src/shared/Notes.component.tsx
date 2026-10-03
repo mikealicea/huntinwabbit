@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { LoadingPulse } from './LoadingPulse.component';
 import { NoteComposer } from './NoteComposer.component';
 import { NoteEntry } from './NoteEntry.component';
@@ -17,8 +17,12 @@ export function Notes({
   onCreate,
   onEdit,
   onDelete,
+  composerContext,
+  renderNoteContext,
 }: {
-  subject?: 'role' | 'company';
+  subject?: 'role' | 'company' | 'interview stage';
+  composerContext?: ReactNode;
+  renderNoteContext?: (note: Note) => ReactNode;
   notes: Note[];
   loading: boolean;
   error?: string;
@@ -50,12 +54,15 @@ export function Notes({
   return (
     <section
       className="card border border-base-300 bg-base-100 shadow-sm"
-      id={`${subject}-notes`}
-      aria-labelledby={`${subject}-notes-title`}
+      id={`${subject.replaceAll(' ', '-')}-notes`}
+      aria-labelledby={`${subject.replaceAll(' ', '-')}-notes-title`}
     >
       <div className="card-body gap-5 p-5 sm:p-6">
         <div>
-          <h2 id={`${subject}-notes-title`} className="card-title">
+          <h2
+            id={`${subject.replaceAll(' ', '-')}-notes-title`}
+            className="card-title"
+          >
             Notes
           </h2>
           <p className="mt-2 text-sm text-base-content/75">
@@ -63,6 +70,7 @@ export function Notes({
           </p>
         </div>
         <div ref={composer}>
+          {composerContext}
           <NoteComposer
             body={body}
             onChange={(value) => {
@@ -111,7 +119,9 @@ export function Notes({
         )}
         {!loading && !error && visibleNotes.length === 0 && (
           <p className="text-sm text-base-content/75">
-            No comments yet. Add your first note above.
+            {hasOlder
+              ? 'No matching comments loaded yet. Load older comments to continue.'
+              : 'No comments yet. Add your first note above.'}
           </p>
         )}
         <div className="space-y-4">
@@ -119,6 +129,7 @@ export function Notes({
             <NoteEntry
               key={note.id}
               note={note}
+              context={renderNoteContext?.(note)}
               disabled={disabled || pending}
               unavailable={
                 !loading && !notes.some((current) => current.id === note.id)

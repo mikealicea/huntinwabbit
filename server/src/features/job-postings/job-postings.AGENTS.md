@@ -265,3 +265,24 @@ cover identity, manual moves, stale edits, Undo, intact long messages, escaped-t
 operation replay and body cleanup. Deploy compatible readers in the API, extraction/recovery and
 analysis workers together before accepting new submissions; old workers cannot interpret separated
 bodies. Rollback requires retaining these readers. No data backfill or new infrastructure is required.
+
+
+Interview stages may include bounded Markdown context extracted from initial transcripts or subsequent
+Update role messages. Normalization preserves existing context when omitted; explicit context values
+replace it. This is part of the process field and inherits its conflict/Undo semantics. The model is
+instructed to preserve unrelated detail and skip uncertain stage assignments. This does not infer
+comment links or mutate the comment timeline. Existing transcripts are not automatically reprocessed.
+
+Role comments optionally reference a stable interview-stage ID. The role notes adapter validates new
+or reassigned links against the current role inside each transaction attempt; company comments reject
+stage associations. Rename/reorder retains links. Stage removal/clearing keeps notes in the main role
+timeline, where they remain editable, deletable or reassignable. Existing links may survive removal;
+new links cannot target a missing stage. Undo of a process never restores/deletes comment rows.
+
+The shared note store binds create replay to both original body hash and original stage association;
+legacy pointers omit the association. Omitted edit association preserves the saved link, explicit null
+clears it, and note revisions protect concurrent body/link changes. Stage-filtered reads validate and
+filter bounded role-note pages without a new index; cursors bind the filter, and an empty page may have
+a continuation. Role deletion uses existing note cleanup. Deploy API, extraction/recovery and analysis
+readers that accept optional context/link fields before enabling new writes; older strict readers cannot
+read those records. No migration or backfill is required.

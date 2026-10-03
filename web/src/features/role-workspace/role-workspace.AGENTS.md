@@ -76,7 +76,7 @@ the operation ID while the text is unchanged; history refresh recovers an accept
 history is paginated, polls pending operations, and refreshes role/board caches on settlement.
 
 Source-derived facts resolve through saved overrides, including empty values. Posting and tracking fields are supported, including fields shown in the detailed posting section;
-notes and comments must be entered through the Notes composer. Chat does not create
+timeline comments must be entered through the Notes composer; stage-specific details can update interview-process context. Chat does not create
 unimplemented tasks or material records. Company-name corrections can reassign this role to an existing
 or new company; they do not edit shared research. Pasted text is processed by Redpill;
 links are values, not fetching instructions. Comment drafts remain local and survive chat updates. Chat does not read or modify the comment timeline.
@@ -141,3 +141,13 @@ Interviewing. Saved process data survives leaving that application stage. Full r
 can also be pasted into Update role; setup's focused mode restricts changes to the interview process.
 The history receipt formats stage names and current position rather than exposing internal IDs.
 Update text limits are validated visibly before submission; oversized drafts are never truncated.
+
+
+Interview-step dialogs reuse RoleNotesContainer with a stage filter. The main Notes section uses
+[NoteStage](NoteStage.component.tsx) to choose an optional step before adding a comment or immediately
+reassign an existing comment. Assignment shares the comment revision and preserves its body; conflicts
+show the latest saved selection for review. A removed step remains visibly identified on retained
+comments. Labels follow current stage names, so renaming does not duplicate or orphan comments.
+Notes do not trigger role-update inference or automatic classification; users choose their association.
+The workspace provides the connected notes slot to the interview feature, preserving presentation
+boundaries. Update receipts include saved stage context so context-only changes remain reviewable.

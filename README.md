@@ -9,7 +9,8 @@ one question: **Where does everything stand?**
 The web app implements a live board, batch link capture and saved-role workspace at `/app`.
 Saved links and tracking edits persist through the backend; posting details are extracted asynchronously
 with agent-fetch and Redpill. Interviewing roles have a personal Kanban of editable interview stages,
-with transcript setup and a movable current-position card. The role workspace also accepts natural-language edits with saved
+with transcript setup and a movable current-position card. Clicking a step opens its saved details and
+linked notes; comments can be added there or assigned from the role Notes timeline. The role workspace also accepts natural-language edits with saved
 chat history, partial updates and Undo. A Markdown notes composer saves timestamped comments with
 editing and deletion on roles and companies. User corrections survive posting refreshes. Company pages group saved roles
 under persistent company identities, with automatic matching and manual corrections. Optional background
@@ -141,5 +142,5 @@ ends, a postmortem should help capture what happened and what to learn for the n
   — the original ramble that started the design discussion.
 
 The web app connects the board, role workspace and quick-add flows to live backend data.
-Structured company research and contacts, resume-library experiences, interview preparation and stage-specific notes, postmortems, and
+Structured company research and contacts, resume-library experiences, interview preparation tasks, postmortems, and
 referral discovery still need further design.

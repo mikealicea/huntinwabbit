@@ -72,7 +72,14 @@ export function mockPostingApi(initial = postingFixtures()) {
           const after = Number(url.searchParams.get('cursor') ?? 0);
           return json({
             schemaVersion: 1,
-            items: list.slice(after, after + 20),
+            items: list
+              .slice(after, after + 20)
+              .filter(
+                (note) =>
+                  !url.searchParams.get('interviewStageId') ||
+                  note.interviewStageId ===
+                    url.searchParams.get('interviewStageId'),
+              ),
             nextCursor: list.length > after + 20 ? String(after + 20) : null,
           });
         }
@@ -87,6 +94,9 @@ export function mockPostingApi(initial = postingFixtures()) {
           const created = {
             id: noteId,
             body: body.body,
+            ...(body.interviewStageId !== undefined
+              ? { interviewStageId: body.interviewStageId }
+              : {}),
             revision: 1,
             createdAt: '2026-09-22T12:00:00.000Z',
             updatedAt: '2026-09-22T12:00:00.000Z',
@@ -116,6 +126,9 @@ export function mockPostingApi(initial = postingFixtures()) {
         }
         Object.assign(note, {
           body: body.body,
+          ...(body.interviewStageId !== undefined
+            ? { interviewStageId: body.interviewStageId }
+            : {}),
           revision: note.revision + 1,
           updatedAt: '2026-09-22T13:00:00.000Z',
         });

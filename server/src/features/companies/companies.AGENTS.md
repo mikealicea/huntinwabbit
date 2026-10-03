@@ -84,3 +84,8 @@ snapshot retention described in the data boundary. Analysis being disabled does 
 [Tests](companies.notes.test.ts) cover ownership, paging, corruption, revision conflicts, concurrent
 writes, acknowledgements and routes. Company-analysis tests cover retention after role deletion,
 comment-only inference, disabled inference and stale worker fencing. Never log comment bodies or cursors.
+
+
+Company comments share the note wire contract but reject interview-stage associations and filters;
+interview steps belong to individual roles. Company analysis readers accept optional links on role
+comments without changing their existing inclusion in analysis.

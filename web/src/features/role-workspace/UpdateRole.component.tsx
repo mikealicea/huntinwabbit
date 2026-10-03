@@ -38,12 +38,16 @@ function valueText(value: unknown): string {
     'stages' in value &&
     Array.isArray(value.stages)
   ) {
-    const stages = value.stages as { id: string; name: string }[];
+    const stages = value.stages as {
+      id: string;
+      name: string;
+      context?: string;
+    }[];
     const current =
       'currentStageId' in value
         ? stages.find((stage) => stage.id === value.currentStageId)?.name
         : null;
-    return `${stages.map((stage) => stage.name).join(' → ')} (Current: ${current ?? 'not set'})`;
+    return `${stages.map((stage) => (stage.context ? `${stage.name}: ${stage.context}` : stage.name)).join(' → ')} (Current: ${current ?? 'not set'})`;
   }
   if (Array.isArray(value))
     return value.length ? value.map(valueText).join('; ') : 'None';

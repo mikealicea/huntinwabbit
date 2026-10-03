@@ -35,6 +35,15 @@ export function createRoleNotes(
     now,
     lookup,
     prefix: 'NOTE',
+    validateStage: (found, stageId) => {
+      if (
+        stageId &&
+        !found.item.application.interviewProcess?.stages.some(
+          (stage) => stage.id === stageId,
+        )
+      )
+        throw postingError('INVALID_REQUEST');
+    },
     error: postingError,
     parentWrites: (found, timestamp) => [
       postingPut(
