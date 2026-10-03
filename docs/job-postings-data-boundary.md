@@ -135,3 +135,14 @@ Authenticated lookups accept one hostname in the request body and return only it
 there is no list download or client write API. This reveals a site's shared recommendation, not who
 visited it or their roles. Only actual parser outcomes can update learned guidance. Advisory updates
 may be lost during storage outages and are not automatically replayed through paid extraction.
+
+
+## Interview-step context and comments
+
+Optional interview-stage details live in the role's application process and its existing update history.
+Comments linked to stages remain ordinary role note rows with one optional stable stage reference; the
+modal and main timeline show the same record. Removing a stage retains these comments until explicitly
+deleted or the role is deleted. Process Undo leaves comments unchanged. Unsaved modal drafts disappear
+when closed. Notes are assigned manually and do not trigger role-update inference; optional company
+analysis continues to receive role comments under its existing boundary. New context and association
+fields need compatible API, worker and frontend readers before writes; no data migration is required.

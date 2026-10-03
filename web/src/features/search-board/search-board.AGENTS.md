@@ -52,3 +52,8 @@ menu controls and narrow-card/mobile menus in both themes alongside existing dra
 
 Company names link to saved company IDs when assigned. Company-page cards reuse presentation and
 actions while showing stage labels and omitting board dragging. The company page owns deletion focus.
+
+Interviewing cards with a saved interview process show the selected stage name, or an explicit
+unknown-position label. The per-role board and its movement controls belong to the
+[interview feature](../interview-process/interview-process.AGENTS.md); the main board still moves
+roles between application stages without clearing interview data.

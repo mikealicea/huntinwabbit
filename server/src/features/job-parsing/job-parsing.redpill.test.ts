@@ -302,3 +302,29 @@ it.each(['candidate-1', 'invented-reference', null, { malformed: true }])(
     expect(sent.messages[1].content).not.toContain('private-path');
   },
 );
+
+it('supports app-wide GLM selection without sending DeepSeek-specific reasoning options', async () => {
+  const { redpillCompletionConfig } = await import('./job-parsing.config.ts');
+  const config = redpillCompletionConfig({ REDPILL_MODEL: 'z-ai/glm-5.3' });
+  const http = vi
+    .fn<typeof fetch>()
+    .mockResolvedValue(Response.json(completion()));
+  await createRedpillExtractor('fixture-key', { ...config, fetch: http })(
+    'page',
+    new AbortController().signal,
+  );
+  expect(http.mock.calls[0]?.[0]).toBe(
+    'https://tee.redpill.ai/v1/chat/completions',
+  );
+  const body = JSON.parse(String(http.mock.calls[0]?.[1]?.body));
+  expect(body.model).toBe('z-ai/glm-5.3');
+  expect(body).not.toHaveProperty('reasoning_effort');
+  expect(body.response_format).toEqual({ type: 'json_object' });
+  expect(redpillCompletionConfig({})).toEqual({
+    model: REDPILL_MODEL,
+    endpoint: REDPILL_URL,
+  });
+  expect(() => redpillCompletionConfig({ REDPILL_MODEL: 'unknown' })).toThrow(
+    'REDPILL_MODEL',
+  );
+});

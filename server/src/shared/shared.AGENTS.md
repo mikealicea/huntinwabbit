@@ -58,3 +58,9 @@ Features inject owner lookup, namespace, parent transaction writes, deadlines an
 code never imports a feature. The router receives its authenticated route and feature error mapping.
 Role and company suites verify these mechanics through their adapters, preserving existing role
 versions, cleanup keys and cursor compatibility.
+
+
+The comment contract supports optional interview-stage associations. Owner adapters inject link
+validation; the default rejects stage links. The store preserves omitted edit links, checks body and
+original association for create replay, and scopes filtered pagination cursors. It does not infer links
+or delete notes when a stage disappears. Role/company tests exercise the respective policies.

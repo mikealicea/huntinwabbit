@@ -1,5 +1,11 @@
 import { z } from 'zod';
 import { companyAssociationSchema } from './job-api.companies.contracts';
+import {
+  INTERVIEW_STAGE_LIMIT,
+  INTERVIEW_STAGE_NAME_LIMIT,
+  UPDATE_TEXT_BYTES,
+  UPDATE_TEXT_CHARACTERS,
+} from './job-api.validation';
 
 const text = z.string().trim().min(1).max(4_000);
 const nullableText = text.nullable();
@@ -108,7 +114,42 @@ export const sourceExtractionFields = {
   operationId: z.uuid().optional(),
 };
 
+export const interviewProcessSchema = z
+  .strictObject({
+    stages: z
+      .array(
+        z.strictObject({
+          id: z.uuid(),
+          name: z.string().trim().min(1).max(INTERVIEW_STAGE_NAME_LIMIT),
+          context: z.string().max(4000).optional(),
+        }),
+      )
+      .min(1)
+      .max(INTERVIEW_STAGE_LIMIT),
+    currentStageId: z.uuid().nullable(),
+  })
+  .superRefine((value, context) => {
+    if (
+      new Set(value.stages.map((stage) => stage.id)).size !==
+      value.stages.length
+    )
+      context.addIssue({
+        code: 'custom',
+        message: 'Stage IDs must be unique.',
+      });
+    if (
+      value.currentStageId !== null &&
+      !value.stages.some((stage) => stage.id === value.currentStageId)
+    )
+      context.addIssue({
+        code: 'custom',
+        message: 'Choose a stage in this process.',
+      });
+  });
+export type InterviewProcess = z.infer<typeof interviewProcessSchema>;
+
 export const applicationSchema = z.strictObject({
+  interviewProcess: interviewProcessSchema.nullable().optional(),
   stage: z.enum([
     'collected',
     'applied',
@@ -236,9 +277,19 @@ export type SavedPosting = z.infer<typeof savedPostingSchema>;
 export type Application = z.infer<typeof applicationSchema>;
 export type ListResponse = z.infer<typeof listResponseSchema>;
 
+export const updateTextSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(UPDATE_TEXT_CHARACTERS)
+  .refine(
+    (text) => new TextEncoder().encode(text).byteLength <= UPDATE_TEXT_BYTES,
+    'Use at most 100,000 characters and 256 KiB of text.',
+  );
 export const updateMessageSchema = z.strictObject({
+  intent: z.literal('interview-process').optional(),
   operationId: z.uuid(),
-  text: z.string().trim().min(1).max(20_000),
+  text: updateTextSchema,
   timezone: z
     .string()
     .max(100)
@@ -258,6 +309,7 @@ export const changeSchema = z.strictObject({
   after: z.unknown(),
 });
 export const updateEntrySchema = z.strictObject({
+  intent: z.literal('interview-process').optional(),
   id: z.uuid(),
   text: z.string(),
   createdAt: z.iso.datetime(),
@@ -299,6 +351,7 @@ export const noteBodySchema = z
 export const noteSchema = z.strictObject({
   id: z.uuid(),
   body: noteBodySchema,
+  interviewStageId: z.uuid().nullable().optional(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
   revision: z.number().int().positive(),
@@ -306,13 +359,16 @@ export const noteSchema = z.strictObject({
 export const createNoteSchema = z.strictObject({
   id: z.uuid(),
   body: noteBodySchema,
+  interviewStageId: z.uuid().nullable().optional(),
 });
 export const editNoteSchema = z.strictObject({
   body: noteBodySchema,
+  interviewStageId: z.uuid().nullable().optional(),
   expectedRevision: z.number().int().positive(),
 });
-export const deleteNoteSchema = editNoteSchema.omit({ body: true });
+export const deleteNoteSchema = editNoteSchema.pick({ expectedRevision: true });
 export const notesQuerySchema = z.strictObject({
+  interviewStageId: z.uuid().optional(),
   cursor: z.string().min(1).max(2048).optional(),
 });
 export const notesPageSchema = z.strictObject({

@@ -34,6 +34,7 @@ export interface RoleWorkspaceProps {
   status?: ReactNode;
   sourceEditor?: ReactNode;
   onManageSource?: () => void;
+  interviewProcess?: ReactNode;
   updates?: ReactNode;
   notes?: ReactNode;
   materials: ReactNode;
@@ -56,6 +57,7 @@ export function RoleWorkspace({
   status,
   sourceEditor,
   onManageSource,
+  interviewProcess,
   updates,
   notes,
   materials,
@@ -173,6 +175,7 @@ export function RoleWorkspace({
           </select>
         </div>
       </div>
+      {interviewProcess}
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
         <div className="min-w-0 space-y-5">
           <JobDetails role={role} />

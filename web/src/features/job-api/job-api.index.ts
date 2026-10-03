@@ -33,11 +33,21 @@ export type {
 } from './job-api.companies.contracts';
 export type {
   Application,
+  InterviewProcess,
   Job,
   RoleNote,
   SavedPosting,
   UpdateEntry,
   UpdateMessage,
 } from './job-api.contracts';
-export { sourceTextSchema } from './job-api.contracts';
+export {
+  interviewProcessSchema,
+  sourceTextSchema,
+  updateTextSchema,
+} from './job-api.contracts';
+export {
+  INTERVIEW_STAGE_LIMIT,
+  INTERVIEW_STAGE_NAME_LIMIT,
+  validUpdateText,
+} from './job-api.validation';
 export { RequestFeedback } from './RequestFeedback.component';

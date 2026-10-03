@@ -7,6 +7,10 @@ import {
   createCompanyAnalyzer,
 } from './features/company-analysis/company-analysis.index.ts';
 import {
+  createRedpillCompletion,
+  redpillCompletionConfig,
+} from './features/job-parsing/job-parsing.index.ts';
+import {
   createCompanyAnalysisInputs,
   createDynamoTransport,
   jobPostingsTable,
@@ -27,7 +31,15 @@ function runtime(inference = true) {
     enabled,
     company: companies.get,
     readInputs: createCompanyAnalysisInputs(table, send, companies),
-    analyze: config.enabled ? createCompanyAnalyzer(config.apiKey) : undefined,
+    analyze: config.enabled
+      ? createCompanyAnalyzer(
+          config.apiKey,
+          createRedpillCompletion(
+            config.apiKey,
+            redpillCompletionConfig(process.env),
+          ),
+        )
+      : undefined,
   });
 }
 export async function handler(event: unknown) {

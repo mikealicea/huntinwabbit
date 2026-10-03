@@ -37,3 +37,9 @@ review, deletion confirmation and focus restoration stay here. Subject-specific 
 where comments are saved. SafeMarkdown owns rendering restrictions. The role-workspace comment
 suite runs against both connected containers, and the workspace browser suites verify real focus,
 keyboard submission, reloads and theme/reflow behavior.
+
+
+Notes exposes composer and per-entry context slots for feature-owned controls, including role note
+associations. Shared presentation owns no assignment rules or API calls. Interview-step instances use
+a distinct subject/section ID so they can coexist with the main role timeline. Empty filtered pages
+with a continuation offer older comments instead of implying the entire timeline is empty.

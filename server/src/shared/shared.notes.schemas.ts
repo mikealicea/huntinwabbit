@@ -7,6 +7,7 @@ export const noteBodySchema = z
 export const noteSchema = z.strictObject({
   id: z.uuid(),
   body: noteBodySchema,
+  interviewStageId: z.uuid().nullable().optional(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
   revision: z.number().int().positive(),
@@ -14,13 +15,16 @@ export const noteSchema = z.strictObject({
 export const createNoteSchema = z.strictObject({
   id: z.uuid(),
   body: noteBodySchema,
+  interviewStageId: z.uuid().nullable().optional(),
 });
 export const editNoteSchema = z.strictObject({
   body: noteBodySchema,
+  interviewStageId: z.uuid().nullable().optional(),
   expectedRevision: z.number().int().positive(),
 });
-export const deleteNoteSchema = editNoteSchema.omit({ body: true });
+export const deleteNoteSchema = editNoteSchema.pick({ expectedRevision: true });
 export const notesQuerySchema = z.strictObject({
+  interviewStageId: z.uuid().optional(),
   cursor: z.string().min(1).max(2048).optional(),
 });
 export const notesPageSchema = z.strictObject({

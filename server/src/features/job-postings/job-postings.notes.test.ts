@@ -290,3 +290,177 @@ it('does not resurrect notes when role deletion wins the append transaction', as
     [...s.rows.values()].some((row) => String(row.sk).startsWith('NOTE#')),
   ).toBe(false);
 });
+
+const stageA = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+const stageB = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+async function setStages(
+  s: Awaited<ReturnType<typeof setup>>,
+  stages = [
+    { id: stageA, name: 'Technical', context: '60-minute pair programming.' },
+    { id: stageB, name: 'Team', context: '' },
+  ],
+) {
+  const role = await s.postings.get(
+    'alice',
+    s.item.id,
+    AbortSignal.timeout(5000),
+  );
+  return s.postings.update(
+    'alice',
+    s.item.id,
+    {
+      expectedApplicationVersion: role.applicationVersion,
+      changes: { interviewProcess: { stages, currentStageId: null } },
+    },
+    AbortSignal.timeout(5000),
+  );
+}
+it('links comments to stable steps, filters all pages, and scopes cursors to the requested step', async () => {
+  const s = await setup();
+  await setStages(s);
+  const input = { ...s.input(), interviewStageId: stageA };
+  const created = await s.notes.create('alice', s.item.id, input);
+  for (let i = 0; i < 21; i++)
+    await s.notes.create('alice', s.item.id, s.input());
+  const page = await s.notes.list('alice', s.item.id, {
+    interviewStageId: stageA,
+  });
+  expect(page.items).toEqual([]);
+  expect(page.nextCursor).toBeTruthy();
+  expect(
+    (
+      await s.notes.list('alice', s.item.id, {
+        interviewStageId: stageA,
+        cursor: page.nextCursor ?? '',
+      })
+    ).items,
+  ).toEqual([created]);
+  await expect(
+    s.notes.list('alice', s.item.id, {
+      interviewStageId: stageB,
+      cursor: page.nextCursor ?? '',
+    }),
+  ).rejects.toMatchObject({ code: 'INVALID_CURSOR' });
+  await expect(
+    s.notes.list('alice', s.item.id, { cursor: page.nextCursor ?? '' }),
+  ).rejects.toMatchObject({ code: 'INVALID_CURSOR' });
+  await expect(
+    s.notes.create('alice', s.item.id, { ...input, interviewStageId: stageB }),
+  ).rejects.toMatchObject({ code: 'CONFLICT' });
+  await setStages(s, [
+    { id: stageB, name: 'Team', context: '' },
+    { id: stageA, name: 'Pairing', context: 'Bring questions.' },
+  ]);
+  expect(
+    (
+      await s.notes.list('alice', s.item.id, {
+        interviewStageId: stageA,
+        cursor: page.nextCursor ?? '',
+      })
+    ).items[0]?.interviewStageId,
+  ).toBe(stageA);
+});
+it('moves links with revision checks, retains removed-step notes, and rejects foreign stage IDs', async () => {
+  const s = await setup();
+  await setStages(s);
+  const input = { ...s.input(), interviewStageId: stageA };
+  await s.notes.create('alice', s.item.id, input);
+  await s.notes.edit('alice', s.item.id, input.id, {
+    body: 'Edited in the stage',
+    expectedRevision: 1,
+  });
+  expect(
+    (await s.notes.list('alice', s.item.id, { interviewStageId: stageA }))
+      .items[0]?.interviewStageId,
+  ).toBe(stageA);
+  const move = {
+    body: 'Edited in the stage',
+    expectedRevision: 2,
+    interviewStageId: stageB,
+  };
+  await s.notes.edit('alice', s.item.id, input.id, move);
+  expect(
+    (await s.notes.edit('alice', s.item.id, input.id, move))?.revision,
+  ).toBe(3);
+  await expect(
+    s.notes.edit('alice', s.item.id, input.id, {
+      ...move,
+      interviewStageId: stageA,
+    }),
+  ).rejects.toMatchObject({ code: 'CONFLICT' });
+  await expect(
+    s.notes.create('alice', s.item.id, {
+      ...s.input(),
+      interviewStageId: randomUUID(),
+    }),
+  ).rejects.toMatchObject({ code: 'INVALID_REQUEST' });
+  await setStages(s, [{ id: stageA, name: 'Technical', context: '' }]);
+  expect(
+    (await s.notes.list('alice', s.item.id, {})).items[0]?.interviewStageId,
+  ).toBe(stageB);
+  // Exact create replay remains safe after removal and after later edits.
+  expect((await s.notes.create('alice', s.item.id, input))?.revision).toBe(3);
+  await s.notes.edit('alice', s.item.id, input.id, {
+    body: 'Still editable after removal',
+    expectedRevision: 3,
+  });
+  await s.notes.edit('alice', s.item.id, input.id, {
+    body: 'Now general',
+    expectedRevision: 4,
+    interviewStageId: null,
+  });
+  expect(
+    (await s.notes.list('alice', s.item.id, {})).items[0]?.interviewStageId,
+  ).toBeNull();
+});
+it('validates stage links through HTTP and prevents a removed stage from accepting a racing note', async () => {
+  let beforeWrite: (() => Promise<unknown>) | undefined;
+  const s = await setup((send) => async (command, signal) => {
+    if (
+      command instanceof TransactWriteCommand &&
+      command.input.TransactItems?.some((write) =>
+        String(write.Put?.Item?.sk).includes('#ENTRY#'),
+      )
+    ) {
+      const run = beforeWrite;
+      beforeWrite = undefined;
+      await run?.();
+    }
+    return send(command, signal);
+  });
+  await setStages(s);
+  const path = `/job-postings/${s.item.id}/notes`;
+  const input = { ...s.input(), interviewStageId: stageA };
+  expect(
+    (
+      await request(s.app)
+        .post(path)
+        .auth('alice', { type: 'bearer' })
+        .send(input)
+    ).status,
+  ).toBe(201);
+  expect(
+    (
+      await request(s.app)
+        .get(path)
+        .query({ interviewStageId: stageA })
+        .auth('alice', { type: 'bearer' })
+    ).body.items,
+  ).toHaveLength(1);
+  expect(
+    (
+      await request(s.app)
+        .post(path)
+        .auth('alice', { type: 'bearer' })
+        .send({ ...s.input(), interviewStageId: randomUUID() })
+    ).status,
+  ).toBe(400);
+  beforeWrite = () => setStages(s, [{ id: stageB, name: 'Team', context: '' }]);
+  await expect(
+    s.notes.create('alice', s.item.id, {
+      ...s.input(),
+      interviewStageId: stageA,
+    }),
+  ).rejects.toMatchObject({ code: 'INVALID_REQUEST' });
+  expect((await s.notes.list('alice', s.item.id, {})).items).toHaveLength(1);
+});

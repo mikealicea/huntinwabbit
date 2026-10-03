@@ -32,7 +32,42 @@ export const sourceExtractionFields = {
   operationId: z.uuid().optional(),
 };
 
+export const interviewProcessSchema = z
+  .strictObject({
+    stages: z
+      .array(
+        z.strictObject({
+          id: z.uuid(),
+          name: z.string().trim().min(1).max(120),
+          context: z.string().max(4000).optional(),
+        }),
+      )
+      .min(1)
+      .max(20),
+    currentStageId: z.uuid().nullable(),
+  })
+  .superRefine((value, context) => {
+    if (
+      new Set(value.stages.map((stage) => stage.id)).size !==
+      value.stages.length
+    )
+      context.addIssue({
+        code: 'custom',
+        message: 'Stage IDs must be unique.',
+      });
+    if (
+      value.currentStageId !== null &&
+      !value.stages.some((stage) => stage.id === value.currentStageId)
+    )
+      context.addIssue({
+        code: 'custom',
+        message: 'Choose a stage in this process.',
+      });
+  });
+export type InterviewProcess = z.infer<typeof interviewProcessSchema>;
+
 export const applicationSchema = z.strictObject({
+  interviewProcess: interviewProcessSchema.nullable().optional(),
   stage: z.enum([
     'collected',
     'applied',

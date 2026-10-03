@@ -147,7 +147,14 @@ const server = createServer(async (request, response) => {
         const after = Number(url.searchParams.get('cursor') ?? 0);
         return send(200, {
           schemaVersion: 1,
-          items: list.slice(after, after + 20),
+          items: list
+            .slice(after, after + 20)
+            .filter(
+              (note) =>
+                !url.searchParams.get('interviewStageId') ||
+                note.interviewStageId ===
+                  url.searchParams.get('interviewStageId'),
+            ),
           nextCursor: list.length > after + 20 ? String(after + 20) : null,
         });
       }
@@ -162,6 +169,9 @@ const server = createServer(async (request, response) => {
         const created = {
           id: noteId,
           body: body.body,
+          ...(body.interviewStageId !== undefined
+            ? { interviewStageId: body.interviewStageId }
+            : {}),
           createdAt: timestamp,
           updatedAt: timestamp,
           revision: 1,
@@ -191,6 +201,9 @@ const server = createServer(async (request, response) => {
       }
       Object.assign(note, {
         body: body.body,
+        ...(body.interviewStageId !== undefined
+          ? { interviewStageId: body.interviewStageId }
+          : {}),
         revision: note.revision + 1,
         updatedAt: new Date().toISOString(),
       });
@@ -357,6 +370,7 @@ const server = createServer(async (request, response) => {
       const entry = {
         id: body.operationId,
         text: body.text,
+        ...(body.intent ? { intent: body.intent } : {}),
         createdAt: new Date().toISOString(),
         status: 'queued',
         changes: [],
@@ -377,6 +391,35 @@ const server = createServer(async (request, response) => {
         if (entry.text.includes('simulate failure') && !entry.retryOf) {
           entry.status = 'failed';
           entry.error = 'The update could not finish.';
+        } else if (entry.intent === 'interview-process') {
+          const process = {
+            stages: [
+              {
+                id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+                name: 'Recruiter conversation',
+              },
+              {
+                id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+                name: 'Technical interview',
+                context:
+                  '**Format:** 60-minute pair programming session.\n\nPrepare a small project and discuss testing tradeoffs.',
+              },
+              {
+                id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+                name: 'Team conversations',
+              },
+            ],
+            currentStageId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+          };
+          entry.changes = [
+            {
+              field: 'interviewProcess',
+              before: current.application.interviewProcess ?? null,
+              after: process,
+            },
+          ];
+          current.application.interviewProcess = process;
+          entry.status = 'applied';
         } else {
           entry.changes = [
             {

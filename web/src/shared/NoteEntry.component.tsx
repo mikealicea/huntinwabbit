@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { type ReactNode, useRef, useState } from 'react';
 import { NoteComposer } from './NoteComposer.component';
 import { SafeMarkdown } from './SafeMarkdown.component';
 import type { Note, NoteOutcome } from './shared.notes';
@@ -8,6 +8,7 @@ function focusCancel(element: HTMLButtonElement | null) {
 }
 export function NoteEntry({
   note,
+  context,
   disabled,
   onEdit,
   onDelete,
@@ -15,6 +16,7 @@ export function NoteEntry({
   unavailable = false,
 }: {
   note: Note;
+  context?: ReactNode;
   onDraftChange: (note: Note | null) => void;
   unavailable?: boolean;
   disabled: boolean;
@@ -86,6 +88,7 @@ export function NoteEntry({
           </div>
         )}
       </div>
+      {!draft && confirm === null && context}
       {draft ? (
         <NoteComposer
           body={draft.body}

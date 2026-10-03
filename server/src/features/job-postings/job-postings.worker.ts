@@ -21,6 +21,7 @@ import {
   jobParsingConfig,
   type ParsePosting,
   type ParseResponse,
+  redpillCompletionConfig,
 } from '../job-parsing/job-parsing.index.ts';
 import { createSourceGuidance } from '../source-guidance/source-guidance.index.ts';
 import { withCompanyAnalysisInvalidation } from './job-postings.analysis.ts';
@@ -168,7 +169,11 @@ export function createExtractionWorker(
   }
   return {
     async run(pk: string, sk: string) {
-      if (sk.startsWith('JOB#UPDATE-ID#') || sk.startsWith('JOB#SOURCE-ID#'))
+      if (
+        sk.startsWith('JOB#UPDATE-ID#') ||
+        sk.startsWith('JOB#UPDATE-BODY#') ||
+        sk.startsWith('JOB#SOURCE-ID#')
+      )
         return;
       if (sk.startsWith('JOB#UPDATE#')) return updates.run(pk, sk);
       const value = await readRow(
@@ -326,11 +331,19 @@ function runtime() {
       ? createParsePosting({
           fetchPosting: createFetchPosting(),
           observeSource: createSourceGuidance(table).observe,
-          extractPosting: createRedpillExtractor(config.apiKey),
+          extractPosting: createRedpillExtractor(
+            config.apiKey,
+            redpillCompletionConfig(process.env),
+          ),
         })
       : undefined,
     Date.now,
-    config.enabled ? createRoleUpdateParser(config.apiKey) : undefined,
+    config.enabled
+      ? createRoleUpdateParser(
+          config.apiKey,
+          redpillCompletionConfig(process.env),
+        )
+      : undefined,
     createCompanyStore(table, send),
   );
 }

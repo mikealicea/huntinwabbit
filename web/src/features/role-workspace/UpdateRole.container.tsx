@@ -4,6 +4,7 @@ import {
   postingApi,
   type UpdateEntry,
   type UpdateMessage,
+  updateTextSchema,
   useRoleUpdatesInfiniteQuery,
   useSendRoleUpdateMutation,
   useUndoRoleUpdateMutation,
@@ -51,18 +52,24 @@ export function UpdateRoleContainer({
     sending.isLoading ||
     undoing.isLoading;
   const error = history.error ?? sending.error ?? undoing.error;
-  async function submit(text: string, retryOf?: string) {
-    if (pending) return false;
+  async function submit(
+    text: string,
+    retryOf?: string,
+    intent?: 'interview-process',
+  ) {
+    if (pending || !updateTextSchema.safeParse(text).success) return false;
     const trimmed = text.trim();
     if (
       attempt.current?.text !== trimmed ||
-      attempt.current?.retryOf !== retryOf
+      attempt.current?.retryOf !== retryOf ||
+      attempt.current?.intent !== intent
     )
       attempt.current = {
         operationId: crypto.randomUUID(),
         text: trimmed,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         ...(retryOf ? { retryOf } : {}),
+        ...(intent ? { intent } : {}),
       };
     if (!attempt.current) return false;
     try {
@@ -95,7 +102,7 @@ export function UpdateRoleContainer({
       }
       onSend={(text) => submit(text)}
       onRetry={(entry: UpdateEntry) => {
-        void submit(entry.text, entry.id);
+        void submit(entry.text, entry.id, entry.intent);
       }}
       onUndo={(operationId) => {
         if (!pending) void undo({ id: roleId, operationId });

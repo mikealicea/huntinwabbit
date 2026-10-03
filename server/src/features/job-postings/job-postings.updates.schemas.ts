@@ -9,9 +9,19 @@ import {
   roleEditsSchema,
 } from './job-postings.schemas.ts';
 
+export const updateTextSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(100_000)
+  .refine(
+    (text) => new TextEncoder().encode(text).byteLength <= 256 * 1024,
+    'Use at most 100,000 characters and 256 KiB of text.',
+  );
 export const updateMessageSchema = z.strictObject({
+  intent: z.literal('interview-process').optional(),
   operationId: z.uuid(),
-  text: z.string().trim().min(1).max(20_000),
+  text: updateTextSchema,
   timezone: z
     .string()
     .max(100)
@@ -31,6 +41,7 @@ export const changeSchema = z.strictObject({
   after: z.unknown(),
 });
 export const updateEntrySchema = z.strictObject({
+  intent: z.literal('interview-process').optional(),
   id: z.uuid(),
   text: z.string(),
   createdAt: z.iso.datetime(),
@@ -77,6 +88,7 @@ export const updateJobSchema = z.strictObject({
   dueAt: z.number().optional(),
 });
 export const updateDataSchema = z.strictObject({
+  bodyStored: z.literal(true).optional(),
   beforeCompanyAssociation: companyAssociationSchema.optional(),
   companyBaselineRevision: z.number().int().nonnegative().optional(),
   appliedCompanyRevision: z.number().int().nonnegative().optional(),
@@ -94,6 +106,7 @@ export type UpdateMessage = z.infer<typeof updateMessageSchema>;
 export type ParseUpdates = (
   input: {
     text: string;
+    intent?: 'interview-process';
     current: Omit<z.infer<typeof editableFieldsSchema>, 'notes'>;
     history: UpdateEntry[];
     today: string;

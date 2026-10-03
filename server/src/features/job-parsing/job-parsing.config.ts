@@ -16,3 +16,21 @@ export function jobParsingConfig(
     throw new Error('REDPILL_API_KEY is required when job parsing is enabled.');
   return { enabled: true, apiKey };
 }
+
+// One deployment setting selects the model for posting parsing, role updates and analysis.
+export function redpillCompletionConfig(
+  env: Record<string, string | undefined>,
+) {
+  const model = env.REDPILL_MODEL?.trim() || REDPILL_MODEL;
+  if (![REDPILL_MODEL, 'z-ai/glm-5.3'].includes(model))
+    throw new Error(
+      'REDPILL_MODEL must be deepseek/deepseek-v4.1-flash or z-ai/glm-5.3.',
+    );
+  return {
+    model,
+    endpoint:
+      model === 'z-ai/glm-5.3'
+        ? 'https://tee.redpill.ai/v1/chat/completions'
+        : REDPILL_URL,
+  };
+}

@@ -10,7 +10,8 @@ competing tracking writes. Notes use an independent comment timeline, described 
 can discard unsaved comment drafts. Extraction only updates generated facts and never overwrites tracking.
 
 [JobDetails](JobDetails.component.tsx) groups all locations, employment type, salary and work arrangement
-in a wrapping overview. Requirements (with distinct preferred qualifications), Tech stack, Responsibilities
+in a wrapping overview. The original posting link sits alongside the Job details heading, wrapping
+when space is limited, and opens in a new tab. Requirements (with distinct preferred qualifications), Tech stack, Responsibilities
 and Full job details follow in that order. Benefits, all compensation bands and posting metadata remain
 available below. Missing facts remain unknown; older records without technology extraction offer refresh.
 Technology labels preserve stated required/preferred distinctions.
@@ -75,7 +76,7 @@ the operation ID while the text is unchanged; history refresh recovers an accept
 history is paginated, polls pending operations, and refreshes role/board caches on settlement.
 
 Source-derived facts resolve through saved overrides, including empty values. Posting and tracking fields are supported, including fields shown in the detailed posting section;
-notes and comments must be entered through the Notes composer. Chat does not create
+timeline comments must be entered through the Notes composer; stage-specific details can update interview-process context. Chat does not create
 unimplemented tasks or material records. Company-name corrections can reassign this role to an existing
 or new company; they do not edit shared research. Pasted text is processed by Redpill;
 links are values, not fetching instructions. Comment drafts remain local and survive chat updates. Chat does not read or modify the comment timeline.
@@ -131,3 +132,22 @@ The status popover distinguishes pasted-source extraction and unavailable/unusab
 Source text is separate from role-update chat and comments; editing it never writes either timeline.
 The source editor and Chromium capture/refresh scenarios cover retention, retry IDs, conflict review,
 removal, responsive layouts and focus. No live inference fidelity is established by these fixtures.
+
+## Interview board composition
+
+The workspace mounts the [interview-process feature](../interview-process/interview-process.AGENTS.md)
+through a slot immediately after tracking controls and before the details/sidebar grid, only while
+Interviewing. Saved process data survives leaving that application stage. Full recruiter transcripts
+can also be pasted into Update role; setup's focused mode restricts changes to the interview process.
+The history receipt formats stage names and current position rather than exposing internal IDs.
+Update text limits are validated visibly before submission; oversized drafts are never truncated.
+
+
+Interview-step dialogs reuse RoleNotesContainer with a stage filter. The main Notes section uses
+[NoteStage](NoteStage.component.tsx) to choose an optional step before adding a comment or immediately
+reassign an existing comment. Assignment shares the comment revision and preserves its body; conflicts
+show the latest saved selection for review. A removed step remains visibly identified on retained
+comments. Labels follow current stage names, so renaming does not duplicate or orphan comments.
+Notes do not trigger role-update inference or automatic classification; users choose their association.
+The workspace provides the connected notes slot to the interview feature, preserving presentation
+boundaries. Update receipts include saved stage context so context-only changes remain reviewable.

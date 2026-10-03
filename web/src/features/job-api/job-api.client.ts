@@ -299,7 +299,7 @@ export const postingApi = createApi({
     }),
     roleNotes: build.infiniteQuery<
       ReturnType<typeof notesPageSchema.parse>,
-      string,
+      string | { roleId: string; interviewStageId: string },
       string | null
     >({
       infiniteQueryOptions: {
@@ -307,15 +307,27 @@ export const postingApi = createApi({
         getNextPageParam: (last) => last.nextCursor ?? undefined,
       },
       query: ({ queryArg, pageParam }) => ({
-        url: `/${queryArg}/notes`,
-        params: pageParam ? { cursor: pageParam } : {},
+        url: `/${typeof queryArg === 'string' ? queryArg : queryArg.roleId}/notes`,
+        params: {
+          ...(pageParam ? { cursor: pageParam } : {}),
+          ...(typeof queryArg === 'string'
+            ? {}
+            : { interviewStageId: queryArg.interviewStageId }),
+        },
       }),
       transformResponse: (value: unknown) => notesPageSchema.parse(value),
-      providesTags: (_result, _error, id) => [{ type: 'Notes', id }],
+      providesTags: (_result, _error, id) => [
+        { type: 'Notes', id: typeof id === 'string' ? id : id.roleId },
+      ],
     }),
     createNote: build.mutation<
       RoleNote,
-      { roleId: string; id: string; body: string }
+      {
+        roleId: string;
+        id: string;
+        body: string;
+        interviewStageId?: string | null;
+      }
     >({
       query: ({ roleId, ...body }) => ({
         url: `/${roleId}/notes`,
@@ -330,7 +342,13 @@ export const postingApi = createApi({
     }),
     editNote: build.mutation<
       RoleNote,
-      { roleId: string; noteId: string; body: string; expectedRevision: number }
+      {
+        roleId: string;
+        noteId: string;
+        body: string;
+        expectedRevision: number;
+        interviewStageId?: string | null;
+      }
     >({
       query: ({ roleId, noteId, ...body }) => ({
         url: `/${roleId}/notes/${noteId}`,

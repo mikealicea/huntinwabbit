@@ -221,3 +221,16 @@ it('serializes concurrent appends and edits and invalidates analysis exactly onc
       ?.hidden,
   ).toBe(true);
 });
+
+it('rejects interview step associations and filters on company comments', async () => {
+  const s = await setup();
+  await expect(
+    s.notes.create('alice', s.item.id, {
+      ...s.input(),
+      interviewStageId: randomUUID(),
+    }),
+  ).rejects.toMatchObject({ code: 'INVALID_REQUEST' });
+  await expect(
+    s.notes.list('alice', s.item.id, { interviewStageId: randomUUID() }),
+  ).rejects.toMatchObject({ code: 'INVALID_REQUEST' });
+});

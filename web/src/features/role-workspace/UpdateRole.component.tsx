@@ -1,5 +1,8 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import type { UpdateEntry } from '@/features/job-api/job-api.index';
+import {
+  type UpdateEntry,
+  validUpdateText,
+} from '@/features/job-api/job-api.index';
 
 export interface UpdateRoleProps {
   entries: UpdateEntry[];
@@ -14,6 +17,7 @@ export interface UpdateRoleProps {
   onRetry: (entry: UpdateEntry) => void;
 }
 const labels: Record<string, string> = {
+  interviewProcess: 'Interview process',
   companyName: 'Company',
   companyWebsite: 'Company website',
   sourceUrl: 'Posting link',
@@ -29,6 +33,22 @@ const labels: Record<string, string> = {
 };
 function valueText(value: unknown): string {
   if (value === null || value === undefined || value === '') return 'Not set';
+  if (
+    typeof value === 'object' &&
+    'stages' in value &&
+    Array.isArray(value.stages)
+  ) {
+    const stages = value.stages as {
+      id: string;
+      name: string;
+      context?: string;
+    }[];
+    const current =
+      'currentStageId' in value
+        ? stages.find((stage) => stage.id === value.currentStageId)?.name
+        : null;
+    return `${stages.map((stage) => (stage.context ? `${stage.name}: ${stage.context}` : stage.name)).join(' → ')} (Current: ${current ?? 'not set'})`;
+  }
   if (Array.isArray(value))
     return value.length ? value.map(valueText).join('; ') : 'None';
   if (typeof value === 'object')
@@ -58,6 +78,7 @@ export function UpdateRole({
   const desktopHistory = useRef<HTMLDivElement>(null);
   const mobileHistory = useRef<HTMLDivElement>(null);
   const previousNewest = useRef<{ id?: string; status?: string }>({});
+  const validText = validUpdateText(text);
   const newest = entries.at(-1);
   const newestId = newest?.id;
   const newestStatus = newest?.status;
@@ -77,7 +98,7 @@ export function UpdateRole({
   }, [newestId, newestStatus, historyExpanded]);
   async function send() {
     const draft = text;
-    if (pending || !draft.trim()) return;
+    if (pending || !validText) return;
     if (await onSend(draft))
       setText((current) => (current === draft ? '' : current));
   }
@@ -100,8 +121,8 @@ export function UpdateRole({
           )}
         </div>
         <p className="text-sm text-base-content/75">
-          Type a change or paste an email. Clear changes save automatically, and
-          you can undo them.
+          Type a change or paste an email or recruiter transcript. Clear changes
+          save automatically, and you can undo them.
         </p>
         <p role="status" className="text-sm">
           {loading
@@ -145,7 +166,6 @@ export function UpdateRole({
             id={`${id}-${suffix}-message`}
             className="textarea min-h-28 w-full text-base"
             aria-describedby={`${id}-${suffix}-hint`}
-            maxLength={20000}
             value={text}
             placeholder="The role is remote, and the salary is…"
             onChange={(event) => setText(event.target.value)}
@@ -161,17 +181,23 @@ export function UpdateRole({
               if (!event.repeat) void send();
             }}
           />
+          {text.trim() && !validText && (
+            <p role="alert">
+              Use at most 100,000 characters and 256 KiB of text.
+            </p>
+          )}
           <div className="flex items-center justify-between gap-3">
             <p
               id={`${id}-${suffix}-hint`}
               className="text-xs text-base-content/75"
             >
-              Text is processed by Redpill. Cmd+Enter to submit.
+              Up to 100,000 characters (256 KiB). Text is processed by Redpill.
+              Cmd+Enter to submit.
             </p>
             <button
               type="submit"
               className="btn btn-primary min-h-11"
-              disabled={pending || !text.trim()}
+              disabled={pending || !validText}
             >
               Send
             </button>

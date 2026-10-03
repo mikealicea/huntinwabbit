@@ -35,7 +35,7 @@ accepts supplied parse responses and owns durable extraction jobs whose worker c
   upstream logs include URLs. Only the allowlisted IPC result leaves the child.
 - [Redpill adapter](job-parsing.redpill.ts) exposes a bounded JSON-completion transport reused by
   saved-role updates. The URL extractor sends extracted page text with a schema-oriented prompt
-  using JSON object mode with reasoning disabled. Source text is untrusted, tools are unavailable, output is bounded, and
+  using JSON object mode, disabling reasoning on the default DeepSeek route. Source text is untrusted, tools are unavailable, output is bounded, and
   the completion envelope, finish reason, JSON and job schema must all validate. New completions must
   include explicitly named technologies with source qualifiers; older saved parse responses may omit
   that field. The same completion formats the full description as Markdown headings, paragraphs and
@@ -139,3 +139,9 @@ consistent with its usability flag; neither pasted-only success nor generic unus
 host access. A usable fetched posting clears learned guidance. Public parse responses are unchanged.
 Observation failures are bounded and cannot replace the extraction outcome. No additional model call
 or automatic paid retry is introduced. [Guidance tests](job-parsing.guidance.test.ts) cover the seam.
+
+The optional app-wide model setting is resolved by runtime composition through the configuration
+owner and passed into the shared completion adapter. Posting extraction, role updates and company
+analysis use the same selected model. The configured GLM route omits the DeepSeek-specific reasoning
+parameter; no automatic fallback or extra inference is performed. The
+[provider boundary](../../../../docs/job-parsing-data-boundary.md) records external endpoint evidence.
