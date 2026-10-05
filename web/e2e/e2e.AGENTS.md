@@ -5,8 +5,10 @@ artifact policy. [job-search.spec.ts](job-search.spec.ts) verifies routing, capt
 edits, refresh/failure/retry, deletion confirmation and URL reuse, real drag geometry, persistence
 across reload and mobile theme behavior. Posting action tests verify dropdown keyboard dismissal, focus restoration and capture menus/dialogs in
 desktop/mobile layouts and both themes. Card menus also exercise refresh/retry and deletion
-without leaving the board, with focus recovery and persistence after reload. Tests use only fictional data and
-the local application. They do not visit captured URLs or depend on the hosted backend.
+without leaving the board, with focus recovery and persistence after reload.
+Sideways-drop cases exercise blank space below shorter populated/empty columns while scrolled down,
+with three- and six-column layouts, both themes, stable scroll during dragging and reload persistence.
+Tests use only fictional data and the local application. They do not visit captured URLs or depend on the hosted backend.
 [Public-page tests](public-pages.spec.ts) exercise real blog loading, generated MDX, metadata and
 breadcrumb navigation without a session. Board status tests measure stable layout through loading, errors, retry and stage saves, including
 keyboard popover dismissal and desktop/mobile status screenshots. Account and workspace suites

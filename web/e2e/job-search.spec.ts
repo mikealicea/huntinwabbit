@@ -295,6 +295,78 @@ test('drag moves to populated and empty columns, and Escape cancels', async ({
   ).toHaveValue('high');
 });
 
+for (const scheme of ['light', 'dark'] as const) {
+  for (const { width, stage } of [
+    { width: 1440, stage: 'Applied' },
+    { width: 1440, stage: 'Offer' },
+    { width: 900, stage: 'Applied' },
+  ]) {
+    test(`sideways drop below shorter ${stage} column at ${width}px in ${scheme}`, async ({
+      page,
+      request,
+    }, testInfo) => {
+      await page.setViewportSize({ width, height: 1000 });
+      await page.emulateMedia({ colorScheme: scheme });
+      const session = await request.post(
+        'http://127.0.0.1:3101/__test/session',
+        {
+          data: {
+            email: `workspace-${testInfo.testId}-${testInfo.retry}@example.test`,
+          },
+        },
+      );
+      const { access_token: token } = await session.json();
+      let movedId = '';
+      for (let index = 0; index < 8; index++) {
+        const response = await request.post(
+          'http://127.0.0.1:3101/job-postings',
+          {
+            headers: { Authorization: `Bearer ${token}` },
+            data: {
+              url: `https://example.test/jobs/sideways-${index}`,
+              application: { interest: 'not-set' },
+            },
+          },
+        );
+        expect(response.ok()).toBeTruthy();
+        movedId = (await response.json()).item.id;
+      }
+      await page.reload();
+      const handle = page.locator(`#move-${movedId}`);
+      await handle.scrollIntoViewIfNeeded();
+      // Keep the pointer away from viewport edges so this is a horizontal move,
+      // not an auto-scroll-assisted drop near the destination's heading.
+      await handle.evaluate((element) =>
+        element.scrollIntoView({ block: 'center' }),
+      );
+      const target = page.getByRole('region', { name: stage, exact: true });
+      const start = await handle.boundingBox();
+      const end = await target.boundingBox();
+      if (!start || !end) throw new Error('Expected board drag geometry');
+      const y = start.y + start.height / 2;
+      const scrollY = await page.evaluate(() => window.scrollY);
+      expect(scrollY).toBeGreaterThan(1000);
+      await page.mouse.move(start.x + start.width / 2, y);
+      await page.mouse.down();
+      await page.mouse.move(start.x + start.width / 2 + 15, y, { steps: 5 });
+      await expect(handle).toHaveAttribute('aria-pressed', 'true');
+      await page.mouse.move(end.x + end.width / 2, y, { steps: 15 });
+      await expect(
+        page.getByText(`Over ${stage}. Drop to move here.`, { exact: true }),
+      ).toBeAttached();
+      expect(await page.evaluate(() => window.scrollY)).toBe(scrollY);
+      await page.screenshot({
+        path: testInfo.outputPath('sideways-drop.png'),
+      });
+      await page.mouse.up();
+      await expect(target.locator(`#move-${movedId}`)).toBeVisible();
+      await expect(handle).toBeFocused();
+      await page.reload();
+      await expect(target.locator(`#move-${movedId}`)).toBeVisible();
+    });
+  }
+}
+
 test('keyboard dragging changes stage and returns focus to the moved role', async ({
   page,
 }) => {

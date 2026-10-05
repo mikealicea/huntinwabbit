@@ -14,6 +14,9 @@ message; partial or failed lists remain labeled incomplete. The marker describes
 card extraction and capture feedback remain with their owning controls.
 
 [Column containers](BoardColumn.container.tsx) receive mapped roles and coordinate drop targets.
+[The column grid](SearchBoard.component.tsx) stretches each column's drop region to the tallest
+column in its row. Users can drop sideways into the blank space below a shorter or empty column
+while scrolled down a long list. Cards stay top-aligned; single-column mobile rows keep their own height.
 [Board card containers](RoleCard.container.tsx) own drag mechanics.
 [Reusable connected cards](SavedRoleCard.container.tsx) own clock context, posting actions and pending
 extraction polling for both board and company pages. [Card presentation](RoleCard.component.tsx) receives typed props. API data belongs to the
@@ -38,7 +41,9 @@ utilities in card presentation. Only the decorative halo changes opacity; conten
 geometry stay steady. Reduced motion keeps a static halo. Terminal states remove it.
 
 Tests use real stores and deterministic HTTP boundaries. Browser tests exercise pointer, keyboard,
-emulated touch, cancellation, populated/empty columns, mobile reflow and both themes. Run web,
+emulated touch, cancellation, populated/empty columns, mobile reflow and both themes.
+Sideways-drop regressions cover scrolled long lists, populated/empty destinations, three- and
+six-column layouts, both themes and persistence after reload. Run web,
 state, architecture, browser and documentation gates. Browser regression tests measure heading,
 capture and column positions across loading, error, retry and stage-save transitions, and exercise
 the error popover at desktop/mobile sizes.

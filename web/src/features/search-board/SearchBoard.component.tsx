@@ -70,7 +70,7 @@ export function DragPreview({ label }: { label: string }) {
 
 export function BoardColumns({ children }: { children: ReactNode }) {
   return (
-    <div className="grid grid-cols-1 items-start gap-5 sm:grid-cols-3 xl:grid-cols-6 xl:gap-2">
+    <div className="grid grid-cols-1 items-stretch gap-5 sm:grid-cols-3 xl:grid-cols-6 xl:gap-2">
       {children}
     </div>
   );
