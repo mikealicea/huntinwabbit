@@ -139,6 +139,7 @@ export const extractionSchema = z.strictObject({
   error: z.string().nullable(),
 });
 export const savedPostingSchema = legacyPostingSchema.extend({
+  stageEnteredAt: z.iso.datetime().optional(),
   companyAssociation: companyAssociationSchema.optional(),
   edits: roleEditsSchema.optional(),
   applicationVersion: z.number().int().nonnegative(),

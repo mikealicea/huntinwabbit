@@ -27,6 +27,15 @@ A lost update acknowledgement can be recovered by a strong read of the exact res
 values. Otherwise the caller refreshes and deliberately retries. API storage operations have a bounded
 deadline; SDK commands make at most three attempts. Disconnect does not revoke an accepted write.
 
+Stage entry is server-owned metadata, initialized at capture and committed atomically with actual
+application-stage changes through tracking PATCH, chat completion and Undo. Undo that returns to a
+previous stage records a new entry time. Same-stage writes, extraction, unrelated edits, duplicate
+saves and replayed Undo preserve it. Records predating this metadata stay unknown until their next
+stage change; creation and general update timestamps cannot reconstruct historical moves. It is
+not a full stage history or an editable input. Lifecycle and update tests cover persistence and replay.
+Ship accepting web contracts before the API and workers emit the optional field; old strict readers
+cannot accept it. Deploy API and workers together to preserve it on every write path.
+
 Legacy records are explicitly decoded as version zero without extraction jobs. The operator-only
 [migration](../../../scripts/migrate-posting-ids.ts) backfills ID pointers idempotently for the explicit
 dev table. Runtime roles have no Scan permission. Existing posting data and IDs are preserved; legacy

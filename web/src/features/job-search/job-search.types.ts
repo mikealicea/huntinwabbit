@@ -104,6 +104,7 @@ export interface ApplicationFields {
 }
 
 export interface Opportunity extends ApplicationFields {
+  stageEnteredAt?: string;
   saved?: SavedPosting;
   jobDetails?: Job;
   companyName?: string | null;

@@ -25,6 +25,12 @@ the server's state. The workspace stage selector remains the keyboard/control al
 returns to the moved handle after refresh. Cancellation/outside drops do not write. Card order follows
 the backend's newest-saved order; there is no within-stage sorting or filtering.
 
+Board and company cards show `Moved: {date}` beneath the company/menu/move row and above the role
+heading, using the saved stage-entry timestamp in the viewer's local calendar day. The backend
+initializes it at capture and changes it only when the application enters a different stage.
+Older records show `Moved: Not recorded` until their next move; refreshes and unrelated edits do not
+change the date. Presentation and browser tests cover placement, persistence and missing metadata.
+
 Queued/processing cards show a labeled pulsing extraction indicator, including refreshes with
 existing facts. Stage saves use the header status spinner. Reduced motion keeps the cue static.
 Pending cards also breathe with a theme-colored border and soft glow using Tailwind pseudo-element

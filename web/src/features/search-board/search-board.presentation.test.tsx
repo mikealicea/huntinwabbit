@@ -54,6 +54,37 @@ describe('board presentation without providers', () => {
     expect(screen.getByText('Salary not listed')).toBeVisible();
     expect(screen.getByText(/Source: example.com/)).toBeVisible();
     expect(screen.getByText('Due today')).toBeVisible();
+    expect(screen.getByText('Moved: Not recorded')).toBeVisible();
+  });
+
+  it('shows the saved stage-entry date beneath company and controls, before the role heading', () => {
+    render(
+      <RoleCard
+        role={{ ...role, stageEnteredAt: '2026-10-05T12:00:00.000Z' }}
+        title="Saved opening"
+        company="Company unknown"
+        next={{ label: 'No next action set', due: false }}
+        isDragging={false}
+        cardRef={null}
+        dragHandleRef={null}
+      />,
+    );
+    const date = screen.getByText('Oct 5, 2026');
+    expect(date).toHaveAttribute('datetime', '2026-10-05T12:00:00.000Z');
+    expect(date.parentElement).toHaveTextContent('Moved: Oct 5, 2026');
+    expect(
+      screen.getByText('Company unknown').compareDocumentPosition(date) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      screen
+        .getByRole('button', { name: /^Move / })
+        .compareDocumentPosition(date) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      date.compareDocumentPosition(screen.getByRole('heading')) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it('renders empty and populated columns using supplied card slots', () => {

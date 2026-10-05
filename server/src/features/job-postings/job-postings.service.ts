@@ -29,6 +29,7 @@ export function createJobPostings(
         sourceUrl,
         parsedPosting: input.parsedPosting,
         application: input.application,
+        stageEnteredAt: timestamp,
         applicationVersion: 0,
         recordVersion: 0,
         extraction: {

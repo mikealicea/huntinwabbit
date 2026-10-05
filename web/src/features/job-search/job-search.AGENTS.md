@@ -6,6 +6,9 @@ application state. The [API feature](../job-api/job-api.AGENTS.md) owns server d
 
 [Types](job-search.types.ts) distinguish posting facts from stage, interest, priority, follow-up and
 notes. [Mapping](job-search.mapping.ts) retains the complete saved record and derives summary fields.
+
+The mapping carries the optional server-owned current-stage entry timestamp without substituting
+creation or general update times for unknown historical moves.
 Unknown companies stay unknown; source hosts are never treated as employers. The card uses the first
 base compensation band, or first supplied band; the workspace renders every supplied band, including
 its original wording. Amounts are never annualized and unknown currencies/periods are labeled.

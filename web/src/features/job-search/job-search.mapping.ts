@@ -42,6 +42,7 @@ export function toOpportunity(item: SavedPosting): Opportunity {
     job?.compensation[0];
   return {
     id: item.id,
+    stageEnteredAt: item.stageEnteredAt,
     sourceUrl: item.sourceUrl,
     companyId: item.companyAssociation?.company?.id ?? null,
     companyName: item.companyAssociation

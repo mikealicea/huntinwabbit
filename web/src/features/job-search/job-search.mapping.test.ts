@@ -3,13 +3,17 @@ import { postingFixtures } from '@/features/job-api/job-api.test-support';
 import { mergePostingPages, toOpportunity } from './job-search.mapping';
 
 it('preserves the full API record and independent application data', () => {
-  const item = postingFixtures()[0];
+  const item = {
+    ...postingFixtures()[0],
+    stageEnteredAt: '2026-10-05T12:00:00.000Z',
+  };
   const role = toOpportunity(item);
   expect(role.saved).toBe(item);
   expect(role.companyName).toBe('Northstar');
   expect(role.tasks).toEqual([]);
   expect(role.posting?.salary?.minimum).toBe(170000);
   expect(role.stage).toBe(item.application.stage);
+  expect(role.stageEnteredAt).toBe(item.stageEnteredAt);
 });
 it('keeps unknown facts and compensation honest', () => {
   const item = postingFixtures()[0];

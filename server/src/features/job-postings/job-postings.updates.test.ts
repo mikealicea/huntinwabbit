@@ -64,6 +64,42 @@ async function setup(override?: (send: DynamoTransport) => DynamoTransport) {
   return { ...db, send, postings, item, updates, input, get, history, run };
 }
 describe('natural language role updates', () => {
+  it('timestamps chat stage moves and Undo as new entries, without changing the date on replay or no-op edits', async () => {
+    const s = await setup();
+    const entry = await s.updates.submit(
+      'alice',
+      s.item.id,
+      s.input('Move to Applied'),
+    );
+    await s.run(async () => ({
+      changes: [{ field: 'stage', value: 'applied' }],
+      skipped: [],
+    }));
+    const moved = await s.get();
+    expect(moved.stageEnteredAt).toBe(moved.updatedAt);
+    expect(moved.stageEnteredAt).not.toBe(s.item.stageEnteredAt);
+    await s.updates.undo('alice', s.item.id, entry.id);
+    const undone = await s.get();
+    expect(undone.application.stage).toBe('collected');
+    expect(undone.stageEnteredAt).toBe(undone.updatedAt);
+    expect(undone.stageEnteredAt).not.toBe(moved.stageEnteredAt);
+    await s.updates.undo('alice', s.item.id, entry.id);
+    expect((await s.get()).stageEnteredAt).toBe(undone.stageEnteredAt);
+
+    await s.updates.submit(
+      'alice',
+      s.item.id,
+      s.input('Keep collected and set high priority'),
+    );
+    await s.run(async () => ({
+      changes: [
+        { field: 'stage', value: 'collected' },
+        { field: 'priority', value: 'high' },
+      ],
+      skipped: [],
+    }));
+    expect((await s.get()).stageEnteredAt).toBe(undone.stageEnteredAt);
+  });
   it('persists accepted work, applies multiple fields, keeps history and undoes atomically', async () => {
     const s = await setup();
     const message = s.input();

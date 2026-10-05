@@ -214,9 +214,14 @@ export function createPostingOperations(
           const { pk, item, previous } = await lookup(user, id, signal);
           if (item.applicationVersion !== input.expectedApplicationVersion)
             throw postingError('CONFLICT');
+          const timestamp = new Date().toISOString();
           const next = {
             ...item,
             application: { ...item.application, ...input.changes },
+            ...(input.changes.stage !== undefined &&
+            input.changes.stage !== item.application.stage
+              ? { stageEnteredAt: timestamp }
+              : {}),
             edits: {
               overrides: item.edits?.overrides ?? {},
               pending: item.edits?.pending ?? null,
@@ -232,7 +237,7 @@ export function createPostingOperations(
             },
             applicationVersion: item.applicationVersion + 1,
             recordVersion: item.recordVersion + 1,
-            updatedAt: new Date().toISOString(),
+            updatedAt: timestamp,
           };
           try {
             await send(
