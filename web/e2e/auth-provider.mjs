@@ -493,6 +493,7 @@ const server = createServer(async (request, response) => {
         applicationVersion: 0,
         recordVersion: 0,
         createdAt: '2026-09-21T00:00:00.000Z',
+        stageEnteredAt: '2026-09-21T00:00:00.000Z',
         updatedAt: '2026-09-21T00:00:00.000Z',
         extraction: { status: 'disabled', generation: null, error: null },
       };
@@ -523,6 +524,10 @@ const server = createServer(async (request, response) => {
       const next = {
         ...item,
         application: { ...item.application, ...body.changes },
+        ...(body.changes.stage !== undefined &&
+        body.changes.stage !== item.application.stage
+          ? { stageEnteredAt: '2026-10-05T12:00:00.000Z' }
+          : {}),
         applicationVersion: item.applicationVersion + 1,
         recordVersion: item.recordVersion + 1,
       };

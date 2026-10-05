@@ -1,12 +1,14 @@
 import Link from 'next/link';
 import type { ReactNode, Ref } from 'react';
 import {
+  formatCalendarDate,
   formatSalary,
   getSourceHost,
   INTEREST_LABELS,
   type Opportunity,
   PRIORITY_LABELS,
   STAGE_LABELS,
+  toLocalDate,
 } from '@/features/job-search/job-search.index';
 import { LoadingPulse } from '@/shared/shared.index';
 
@@ -92,6 +94,16 @@ export function RoleCard({
             )}
           </div>
         </div>
+        <p className="-mt-2 text-xs text-base-content/75">
+          Moved:{' '}
+          {role.stageEnteredAt ? (
+            <time dateTime={role.stageEnteredAt}>
+              {formatCalendarDate(toLocalDate(new Date(role.stageEnteredAt)))}
+            </time>
+          ) : (
+            'Not recorded'
+          )}
+        </p>
         {showStage && (
           <p className="text-xs font-medium">{STAGE_LABELS[role.stage]}</p>
         )}

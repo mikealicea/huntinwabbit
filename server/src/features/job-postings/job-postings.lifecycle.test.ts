@@ -11,6 +11,7 @@ import { parsedPostingFixture } from './job-postings.fixtures.ts';
 import {
   savedPostingSchema,
   saveRequestSchema,
+  updateRequestSchema,
 } from './job-postings.schemas.ts';
 import { createJobPostings } from './job-postings.service.ts';
 import { memoryPostings } from './job-postings.test-support.ts';
@@ -40,8 +41,123 @@ function setup(
     );
   return { ...db, send, store, service, app, save };
 }
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.useRealTimers();
+});
 describe('persistent edits and extraction', () => {
+  it('keeps historical stage dates unknown until a move and rejects client-supplied timestamps', async () => {
+    const s = setup();
+    const { item } = await s.save(false);
+    const row = [...s.rows.values()].find((value) => 'data' in value);
+    if (!row) throw new Error('Missing posting');
+    const stored = savedPostingSchema.parse(JSON.parse(String(row.data)));
+    delete stored.stageEnteredAt;
+    row.data = JSON.stringify(stored);
+    expect(
+      (await s.service.get('alice', item.id, signal())).stageEnteredAt,
+    ).toBeUndefined();
+    const edited = await s.service.update(
+      'alice',
+      item.id,
+      {
+        expectedApplicationVersion: 0,
+        changes: { priority: 'high' },
+      },
+      signal(),
+    );
+    expect(edited.stageEnteredAt).toBeUndefined();
+    const moved = await s.service.update(
+      'alice',
+      item.id,
+      {
+        expectedApplicationVersion: 1,
+        changes: { stage: 'applied' },
+      },
+      signal(),
+    );
+    expect(moved.stageEnteredAt).toBe(moved.updatedAt);
+    expect(
+      updateRequestSchema.safeParse({
+        expectedApplicationVersion: 2,
+        changes: { stageEnteredAt: item.createdAt },
+      }).success,
+    ).toBe(false);
+    expect(
+      saveRequestSchema.safeParse({
+        url: item.sourceUrl,
+        stageEnteredAt: item.createdAt,
+      }).success,
+    ).toBe(false);
+    expect(
+      savedPostingSchema.safeParse({ ...item, stageEnteredAt: 'yesterday' })
+        .success,
+    ).toBe(false);
+  });
+  it('records stage entry on capture and real moves, preserving it across retries and unrelated edits', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-01T10:00:00.000Z'));
+    const s = setup();
+    const { item } = await s.save(false);
+    expect(item.stageEnteredAt).toBe('2026-10-01T10:00:00.000Z');
+
+    vi.setSystemTime(new Date('2026-10-02T11:00:00.000Z'));
+    expect((await s.save(false)).item.stageEnteredAt).toBe(item.stageEnteredAt);
+    const moved = await s.service.update(
+      'alice',
+      item.id,
+      {
+        expectedApplicationVersion: 0,
+        changes: { stage: 'applied' },
+      },
+      signal(),
+    );
+    expect(moved.stageEnteredAt).toBe('2026-10-02T11:00:00.000Z');
+    expect(
+      (await s.service.get('alice', item.id, signal())).stageEnteredAt,
+    ).toBe(moved.stageEnteredAt);
+
+    vi.setSystemTime(new Date('2026-10-03T12:00:00.000Z'));
+    await expect(
+      s.service.update(
+        'alice',
+        item.id,
+        {
+          expectedApplicationVersion: 0,
+          changes: { stage: 'offer' },
+        },
+        signal(),
+      ),
+    ).rejects.toMatchObject({ code: 'CONFLICT' });
+    const edited = await s.service.update(
+      'alice',
+      item.id,
+      {
+        expectedApplicationVersion: 1,
+        changes: { stage: 'applied', priority: 'high' },
+      },
+      signal(),
+    );
+    expect(edited.stageEnteredAt).toBe(moved.stageEnteredAt);
+    const queued = await s.service.extract('alice', item.id, null, signal());
+    await createExtractionWorker('test', s.send, async () =>
+      parsedPostingFixture(),
+    ).run('USER#alice', `JOB#${queued.extraction.generation}`);
+    expect(
+      (await s.service.get('alice', item.id, signal())).stageEnteredAt,
+    ).toBe(moved.stageEnteredAt);
+
+    const returned = await s.service.update(
+      'alice',
+      item.id,
+      {
+        expectedApplicationVersion: edited.applicationVersion,
+        changes: { stage: 'collected' },
+      },
+      signal(),
+    );
+    expect(returned.stageEnteredAt).toBe('2026-10-03T12:00:00.000Z');
+  });
   it('atomically saves lookup pointers and durable jobs; duplicate saves do not publish again', async () => {
     const s = setup();
     const first = await s.save();

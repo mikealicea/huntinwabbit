@@ -55,6 +55,52 @@ async function moveProductRole(page: Page, targetStage: string) {
 }
 
 for (const scheme of ['light', 'dark'] as const) {
+  test(`card move dates persist and sit between the company row and title in ${scheme}`, async ({
+    page,
+  }, testInfo) => {
+    await page.emulateMedia({ colorScheme: scheme });
+    const card = page.getByRole('article', {
+      name: 'Senior Product Engineer at Northstar',
+      exact: true,
+    });
+    await expect(card.getByText('Moved: Not recorded')).toBeVisible();
+    await moveProductRole(page, 'Applied');
+    await expect(card.getByText('Moved: Oct 5, 2026')).toBeVisible();
+    await page.reload();
+    await expect(
+      page
+        .getByRole('region', { name: 'Applied', exact: true })
+        .getByText('Moved: Oct 5, 2026'),
+    ).toBeVisible();
+    await expect(card.locator('time')).toHaveAttribute(
+      'datetime',
+      '2026-10-05T12:00:00.000Z',
+    );
+    for (const viewport of [
+      { width: 1440, height: 1000 },
+      { width: 390, height: 844 },
+    ]) {
+      await page.setViewportSize(viewport);
+      await card.scrollIntoViewIfNeeded();
+      const company = await card
+        .getByText('Northstar', { exact: true })
+        .boundingBox();
+      const move = await card
+        .getByRole('button', { name: /^Move / })
+        .boundingBox();
+      const date = await card.getByText('Moved: Oct 5, 2026').boundingBox();
+      const heading = await card.getByRole('heading').boundingBox();
+      if (!company || !move || !date || !heading)
+        throw new Error('Expected visible card content');
+      expect(date.y).toBeGreaterThanOrEqual(company.y + company.height);
+      expect(date.y).toBeGreaterThanOrEqual(move.y + move.height);
+      expect(date.y + date.height).toBeLessThanOrEqual(heading.y);
+      await card.screenshot({
+        path: testInfo.outputPath(`move-date-${scheme}-${viewport.width}.png`),
+      });
+    }
+  });
+
   test(`job details are ordered and readable on desktop and mobile in ${scheme}`, async ({
     page,
   }, testInfo) => {

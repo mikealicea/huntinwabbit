@@ -46,6 +46,10 @@ expected application version and requires an empty 204 success; it removes the a
 cached board pages before navigation. Failed deletions retain cached data. Deletion returns no response payload; upstream errors remain sanitized. The browser keeps no
 persistent copy of application data. Unsaved drafts and unsubmitted batch rows are not durable.
 
+Saved responses accept optional server-owned stage-entry timestamps. Tracking requests cannot set
+them; the backend records actual stage changes. Missing timestamps on older records remain unknown.
+Deploy this accepting web contract before the API/workers emit the field, since older readers are strict.
+
 ## Verification
 
 [job-api.test.ts](job-api.test.ts) covers configuration, auth ordering, routing, payload bounds and

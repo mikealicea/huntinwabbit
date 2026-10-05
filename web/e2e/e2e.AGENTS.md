@@ -80,3 +80,7 @@ Interview scenarios also open stage-detail dialogs, render fictional extracted c
 comments in both the modal and main role timeline, edit them, reload and verify shared persistence.
 Screenshots cover the modal on desktop/mobile in both themes; tests exercise Escape/focus restoration,
 reduced-motion media and 200% zoom. These checks do not establish a screen-reader audit.
+
+Card move-date cases verify reload persistence and subtitle placement beneath the company and action
+row, above the role heading, at desktop/mobile sizes in both themes. Screenshots use fictional stage
+entry timestamps from the loopback fixture; backend lifecycle tests establish real write semantics.

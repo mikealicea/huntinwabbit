@@ -562,6 +562,8 @@ export function createRoleUpdates(
       )
         next.applicationVersion++;
       next.updatedAt = new Date(now()).toISOString();
+      if (next.application.stage !== item.application.stage)
+        next.stageEnteredAt = next.updatedAt;
       result.entry.status = error
         ? 'failed'
         : result.entry.changes.length
@@ -820,6 +822,8 @@ export function createRoleUpdates(
       )
         next.applicationVersion++;
       next.updatedAt = new Date(now()).toISOString();
+      if (next.application.stage !== found.item.application.stage)
+        next.stageEnteredAt = next.updatedAt;
       const result = structuredClone(data);
       result.entry.undoneAt = next.updatedAt;
       try {
