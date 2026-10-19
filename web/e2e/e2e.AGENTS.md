@@ -86,3 +86,10 @@ reduced-motion media and 200% zoom. These checks do not establish a screen-reade
 Card move-date cases verify reload persistence and subtitle placement beneath the company and action
 row, above the role heading, at desktop/mobile sizes in both themes. Screenshots use fictional stage
 entry timestamps from the loopback fixture; backend lifecycle tests establish real write semantics.
+
+Interview prep export scenarios use real local process/source/comment writes and test-scoped GET
+fixtures for paginated history and analysis, which the global provider does not paginate. They inspect
+downloaded ZIP entries and individual Markdown bytes, exercise per-document clipboard actions,
+uninitialized analysis without writes, late-page failure/retry and unsaved-draft exclusion. Artifacts
+include ordinary ZIP files and screenshots at desktop/mobile widths and 200% CSS zoom in both themes.
+These cases check saved-source completeness and read-only behavior, not live backend snapshot atomicity.

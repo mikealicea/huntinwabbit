@@ -3,6 +3,7 @@ import {
   createApi,
   type FetchArgs,
   type FetchBaseQueryError,
+  type FetchBaseQueryMeta,
   fetchBaseQuery,
 } from '@reduxjs/toolkit/query/react';
 import {
@@ -31,15 +32,22 @@ import {
   updateResultSchema,
 } from './job-api.contracts';
 import { guidanceResponseSchema } from './job-api.guidance.contracts';
+import {
+  loadPrepContext,
+  type PrepContext,
+  type PrepContextArgs,
+} from './job-api.prep';
 
 const transport = fetchBaseQuery({
   baseUrl: '/api/job-postings',
   timeout: 20_000,
 });
-const validatedQuery: BaseQueryFn<
+const safeTransport: BaseQueryFn<
   string | FetchArgs,
   unknown,
-  FetchBaseQueryError
+  FetchBaseQueryError,
+  object,
+  FetchBaseQueryMeta
 > = async (args, api, extra) => {
   const result = await transport(args, api, extra);
   if (result.error)
@@ -51,6 +59,15 @@ const validatedQuery: BaseQueryFn<
           },
         }
       : { error: { status: 'CUSTOM_ERROR', error: 'The request failed.' } };
+  return result;
+};
+const validatedQuery: BaseQueryFn<
+  string | FetchArgs,
+  unknown,
+  FetchBaseQueryError
+> = async (args, api, extra) => {
+  const result = await safeTransport(args, api, extra);
+  if (result.error) return { error: result.error };
   if (
     ['deletePosting', 'deleteNote', 'deleteCompanyNote'].includes(api.endpoint)
   )
@@ -110,6 +127,20 @@ export const postingApi = createApi({
   baseQuery: validatedQuery,
   tagTypes: ['Posting', 'Updates', 'Notes', 'CompanyNotes', 'Analysis'],
   endpoints: (build) => ({
+    prepContext: build.query<PrepContext, PrepContextArgs>({
+      queryFn: (args, api, extra) =>
+        loadPrepContext(
+          args,
+          async (request) => {
+            const result = await safeTransport(request, api, extra);
+            return result.error
+              ? { error: result.error }
+              : { data: result.data };
+          },
+          api.signal,
+        ),
+      keepUnusedDataFor: 0,
+    }),
     sourceGuidance: build.query<
       ReturnType<typeof guidanceResponseSchema.parse>,
       string
@@ -558,6 +589,7 @@ export const postingApi = createApi({
   }),
 });
 export const {
+  useLazyPrepContextQuery,
   useSourceGuidanceQuery,
   useSourceTextQuery,
   useCompanyAnalysisInfiniteQuery,

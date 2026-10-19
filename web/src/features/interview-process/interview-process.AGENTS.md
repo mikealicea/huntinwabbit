@@ -39,10 +39,12 @@ and deterministic inference; no provider requests or hosted data are used.
 
 Each column heading opens [InterviewStage](InterviewStage.component.tsx), a native dialog with its
 saved Markdown stage details and the role's comment timeline filtered to that stable stage ID. Opening
-any step does not move the current card. Role-workspace composition supplies the connected notes slot;
-this feature never duplicates comments or imports role-workspace containers. Dialogs restore the opener
-on Close/Escape, falling back to setup if a background process edit removed the column. A removed-step
-message keeps mounted drafts available for copying; closing discards unsaved drafts as disclosed.
+any step does not move the current card. Role-workspace composition supplies connected prep-materials
+and notes slots; this feature never duplicates comments or imports role-workspace containers. The
+optional prep slot appears after Stage details and before notes only while the saved step exists.
+Dialogs restore the opener on Close/Escape, falling back to setup if a background process edit removed
+the column. A removed-step message keeps mounted notes drafts available for copying while unmounting
+the export controls; closing discards unsaved drafts as disclosed.
 
 Optional stage context holds stated interview format, duration, people, topics and preparation details.
 Transcript setup and later Update role messages can populate it through the existing AI update and Undo

@@ -5,10 +5,12 @@ import { SafeMarkdown } from '@/shared/shared.index';
 export function InterviewStage({
   stage,
   notes,
+  prepMaterials,
   onClose,
 }: {
   stage: { name: string; context?: string } | undefined;
   notes: ReactNode;
+  prepMaterials?: ReactNode;
   onClose: () => void;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
@@ -60,6 +62,7 @@ export function InterviewStage({
             Notes. Copy any unsaved draft before closing.
           </p>
         )}
+        {stage && prepMaterials}
         {notes}
         <p className="text-sm text-base-content/75">
           Add or save your comment before closing. Unsaved drafts are not

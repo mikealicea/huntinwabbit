@@ -103,12 +103,14 @@ export function InterviewProcessContainer({
   company,
   disabled = false,
   renderStageNotes,
+  renderStagePrep,
 }: {
   posting: SavedPosting;
   title: string;
   company: string;
   disabled?: boolean;
   renderStageNotes?: (stageId: string) => ReactNode;
+  renderStagePrep?: (stageId: string) => ReactNode;
 }) {
   const process = posting.application.interviewProcess ?? null;
   const [update, saving] = useUpdatePostingMutation();
@@ -220,6 +222,7 @@ export function InterviewProcessContainer({
             <InterviewStage
               stage={process?.stages.find((stage) => stage.id === openStage)}
               notes={renderStageNotes?.(openStage)}
+              prepMaterials={renderStagePrep?.(openStage)}
               onClose={() => {
                 setOpenStage(null);
                 requestAnimationFrame(() => {
