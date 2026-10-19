@@ -10,7 +10,10 @@ The web app implements a live board, batch link capture and saved-role workspace
 Saved links and tracking edits persist through the backend; posting details are extracted asynchronously
 with agent-fetch and Redpill. Interviewing roles have a personal Kanban of editable interview stages,
 with transcript setup and a movable current-position card. Clicking a step opens its saved details and
-linked notes; comments can be added there or assigned from the role Notes timeline. The role workspace also accepts natural-language edits with saved
+linked notes; comments can be added there or assigned from the role Notes timeline. Each saved step can
+export three Markdown prep documents (job listing, company context and role context), as a ZIP or
+individual downloads/copies, for review before sharing with an external service. Export includes saved
+information only and does not start analysis. The role workspace also accepts natural-language edits with saved
 chat history, partial updates and Undo. A Markdown notes composer saves timestamped comments with
 editing and deletion on roles and companies. User corrections survive posting refreshes. Company pages group saved roles
 under persistent company identities, with automatic matching and manual corrections. Optional background

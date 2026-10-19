@@ -151,3 +151,43 @@ comments. Labels follow current stage names, so renaming does not duplicate or o
 Notes do not trigger role-update inference or automatic classification; users choose their association.
 The workspace provides the connected notes slot to the interview feature, preserving presentation
 boundaries. Update receipts include saved stage context so context-only changes remain reviewable.
+
+## Interview prep materials
+
+Each saved interview-step dialog offers **Export prep materials**, composed by
+[PrepMaterialsContainer](PrepMaterials.container.tsx) and rendered by
+[PrepMaterials](PrepMaterials.component.tsx). The first click collects saved data without downloading
+or copying. A completed collection offers one ZIP and independent Markdown download/copy actions.
+The chosen step can be non-current; exporting does not move the interview card or change saved data.
+
+[The formatter](role-workspace.prep.ts) produces exactly three document categories: `job-listing.md`,
+`company-context.md` and `role-context.md`. Individual downloads prefix these names with the saved
+associated company and effective role title: `<company>-<role>-<category>.md`. Each identity segment
+uses lowercase ASCII letters/digits and hyphens, is bounded to 60 characters, and falls back to
+`company` or `role` when empty. ZIP entries retain the category filenames; document contents and
+clipboard output are identical to the individual downloads. The formatter reuses the effective
+posting mapper, preserves original source/user text in safe fences, and assigns content by saved
+ownership rather than subject matter. Company comments
+precede separately labeled existing generated analysis; full role-update messages and structured
+receipts remain in role context. Each timeline comment appears once, including removed-step links.
+All three documents identify the target and collection interval and disclose that reads are not an
+atomic snapshot. Unsaved drafts, deleted comments, previous comment revisions and unavailable
+attachments are not exported. Review personal information before sharing with an external service.
+
+The lazy [API acquisition](../job-api/job-api.prep.ts) owns server data; the container derives one
+bundle per successful result. Export again discards ready output and starts fresh reads. Any source
+failure hides all output and offers explicit retry, preserving the notes draft. Copy or download
+failure leaves the prepared documents available. [ZIP packaging](role-workspace.prep-archive.ts)
+uses stored UTF-8 entries locally only on demand; it does not upload content or start inference.
+Temporary object URLs are revoked after download initiation; the UI does not claim a completed save.
+
+Closing, disabling/removing the target, changing role/step or tearing down the account provider
+aborts and releases collection. Stale asynchronous copy feedback cannot update a later instance.
+There is no persistent browser export cache, automatic refresh or combined Markdown file.
+
+[Acquisition](../job-api/job-api.prep.test.ts), [formatter](role-workspace.prep.test.ts),
+[archive](role-workspace.prep-archive.test.ts) and [container](PrepMaterials.test.tsx) tests cover
+completeness, source boundaries, exact archive bytes, failure recovery and lifetimes. The
+[interview browser scenarios](../../../e2e/interview-process.spec.ts) exercise real downloads,
+clipboard actions, late-page failures, unchanged current position and responsive keyboard controls
+against fictional local data; they do not establish live inference or screen-reader behavior.

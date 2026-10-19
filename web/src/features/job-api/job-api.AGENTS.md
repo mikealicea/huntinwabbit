@@ -126,3 +126,23 @@ view on mutation. Cursors are bound to the filter, and empty filtered pages can 
 Stage context and note links are optional for legacy records. Deploy compatible readers before writers,
 including company-analysis readers of role comments. No additional routes, processors or storage are
 introduced; note writes remain direct and process context uses the existing versioned update path.
+
+## Interview prep reads
+
+[Prep acquisition](job-api.prep.ts) collects fresh saved context for one explicit interview-step ID
+through the existing authenticated bridge. The [client](job-api.client.ts) exposes a lazy aggregate
+query with no tags, polling, mutation lifecycle or retained cache after unsubscription. It uses the
+sanitized transport directly and validates each heterogeneous response with its own wire schema.
+Do not route these reads through company-analysis initialization or role-history invalidation.
+
+The loader follows every opaque cursor, including empty pages, without stage filtering or record
+caps. A repeated cursor, failed/malformed page, changed analysis completion timestamp or changed
+final role version fails the entire export. Explicit retry starts at the first page. Company identity
+comes only from the saved association; missing required resources are errors, while valid absent
+source/association and disabled or uninitialized analysis remain data. All reads share cancellation,
+and aborted collection cannot return an empty success.
+
+These reads span an interval, not a cross-resource atomic snapshot. They never fetch external links,
+follow evidence to other roles, start analysis or write saved state. [Acquisition tests](job-api.prep.test.ts)
+exercise real stores, complete pagination, safe failures, retry, cancellation and GET-only behavior.
+The [role workspace](../role-workspace/role-workspace.AGENTS.md) owns document content and output.

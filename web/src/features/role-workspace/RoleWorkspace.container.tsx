@@ -19,6 +19,7 @@ import {
   toOpportunity,
 } from '@/features/job-search/job-search.index';
 import { selectToday, useAppSelector } from '@/state/state.index';
+import { PrepMaterialsContainer } from './PrepMaterials.container';
 import { RoleNotesContainer } from './RoleNotes.container';
 import { RoleNotFound } from './RoleNotFound.component';
 import { RoleStatus } from './RoleStatus.component';
@@ -170,6 +171,19 @@ export function RoleWorkspaceContainer({ roleId }: { roleId: string }) {
               <RoleNotesContainer
                 roleId={role.id}
                 interviewStageId={stageId}
+                disabled={
+                  deletion.isLoading ||
+                  !query.currentData?.application.interviewProcess?.stages.some(
+                    (stage) => stage.id === stageId,
+                  )
+                }
+              />
+            )}
+            renderStagePrep={(stageId) => (
+              <PrepMaterialsContainer
+                key={`${role.id}-${stageId}`}
+                roleId={role.id}
+                stageId={stageId}
                 disabled={
                   deletion.isLoading ||
                   !query.currentData?.application.interviewProcess?.stages.some(

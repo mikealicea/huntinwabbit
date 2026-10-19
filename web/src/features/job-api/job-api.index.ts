@@ -14,6 +14,7 @@ export {
   useEditCompanyNoteMutation,
   useEditNoteMutation,
   useExtractPostingMutation,
+  useLazyPrepContextQuery,
   usePostingQuery,
   usePostingsInfiniteQuery,
   useRequestCompanyAnalysisMutation,
@@ -45,6 +46,7 @@ export {
   sourceTextSchema,
   updateTextSchema,
 } from './job-api.contracts';
+export type { PrepContext, PrepContextArgs } from './job-api.prep';
 export {
   INTERVIEW_STAGE_LIMIT,
   INTERVIEW_STAGE_NAME_LIMIT,
